@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ExaCC Metrics Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; margin: 20px; background: #121212; color: #f0f0f0; }
+    h2, h3 { color: #fff; }
+    .tabs { display: flex; gap: 5px; margin-bottom: 10px; }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      background: #1f1f1f;
+      color: #ccc;
+      border: 1px solid #333;
+    }
+    .tab.active {
+      background: #272727;
+      border-bottom: none;
+      font-weight: bold;
+      color: #00e5ff;
+    }
+    .tabContent {
+      display: none;
+      border: 1px solid #333;
+      padding: 15px;
+      background: #1a1a1a;
+      border-radius: 0 8px 8px 8px;
+    }
+    .tabContent.active { display: block; }
+    canvas { background: #222; border: 1px solid #444; margin-bottom: 30px; border-radius: 8px; }
+    select, input[type=file] {
+      background: #1f1f1f;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 5px;
+      padding: 5px;
+    }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; cursor: pointer; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+    th { background: #2a2a2a; color: #00e5ff; }
+    .Normal { background-color: rgba(0, 200, 83, 0.2); }
+    .Warning { background-color: rgba(255, 193, 7, 0.2); }
+    .Critical { background-color: rgba(244, 67, 54, 0.2); }
+    footer {
+      text-align: right;
+      font-size: 13px;
+      color: #888;
+      margin-top: 25px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h2>🚀 ExaCC Metrics Dashboard - Paulo Portugal - XTeam </h2>
+
+  <input type="file" id="fileInput" accept=".lst,.txt">
+  <br><br>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="charts">📊 Charts</div>
+    <div class="tab" data-tab="alerts">⚡ Flash Cache</div>
+    <div class="tab" data-tab="sioAlerts">🔍 Smart I/O</div>
+    <div class="tab" data-tab="cdioAlerts">💽 Cell Disk</div>
+    <div class="tab" data-tab="summary">📑 Summary</div>
+  </div>
+
+  <!-- Charts Tab -->
+  <div id="charts" class="tabContent active">
+    <label for="metricSelect">Choose Metric:</label>
+    <select id="metricSelect"></select>
+    <br><br>
+    <label for="targetSelect">Choose Target/Database:</label>
+    <select id="targetSelect"></select>
+    <br><br>
+    <canvas id="lineChart"></canvas>
+    <canvas id="barChart"></canvas>
+  </div>
+
+  <!-- Flash Cache Alerts Tab -->
+  <div id="alerts" class="tabContent">
+    <h3>⚡ Flash Cache Performance Alerts</h3>
+    <div id="alertsTable"></div>
+  </div>
+
+  <!-- Smart I/O Alerts Tab -->
+  <div id="sioAlerts" class="tabContent">
+    <h3>🔍 Smart I/O Performance Alerts</h3>
+    <div id="sioAlertsTable"></div>
+  </div>
+
+  <!-- Cell Disk I/O Alerts Tab -->
+  <div id="cdioAlerts" class="tabContent">
+    <h3>💽 Cell Disk I/O Performance Alerts</h3>
+    <div id="cdioAlertsTable"></div>
+  </div>
+
+  <!-- Summary Tab -->
+  <div id="summary" class="tabContent">
+    <h3>📑 Overall Performance Summary</h3>
+    <div id="summaryTable"></div>
+  </div>
+
+  <footer>
+    Paulo Portugal – Oracle XTeam
+  </footer>
+
+  <script>
+    let parsedData = [];
+    let lineChart, barChart;
+
+    const chartColors = ["#00e5ff","#ff4081","#76ff03","#ffab40","#ff1744","#7c4dff"];
+
+    function switchTab(tabName) {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tabContent").forEach(c => c.classList.remove("active"));
+      document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add("active");
+      document.getElementById(tabName).classList.add("active");
+    }
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+    });
+
+    document.getElementById('fileInput').addEventListener('change', function(evt) {
+      const file = evt.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const lines = e.target.result.split(/\r?\n/);
+        parsedData = lines
+          .filter(l => l.trim())
+          .map(line => line.split(/\t+/).map(c => c.trim()))
+          .filter(cols => cols.length >= 5)
+          .map(cols => {
+            const numMatch = cols[3].replace(/,/g, '').match(/[-+]?\d*\.?\d+/);
+            return numMatch ? { metric: cols[1], target: cols[2], value: parseFloat(numMatch[0]), ts: cols[4] } : null;
+          })
+          .filter(x => x);
+
+        const metrics = [...new Set(parsedData.map(d => d.metric))].sort();
+        document.getElementById('metricSelect').innerHTML = metrics.map(m => `<option value="${m}">${m}</option>`).join('');
+        document.getElementById('metricSelect').dispatchEvent(new Event('change'));
+
+        generateAlerts();
+        generateSIOAlerts();
+        generateCDIOAlerts();
+        generateSummary();
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('metricSelect').addEventListener('change', function() {
+      const m = this.value;
+      const targets = [...new Set(parsedData.filter(d => d.metric === m).map(d => d.target))].sort();
+      document.getElementById('targetSelect').innerHTML = targets.map(t => `<option value="${t}">${t}</option>`).join('');
+      document.getElementById('targetSelect').dispatchEvent(new Event('change'));
+    });
+
+    document.getElementById('targetSelect').addEventListener('change', drawCharts);
+
+    function drawCharts() {
+      const metric = document.getElementById('metricSelect').value;
+      const target = document.getElementById('targetSelect').value;
+      const data = parsedData.filter(d => d.metric === metric && d.target === target);
+      const labels = data.map(d => d.ts), values = data.map(d => d.value);
+
+      if (lineChart) lineChart.destroy();
+      lineChart = new Chart(document.getElementById('lineChart'), {
+        type: 'line',
+        data: { labels, datasets: [{ label: `${metric} (${target})`, data: values, borderColor: chartColors[0], fill: false }] },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: "#fff" } } },
+          scales: { x: { ticks: { color: "#aaa" } }, y: { ticks: { color: "#aaa" }, beginAtZero: true } }
+        }
+      });
+
+      const all = parsedData.filter(d => d.metric === metric);
+      const grouped = all.reduce((acc, d) => { acc[d.target] = (acc[d.target] || []).concat(d.value); return acc; }, {});
+      const barLabels = Object.keys(grouped), barValues = barLabels.map(t => grouped[t].reduce((a,b) => a + b, 0) / grouped[t].length);
+
+      if (barChart) barChart.destroy();
+      barChart = new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: { labels: barLabels, datasets: [{ label: `${metric} (avg by target)`, data: barValues, backgroundColor: chartColors }] },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: "#fff" } } },
+          scales: { x: { ticks: { color: "#aaa" } }, y: { ticks: { color: "#aaa" }, beginAtZero: true } }
+        }
+      });
+    }
+
+    function generateAlerts() {
+      const rules = [
+        { metric: "FC_IO_RQ_R_MISS_SEC", warn: 100, crit: 500, desc: "Flash cache read misses/sec" },
+        { metric: "FC_IO_BY_W_POPULATE_SEC", warn: 100, crit: 500, desc: "Flash cache populate writes/sec" },
+        { metric: "FC_IO_RQ_W_SKIP_SEC", warn: 50, crit: 200, desc: "Skipped writes/sec" },
+        { metric: "FC_IO_RQ_BY_DISK_WRITER_SEC", warn: 50, crit: 200, desc: "Disk writer flushes/sec" }
+      ];
+      renderAlertTable("alertsTable", rules);
+    }
+
+    function generateSIOAlerts() {
+      const rules = [
+        { metric: "SIO_IO_RD_FC_SEC", warn: 50, crit: 20, desc: "MB/sec read from flash cache (low is bad)", lowBad: true },
+        { metric: "SIO_IO_RD_HD_SEC", warn: 20, crit: 50, desc: "MB/sec read from hard disk (high is bad)" },
+        { metric: "SIO_IO_SI_SV_SEC", warn: 50, crit: 20, desc: "MB/sec saved by storage index (low is bad)", lowBad: true },
+        { metric: "SIO_IO_WR_FC_SEC", warn: 20, crit: 50, desc: "MB/sec writes into flash cache (population writes)" }
+      ];
+      renderAlertTable("sioAlertsTable", rules);
+    }
+
+    function generateCDIOAlerts() {
+      const rules = [
+        { metric: "CD_IO_LOAD", warn: 5, crit: 10, desc: "Average I/O load (queue length)" },
+        { metric: "CD_IO_UTIL", warn: 70, crit: 90, desc: "Disk utilization (%)" },
+        { metric: "CD_IO_ERRS", warn: 1, crit: 5, desc: "I/O errors" },
+        { metric: "CD_IO_BY_R_LG_SEC", warn: 500, crit: 1000, desc: "MB/sec read large blocks" },
+        { metric: "CD_IO_BY_W_LG_SEC", warn: 100, crit: 130, desc: "MB/sec write large blocks" },
+        { metric: "CD_IO_TM_R_LG_RQ", warn: 100, crit: 130, desc: "Avg read latency large blocks (µs)" }
+      ];
+      renderAlertTable("cdioAlertsTable", rules);
+    }
+
+    function generateSummary() {
+      const allRules = [
+        { metric: "FC_IO_RQ_R_MISS_SEC", warn: 100, crit: 500, desc: "Flash cache read misses/sec" },
+        { metric: "FC_IO_BY_W_POPULATE_SEC", warn: 100, crit: 500, desc: "Flash cache populate writes/sec" },
+        { metric: "FC_IO_RQ_W_SKIP_SEC", warn: 50, crit: 200, desc: "Skipped writes/sec" },
+        { metric: "FC_IO_RQ_BY_DISK_WRITER_SEC", warn: 50, crit: 200, desc: "Disk writer flushes/sec" },
+        { metric: "SIO_IO_RD_FC_SEC", warn: 50, crit: 20, desc: "MB/sec read from flash cache (low is bad)", lowBad: true },
+        { metric: "SIO_IO_RD_HD_SEC", warn: 20, crit: 50, desc: "MB/sec read from hard disk (high is bad)" },
+        { metric: "SIO_IO_SI_SV_SEC", warn: 50, crit: 20, desc: "MB/sec saved by storage index (low is bad)", lowBad: true },
+        { metric: "SIO_IO_WR_FC_SEC", warn: 20, crit: 50, desc: "MB/sec writes into flash cache (population writes)" },
+        { metric: "CD_IO_LOAD", warn: 5, crit: 10, desc: "Average I/O load (queue length)" },
+        { metric: "CD_IO_UTIL", warn: 70, crit: 90, desc: "Disk utilization (%)" },
+        { metric: "CD_IO_ERRS", warn: 1, crit: 5, desc: "I/O errors" },
+        { metric: "CD_IO_BY_R_LG_SEC", warn: 100, crit: 130, desc: "MB/sec read large blocks" },
+        { metric: "CD_IO_BY_W_LG_SEC", warn: 100, crit: 130, desc: "MB/sec write large blocks" },
+        { metric: "CD_IO_TM_R_LG_RQ", warn: 500, crit: 1000, desc: "Avg read latency large blocks (µs)" }
+      ];
+      renderAlertTable("summaryTable", allRules);
+    }
+
+    function renderAlertTable(containerId, rules) {
+      let html = "<table><tr><th>Metric</th><th>Avg Value</th><th>Status</th><th>Description</th></tr>";
+      rules.forEach(rule => {
+        const vals = parsedData.filter(d => d.metric === rule.metric).map(d => d.value);
+        if (vals.length === 0) return;
+        const avg = vals.reduce((a,b) => a + b, 0) / vals.length;
+        let status = "Normal";
+        if (rule.lowBad) {
+          if (avg < rule.crit) status = "Critical";
+          else if (avg < rule.warn) status = "Warning";
+        } else {
+          if (avg > rule.crit) status = "Critical";
+          else if (avg > rule.warn) status = "Warning";
+        }
+        html += `<tr class="${status}" onclick="jumpToChart('${rule.metric}')">
+                   <td>${rule.metric}</td><td>${avg.toFixed(2)}</td><td>${status}</td><td>${rule.desc}</td>
+                 </tr>`;
+      });
+      html += "</table>";
+      document.getElementById(containerId).innerHTML = html;
+    }
+
+    function jumpToChart(metricName) {
+      switchTab("charts");
+      const sel = document.getElementById("metricSelect");
+      if (Array.from(sel.options).find(o => o.value === metricName)) {
+        sel.value = metricName;
+        sel.dispatchEvent(new Event("change"));
+      }
+    }
+  </script>
+</body>
+</html>

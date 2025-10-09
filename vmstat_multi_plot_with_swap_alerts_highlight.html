@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VMStat Continuous Plotter (Split Swap)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #181920; color: #eee; }
+    h2, h3 { color: #48e1f9; }
+    input[type=file] { margin: 10px 0; }
+    canvas { margin-top: 20px; max-width: 95vw; background: #13121b; border-radius: 8px; padding: 5px; }
+    table { margin-top: 20px; border-collapse: collapse; width: 80%; }
+    th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+    th { background: #333; }
+  </style>
+</head>
+<body>
+  <h2>VMStat Continuous Plotter</h2>
+  <p>Select one or more vmstat files to stitch together into a continuous timeline:</p>
+  <input type="file" id="fileInput" multiple><br>
+  <button onclick="handleFiles()">Plot & Analyze</button>
+
+  <h3>Memory + CPU Usage</h3>
+  <canvas id="chart1" width="1400" height="450"></canvas>
+
+  <h3>Swap In (si)</h3>
+  <canvas id="chart2" width="1400" height="250"></canvas>
+
+  <h3>Swap Out (so)</h3>
+  <canvas id="chart3" width="1400" height="250"></canvas>
+
+  <h3>Swap Utilization Alerts</h3>
+  <table id="alertTable">
+    <tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>
+  </table>
+
+  <script>
+    let chart1, chart2, chart3;
+
+    function parseVmstat(text) {
+      const lines = text.split("\n");
+      let startTime = null;
+      const startMatch = text.match(/# Starting Time:\s*([0-9/]+)\s+([0-9:]+)/);
+      if (startMatch) {
+        startTime = new Date(startMatch[1] + " " + startMatch[2]);
+      }
+
+      const intervalSec = 1; // vmstat default interval
+      let t = startTime ? new Date(startTime) : null;
+
+      const records = [];
+      for (let line of lines) {
+        line = line.trim();
+        if (!line.match(/^\d\d:\d\d:\d\d/)) continue;
+        const parts = line.split(/\s+/);
+        if (parts.length < 17) continue;
+
+        const free = parseInt(parts[4]);
+        const si   = parseInt(parts[6]);
+        const so   = parseInt(parts[7]);
+        const us   = parseInt(parts[parts.length - 5]);
+        const sy   = parseInt(parts[parts.length - 4]);
+        const id   = parseInt(parts[parts.length - 3]);
+        const wa   = parseInt(parts[parts.length - 2]);
+
+        const ts = t ? new Date(t) : parts[0];
+        if (t) t = new Date(t.getTime() + intervalSec*1000);
+
+        records.push({ ts, free, si, so, us, sy, id, wa });
+      }
+      return records;
+    }
+
+    function handleFiles() {
+      const files = document.getElementById('fileInput').files;
+      if (!files.length) {
+        alert("Please select at least one vmstat file!");
+        return;
+      }
+
+      const readers = [];
+      for (let i = 0; i < files.length; i++) {
+        readers.push(new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ name: files[i].name, records: parseVmstat(reader.result) });
+          reader.onerror = reject;
+          reader.readAsText(files[i]);
+        }));
+      }
+
+      Promise.all(readers).then(results => {
+        // Merge all files into one continuous timeline
+        let allRecords = [];
+        results.forEach(r => { allRecords = allRecords.concat(r.records); });
+        allRecords.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+
+        plotCharts(allRecords);
+        showAlerts(results);
+      });
+    }
+
+    function plotCharts(allRecords) {
+      const times   = allRecords.map(r => r.ts.toLocaleString());
+      const freeMem = allRecords.map(r => r.free);
+      const usrCpu  = allRecords.map(r => r.us);
+      const sysCpu  = allRecords.map(r => r.sy);
+      const idleCpu = allRecords.map(r => r.id);
+      const waCpu   = allRecords.map(r => r.wa);
+      const siVals  = allRecords.map(r => r.si);
+      const soVals  = allRecords.map(r => r.so);
+
+      const ctx1 = document.getElementById('chart1').getContext('2d');
+      const ctx2 = document.getElementById('chart2').getContext('2d');
+      const ctx3 = document.getElementById('chart3').getContext('2d');
+      if (chart1) chart1.destroy();
+      if (chart2) chart2.destroy();
+      if (chart3) chart3.destroy();
+
+      // Memory + CPU
+      chart1 = new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels: times,
+          datasets: [
+            { label: 'Free Mem (KB)', data: freeMem, borderColor: 'blue', yAxisID: 'y' },
+            { label: 'User CPU %', data: usrCpu, borderColor: 'red', yAxisID: 'y1' },
+            { label: 'System CPU %', data: sysCpu, borderColor: 'orange', yAxisID: 'y1' },
+            { label: 'Idle CPU %', data: idleCpu, borderColor: 'green', yAxisID: 'y1' },
+            { label: 'Wait CPU %', data: waCpu, borderColor: 'purple', yAxisID: 'y1' }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          stacked: false,
+          plugins: { title: { display: true, text: 'Memory + CPU Usage (Continuous)' } },
+          scales: {
+            y: { type: 'linear', position: 'left', title: { display: true, text: 'Free Mem (KB)' }},
+            y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: 'CPU %' }}
+          }
+        }
+      });
+
+      // Swap In
+      chart2 = new Chart(ctx2, {
+        type: 'line',
+        data: {
+          labels: times,
+          datasets: [{ label: 'Swap In (si)', data: siVals, borderColor: 'darkcyan' }]
+        },
+        options: {
+          responsive: true,
+          plugins: { title: { display: true, text: 'Swap In Activity (Continuous)' } },
+          scales: {
+            y: { type: 'linear', position: 'left', title: { display: true, text: 'Pages / sec' }}
+          }
+        }
+      });
+
+      // Swap Out
+      chart3 = new Chart(ctx3, {
+        type: 'line',
+        data: {
+          labels: times,
+          datasets: [{ label: 'Swap Out (so)', data: soVals, borderColor: 'darkred' }]
+        },
+        options: {
+          responsive: true,
+          plugins: { title: { display: true, text: 'Swap Out Activity (Continuous)' } },
+          scales: {
+            y: { type: 'linear', position: 'left', title: { display: true, text: 'Pages / sec' }}
+          }
+        }
+      });
+    }
+
+    function showAlerts(results) {
+      const table = document.getElementById("alertTable");
+      table.innerHTML = "<tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>";
+
+      results.forEach(r => {
+        const siMax = Math.max(...r.records.map(x => x.si));
+        const soMax = Math.max(...r.records.map(x => x.so));
+        const swapDetected = (siMax > 0 || soMax > 0);
+
+        const row = table.insertRow();
+        row.insertCell(0).textContent = r.name;
+        row.insertCell(1).textContent = swapDetected ? "⚠️ YES" : "✅ NO";
+        row.insertCell(2).textContent = swapDetected 
+          ? `Max si=${siMax}, Max so=${soMax}` 
+          : "No swap activity detected";
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Oracle Alert Log Analyzer + Timeline (v2)</title>
+<style>
+  body{font-family:Consolas,monospace;background:#1e1e1e;color:#ddd;margin:20px}
+  h1{color:#00bfff}
+  input,button{margin:5px}
+  details{margin-bottom:10px;border:1px solid #555;border-radius:8px;padding:5px;background:#111}
+  summary{cursor:pointer;color:#00bfff;font-weight:bold}
+  .log-block{max-height:70vh;overflow-y:auto;white-space:pre;background:#000;padding:10px;border-radius:8px;font-size:13px;line-height:1.05}
+  .ora{color:#ff5050;font-weight:bold}
+  .error{color:#ffb84d;font-weight:bold}
+  .fatal{color:#ff3333;font-weight:bold}
+  .fail{color:#ff8080;font-weight:bold}
+  .timestamp{color:#66d9ef}
+  .filter-input{width:30%;padding:5px;margin-bottom:10px;border-radius:5px;border:1px solid #444;background:#222;color:#ddd}
+  #progress{color:#00bfff;margin-top:10px;font-size:14px}
+  .line{display:block;margin:0;padding:0;line-height:1.05}
+  .line:hover{background:#222}
+  /* --- tabs --- */
+  .tabs button{margin-right:10px;padding:6px 14px;background:#222;border:1px solid #444;color:#ddd;border-radius:5px;cursor:pointer}
+  .tabs button.active{background:#00bfff;color:#000}
+  .tab{display:none}
+  .tab.active{display:block}
+</style>
+</head>
+<body>
+<h1>Oracle Alert Log Analyzer</h1>
+
+<div class="tabs">
+  <button id="tabBtnLogs" class="active">Log View</button>
+  <button id="tabBtnTimeline">Timeline</button>
+</div>
+
+<!-- LOG VIEW TAB -->
+<div id="tabLogs" class="tab active">
+  <input type="file" id="folderInput" webkitdirectory directory multiple>
+  <button id="listBtn">List Alert Logs</button><br>
+  <input type="text" id="fileFilter" class="filter-input" placeholder="Filter by instance (e.g. cdbpr835)">
+  <input type="text" id="excludeFilter" class="filter-input" placeholder="Exclude alert files containing (e.g. test)">
+  <div id="fileList"></div>
+
+  <label>Start Time: <input type="datetime-local" id="startTime"></label>
+  <label>End Time: <input type="datetime-local" id="endTime"></label>
+  <input type="text" id="searchBox" placeholder="Search keyword (optional)">
+  <button id="analyzeBtn">Analyze</button>
+  <div id="progress"></div>
+  <div id="output"></div>
+</div>
+
+<!-- TIMELINE TAB -->
+<div id="tabTimeline" class="tab">
+  <h2>Event Timeline</h2>
+  <p>After analyzing logs, filter events to plot on timeline:</p>
+  <input id="timelineFilter" class="filter-input" placeholder="Keyword (e.g. ORA-, FATAL)">
+  <button id="buildTimeline">Build Timeline</button>
+  <canvas id="timelineChart" style="width:100%;max-height:600px;margin-top:20px"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let alertFiles=[],filteredFiles=[],parsedEvents=[];
+function parseTimestamp(l){
+  const m=l.match(/(\w{3}\s\w{3}\s\d{1,2}\s\d{2}:\d{2}:\d{2}\s\d{4})|(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
+  return m?new Date(m[0]):null;
+}
+function highlight(l){
+  return l.replace(/(ORA-\d+)/g,'<span class="ora">$1</span>')
+          .replace(/(ERROR)/gi,'<span class="error">$1</span>')
+          .replace(/(FATAL)/gi,'<span class="fatal">$1</span>')
+          .replace(/(FAIL)/gi,'<span class="fail">$1</span>');
+}
+
+/* ---------- File list filters ---------- */
+function renderFileList(f1='',f2=''){
+  const list=document.getElementById('fileList');
+  filteredFiles=alertFiles.filter(f=>{
+    const n=f.name.toLowerCase();
+    if(f1&&!n.includes(f1.toLowerCase()))return false;
+    if(f2&&n.includes(f2.toLowerCase()))return false;
+    return true;
+  });
+  list.innerHTML=filteredFiles.length
+    ?filteredFiles.map((f,i)=>`<label><input type="checkbox" class="fileCheckbox" data-idx="${i}" checked> ${f.name}</label>`).join('<br>')
+    :"<p>No alert_*.log files found.</p>";
+}
+document.getElementById('listBtn').onclick=()=>{
+  alertFiles=Array.from(document.getElementById('folderInput').files).filter(f=>f.name.startsWith('alert_'));
+  renderFileList();
+};
+document.getElementById('fileFilter').oninput=()=>renderFileList(
+  document.getElementById('fileFilter').value,
+  document.getElementById('excludeFilter').value);
+document.getElementById('excludeFilter').oninput=()=>renderFileList(
+  document.getElementById('fileFilter').value,
+  document.getElementById('excludeFilter').value);
+
+/* ---------- Tabs ---------- */
+const tabLogs=document.getElementById('tabLogs'),tabTimeline=document.getElementById('tabTimeline');
+document.getElementById('tabBtnLogs').onclick=()=>{tabLogs.classList.add('active');tabTimeline.classList.remove('active');
+  document.getElementById('tabBtnLogs').classList.add('active');document.getElementById('tabBtnTimeline').classList.remove('active');};
+document.getElementById('tabBtnTimeline').onclick=()=>{tabTimeline.classList.add('active');tabLogs.classList.remove('active');
+  document.getElementById('tabBtnTimeline').classList.add('active');document.getElementById('tabBtnLogs').classList.remove('active');};
+
+/* ---------- Full file viewer ---------- */
+async function showFullFile(file){
+  const txt=await file.text();
+  const blob=new Blob([txt],{type:"text/plain"});
+  window.open(URL.createObjectURL(blob),'_blank');
+}
+
+/* ---------- Analyzer + event collector ---------- */
+async function streamAnalyze(files,startTime,endTime,searchTerm){
+  const out=document.getElementById('output'),prog=document.getElementById('progress');
+  out.innerHTML="";prog.textContent="";parsedEvents=[];
+  let total=0;
+  for(const [i,file] of files.entries()){
+    const details=document.createElement('details');
+    const summary=document.createElement('summary');
+    summary.textContent=`${file.name} (${i+1}/${files.length})`;
+    const block=document.createElement('div');block.className='log-block';
+    details.appendChild(summary);details.appendChild(block);
+
+    const reader=file.stream().getReader();const dec=new TextDecoder();let leftover="";let lines=[];
+    while(true){const {done,value}=await reader.read();if(done)break;
+      const txt=leftover+dec.decode(value,{stream:true});
+      const arr=txt.split(/\r?\n/);leftover=arr.pop()||"";lines.push(...arr);
+      await new Promise(r=>setTimeout(r,0));
+    }
+    if(leftover)lines.push(leftover);
+
+    // find matches
+    let hits=[];
+    if(searchTerm){
+      const key=searchTerm.toLowerCase();
+      for(let j=0;j<lines.length;j++)if(lines[j].toLowerCase().includes(key))hits.push(j);
+    }
+    let show=new Set();
+    if(searchTerm&&hits.length){
+      for(const h of hits)for(let j=Math.max(0,h-3);j<=Math.min(lines.length-1,h+3);j++)show.add(j);
+    }else if(!searchTerm){for(let j=0;j<lines.length;j++)show.add(j);}
+
+    let cnt=0; let lastTs=null;
+    for(const j of Array.from(show).sort((a,b)=>a-b)){
+      const line=lines[j]; if(!line.trim())continue;
+      let ts=parseTimestamp(line);
+      if(ts) lastTs=ts; else if(lastTs) ts=lastTs;  // reuse last known timestamp
+      if(startTime&&ts&&ts<startTime)continue;
+      if(endTime&&ts&&ts>endTime)continue;
+
+      block.insertAdjacentHTML('beforeend',
+        `<span class="line" title="Double-click to open full file">${ts?`<span class="timestamp">${ts.toISOString()}</span> `:''}${highlight(line)}</span>`);
+
+      parsedEvents.push({file:file.name,ts:ts||new Date(),line});
+      cnt++; total++;
+    }
+
+    if(!searchTerm||cnt>0)out.appendChild(details);
+    block.addEventListener('dblclick',()=>showFullFile(file));
+    prog.textContent=`Processed ${file.name} (${cnt} lines)`;
+  }
+  prog.textContent=searchTerm?`Done. ${total} lines with ±3 context.`:`Done. Displayed all lines.`;
+}
+
+document.getElementById('analyzeBtn').onclick=async()=>{
+  const sel=[...document.querySelectorAll('.fileCheckbox:checked')].map(cb=>filteredFiles[cb.dataset.idx]);
+  if(!sel.length)return alert("Select at least one file.");
+  const s=document.getElementById('startTime').value,e=document.getElementById('endTime').value;
+  const st=s?new Date(s):null,et=e?new Date(e):null;
+  const key=document.getElementById('searchBox').value.trim().toLowerCase();
+  await streamAnalyze(sel,st,et,key);
+};
+
+/* ---------- Timeline ---------- */
+let chartObj;
+document.getElementById('buildTimeline').onclick=()=>{
+  if(!parsedEvents.length){alert("Run Analyze first.");return;}
+  const kw=document.getElementById('timelineFilter').value.trim().toLowerCase();
+  const data=parsedEvents
+    .filter(e=>!kw||e.line.toLowerCase().includes(kw))
+    .sort((a,b)=>a.ts-b.ts);
+  if(!data.length){alert("No events matched.");return;}
+
+  const uniqueFiles=[...new Set(data.map(e=>e.file))];
+  const colors=["#00bfff","#ff5050","#66ff66","#ffd966","#ff66cc","#a366ff","#ffaa00","#00ffaa"];
+  const datasets=uniqueFiles.map((f,idx)=>({
+      label:f,
+      data:data.filter(e=>e.file===f).map(e=>({x:e.ts,y:f})),
+      backgroundColor:colors[idx%colors.length],
+      pointRadius:5
+  }));
+
+  const ctx=document.getElementById('timelineChart');
+  if(chartObj)chartObj.destroy();
+  chartObj=new Chart(ctx,{
+    type:'scatter',
+    data:{datasets},
+    options:{
+      scales:{
+        x:{type:'time',title:{text:'Time',display:true}},
+        y:{type:'category',title:{text:'Instance/File',display:true}}
+      },
+      plugins:{tooltip:{callbacks:{
+        label:ctx=>`${ctx.raw.y} → ${ctx.raw.x.toISOString()}`
+      }}}
+    }
+  });
+};
+</script>
+</body>
+</html>

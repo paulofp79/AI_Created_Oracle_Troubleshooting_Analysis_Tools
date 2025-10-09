@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CPU Chart from Zipped JSON</title>
+  <style>
+    :root {
+      --bg: #0f172a; /* slate-900 */
+      --card: #111827; /* gray-900 */
+      --muted: #9ca3af; /* gray-400 */
+      --text: #e5e7eb; /* gray-200 */
+      --accent: #38bdf8; /* sky-400 */
+      --border: #1f2937; /* gray-800 */
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(180deg, #0b1022, #0a0f1d 60%, #0a0e19);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header { padding: 24px 16px 8px; text-align: center; }
+    header h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: 0.2px; }
+    header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .wrap { max-width: 1100px; margin: 18px auto 36px; padding: 0 16px; }
+
+    .uploader {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .dropzone {
+      border: 1px dashed var(--muted);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .dropzone.dragover { border-color: var(--accent); color: var(--text); }
+
+    .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: center; }
+    .controls button, .controls label {
+      border: 1px solid var(--border);
+      background: #0b1223;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .controls button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .controls input[type="file"] { display: none; }
+    .file-label { display: inline-flex; align-items: center; gap: 8px; }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .chip { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); background: #0b1223; color: var(--muted); }
+
+    .card { margin-top: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); overflow: hidden; }
+    .card h3 { margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 16px; color: var(--text); }
+    .card .content { padding: 14px; }
+
+    canvas { width: 100%; height: 420px; }
+
+    .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; justify-content: center; }
+    .legend label { font-size: 12px; color: var(--muted); }
+
+    footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px 0 36px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CPU Chart from Zipped JSON</h1>
+    <p>Choose your <strong>.zip</strong> files (CPUManager_*.json inside), then click <em>Load Selected</em>. Everything runs entirely in your browser.</p>
+  </header>
+
+  <div class="wrap">
+    <section class="uploader">
+      <div id="dropzone" class="dropzone">
+        <div class="controls">
+          <label class="file-label">
+            <input id="fileInput" type="file" accept=".zip,application/zip" multiple />Choose .zip files
+          </label>
+          <button id="loadBtn" type="button" title="Load chosen files" disabled>Load Selected</button>
+          <button id="clearBtn" type="button" title="Clear data">Clear</button>
+          <button id="downloadBtn" type="button" title="Download combined CSV" disabled>Download CSV</button>
+        </div>
+        <div id="status" style="margin-top:8px; font-size:12px; color:var(--muted);"></div>
+        <div id="files" class="chips"></div>
+      </div>
+
+      <div class="card">
+        <h3>CPU Utilization Over Time</h3>
+        <div class="content">
+          <canvas id="chart"></canvas>
+          <div class="legend" id="seriesToggles"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Summary</h3>
+        <div class="content" id="summary">No data loaded yet.</div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Works offline after load; uses JSZip + Chart.js. If the time axis looks wrong, ensure the time adapter script loaded.
+  </footer>
+
+  <!-- JS libs: JSZip, Chart.js, and the required time adapter for Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+  <script>
+    // --- Utilities ---
+    const formatNumber = (n, d=2) => (typeof n === 'number' && isFinite(n)) ? n.toFixed(d) : '';
+
+    function normalizeJsonText(txt) {
+      // Fix '-.123' -> '-0.123'
+      txt = txt.replace(/-\.(?=\d)/g, '-0.');
+      // Fix '.123' when not preceded by a digit
+      txt = txt.replace(/(^|[^0-9])\.(\d+)/g, (m, p1, p2) => `${p1}0.${p2}`);
+      return txt;
+    }
+
+    function extractRowsFromObject(obj, source) {
+      const rows = [];
+      try {
+        const statNames = obj?.statNames;
+        const values = obj?.values;
+        if (!Array.isArray(statNames) || !Array.isArray(values)) return rows;
+        for (const v of values) {
+          if (!Array.isArray(v) || v.length !== statNames.length) continue;
+          const rec = Object.fromEntries(statNames.map((k, i) => [k, v[i]]));
+          let t = rec.timestamp;
+          // If timestamp is a string, coerce to number
+          if (typeof t === 'string') t = Number(t);
+          const ts = (typeof t === 'number' && t >= 1e12) ? new Date(t) : new Date(t * 1000);
+          rows.push({
+            timestamp: ts,
+            '%usr': +rec['%usr'], '%nice': +rec['%nice'], '%sys': +rec['%sys'], '%idle': +rec['%idle'],
+            '%wio': +rec['%wio'], '%irq': +rec['%irq'], '%softirq': +rec['%softirq'], '%steal': +rec['%steal'],
+            _source: source || ''
+          });
+        }
+      } catch (e) {
+        console.warn('extractRowsFromObject failed for', source, e);
+      }
+      return rows;
+    }
+
+    function rowsToCsv(rows) {
+      if (!rows.length) return '';
+      const cols = ['timestamp','%usr','%nice','%sys','%idle','%wio','%irq','%softirq','%steal','_source'];
+      const header = cols.join(',');
+      const lines = rows.map(r => [
+        new Date(r.timestamp).toISOString(),
+        r['%usr'], r['%nice'], r['%sys'], r['%idle'], r['%wio'], r['%irq'], r['%softirq'], r['%steal'],
+        '"' + String(r._source||'').replaceAll('"','""') + '"'
+      ].join(','));
+      return [header, ...lines].join('\n');
+    }
+
+    function summarize(rows) {
+      if (!rows.length) return { count: 0 };
+      const sum = { usr:0, sys:0, idle:0 };
+      for (const r of rows) { sum.usr += r['%usr']||0; sum.sys += r['%sys']||0; sum.idle += r['%idle']||0; }
+      const n = rows.length;
+      return { count: n, from: rows[0].timestamp, to: rows[n-1].timestamp, avgUsr: sum.usr/n, avgSys: sum.sys/n, avgIdle: sum.idle/n };
+    }
+
+    // --- State ---
+    let allRows = [];
+    let pendingFiles = [];
+    let chart;
+
+    function renderChart() {
+      const ctx = document.getElementById('chart');
+      const labels = allRows.map(r => r.timestamp);
+      const makeDS = (label, field, hidden=false) => ({ label, data: allRows.map(r => r[field]), borderWidth: 1.8, pointRadius: 0, tension: 0.15, hidden });
+      const datasets = [
+        makeDS('%usr','%usr'),
+        makeDS('%sys','%sys'),
+        makeDS('%nice','%nice', true),
+        makeDS('%irq','%irq', true),
+        makeDS('%softirq','%softirq', true),
+        makeDS('%steal','%steal', true),
+        makeDS('%idle','%idle', true)
+      ];
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)}%` } }
+          },
+          scales: {
+            x: { type: 'time', time: { tooltipFormat: 'yyyy-MM-dd HH:mm:ss' } },
+            y: { beginAtZero: true, title: { display: true, text: 'Percent' } }
+          }
+        }
+      });
+
+      const toggles = document.getElementById('seriesToggles');
+      toggles.innerHTML = '';
+      chart.data.datasets.forEach((ds, i) => {
+        const wrap = document.createElement('label');
+        wrap.innerHTML = `<input type="checkbox" ${ds.hidden? '': 'checked'} data-idx="${i}" /> ${ds.label}`;
+        const checkbox = wrap.querySelector('input');
+        checkbox.addEventListener('change', (e) => { chart.setDatasetVisibility(i, e.target.checked); chart.update(); });
+        toggles.appendChild(wrap);
+      });
+    }
+
+    function updateSummaryBox() {
+      const box = document.getElementById('summary');
+      if (!allRows.length) { box.textContent = 'No data loaded yet.'; return; }
+      const s = summarize(allRows);
+      box.innerHTML = `Loaded <strong>${s.count.toLocaleString()}</strong> rows from <strong>${new Date(s.from).toLocaleString()}</strong> to <strong>${new Date(s.to).toLocaleString()}</strong><br/>Avg %usr: <strong>${formatNumber(s.avgUsr)}</strong> • Avg %sys: <strong>${formatNumber(s.avgSys)}</strong> • Avg %idle: <strong>${formatNumber(s.avgIdle)}</strong>`;
+    }
+
+    function refreshUI() {
+      allRows.sort((a,b) => a.timestamp - b.timestamp);
+      renderChart();
+      updateSummaryBox();
+      document.getElementById('downloadBtn').disabled = allRows.length === 0;
+    }
+
+    async function processZipFiles(files) {
+      const filesDiv = document.getElementById('files');
+      const status = document.getElementById('status');
+      for (const f of files) {
+        if (!f.name.toLowerCase().endsWith('.zip')) continue;
+        const chip = document.createElement('span'); chip.className = 'chip'; chip.textContent = f.name; filesDiv.appendChild(chip);
+        status.textContent = `Reading ${f.name} ...`;
+        try {
+          const data = await f.arrayBuffer();
+          const zip = await JSZip.loadAsync(data);
+          const jsonFiles = Object.keys(zip.files).filter(k => k.toLowerCase().endsWith('.json'));
+          for (const name of jsonFiles) {
+            const file = zip.files[name];
+            const txt = await file.async('string');
+            const fixed = normalizeJsonText(txt);
+            try {
+              const obj = JSON.parse(fixed);
+              const rows = extractRowsFromObject(obj, `${f.name}/${name}`);
+              allRows.push(...rows);
+            } catch (e) {
+              console.warn('JSON parse failed for', name, e);
+            }
+          }
+        } catch (e) {
+          console.error('Failed processing zip', f.name, e);
+        }
+      }
+      status.textContent = '';
+      refreshUI();
+    }
+
+    // ---- Buttons & inputs ----
+    const fileInput = document.getElementById('fileInput');
+    const loadBtn = document.getElementById('loadBtn');
+
+    fileInput.addEventListener('change', (e) => {
+      pendingFiles = Array.from(e.target.files || []);
+      document.getElementById('files').innerHTML = '';
+      for (const f of pendingFiles) {
+        const chip = document.createElement('span'); chip.className = 'chip'; chip.textContent = f.name; document.getElementById('files').appendChild(chip);
+      }
+      loadBtn.disabled = pendingFiles.length === 0;
+    });
+
+    loadBtn.addEventListener('click', async () => {
+      if (!pendingFiles.length) return;
+      loadBtn.disabled = true;
+      await processZipFiles(pendingFiles);
+      pendingFiles = [];
+      fileInput.value = '';
+      loadBtn.disabled = true;
+    });
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      const csv = rowsToCsv(allRows);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'cpu_metrics_combined.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      allRows = []; pendingFiles = [];
+      document.getElementById('files').innerHTML = '';
+      document.getElementById('status').textContent = '';
+      document.getElementById('downloadBtn').disabled = true;
+      document.getElementById('loadBtn').disabled = true;
+      if (chart) { chart.destroy(); chart = null; }
+      document.getElementById('summary').textContent = 'No data loaded yet.';
+    });
+
+    // Drag & Drop support
+    const dz = document.getElementById('dropzone');
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault(); dz.classList.remove('dragover');
+      const items = Array.from(e.dataTransfer?.files || []);
+      if (!items.length) return;
+      pendingFiles = items;
+      document.getElementById('files').innerHTML = '';
+      for (const f of pendingFiles) {
+        const chip = document.createElement('span'); chip.className = 'chip'; chip.textContent = f.name; document.getElementById('files').appendChild(chip);
+      }
+      loadBtn.disabled = pendingFiles.length === 0;
+    });
+  </script>
+</body>
+</html>

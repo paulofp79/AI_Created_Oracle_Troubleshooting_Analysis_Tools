@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Exadata Troubleshooting Tools</title>
+  <style>
+    body {
+      background: #121212;
+      color: #f0f0f0;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      padding: 40px 20px 20px 20px;
+    }
+    h1 {
+      color: #00e5ff;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #bbb;
+      margin-bottom: 40px;
+    }
+    .tool-list {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .tool-card {
+      background: #1f1f1f;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 30px;
+      width: 280px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .tool-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
+    .tool-card h2 {
+      color: #48e1f9;
+      margin-bottom: 15px;
+      font-size: 1.4em;
+    }
+    .tool-card p {
+      font-size: 0.95em;
+      color: #ccc;
+      min-height: 40px;
+    }
+    .tool-card a {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: linear-gradient(90deg,#047cfb,#1adaa6);
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .tool-card a:hover {
+      background: linear-gradient(90deg,#1adaa6,#047cfb);
+    }
+    footer {
+      margin-top: 50px;
+      font-size: 0.85em;
+      color: #777;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Exadata Troubleshooting Tools</h1>
+    <p>Select a tool below to start analyzing your metrics.</p>
+  </header>
+
+  <main class="tool-list">
+    <div class="tool-card">
+      <h2>RDS Info Analysis</h2>
+      <p>Analyze RDS counters and congestion metrics from diagnostic files.</p>
+      <a href="RDS_Info_Analysis.html" target="_blank">Open Tool</a>
+    </div>
+
+    <div class="tool-card">
+      <h2>ExaCC Metrics Dashboard</h2>
+      <p>Interactive charts and alerts for Exadata Cell metrics.</p>
+      <a href="Exa_Cell_Metrics_Chart.html" target="_blank">Open Tool</a>
+    </div>
+
+    <div class="tool-card">
+      <h2>ECS Analysis Tool</h2>
+      <p>Parse and visualize ECStat metrics (Streamlit-based).</p>
+      <a href="http://localhost:8501" target="_blank">Open ECS Tool</a>
+      <p style="margin-top:10px; font-size:0.8em; color:#999; font-family:monospace;">
+      Run first:<br>
+      python3 -m streamlit run ECS_Analysis.py --server.port 8501 &
+      </p>
+    </div>
+    <!-- ✅ New VMStat Swap Analysis Tool -->
+  <div class="tool-card">
+    <h2>VMStat Swap Analysis</h2>
+    <p>Upload vmstat logs, visualize memory/CPU usage, swap activity, and get alerts on swapping.</p>
+    <a href="vmstat_multi_plot_with_swap_alerts_highlight.html" target="_blank">Open Tool</a>
+  </div>
+</main>
+
+
+  <footer>
+    © 2025 Paulo Portugal – XTeam
+  </footer>
+</body>
+</html>
