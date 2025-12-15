@@ -75,14 +75,16 @@
   <h2>🚀 Oracle Exadata Tools Dashboard – Paulo Portugal – XTeam</h2>
   <p>Select a tool below to open it in a new tab.</p>
 
-  <div class="tabs">
-    <div class="tab active" data-tab="rds">📊 RDS Info Analysis</div>
-    <div class="tab" data-tab="exacc">📈 ExaCC Metrics Dashboard</div>
-    <div class="tab" data-tab="ecs">⚙️ ECS Analysis Tool</div>
-    <div class="tab" data-tab="vmstat">💾 VMStat Swap Analysis</div>
-    <div class="tab" data-tab="cpu">🖥️ CPU Charts from ATP files</div><!-- ✅ NEW -->
-    <div class="tab" data-tab="alertlog">🧩 Alert Log Analyzer</div>
-  </div>
+<div class="tabs">
+  <div class="tab active" data-tab="rds">📊 RDS Info Analysis</div>
+  <div class="tab" data-tab="exacc">📈 ExaCC Metrics Dashboard</div>
+  <div class="tab" data-tab="ecs">⚙️ ECS Analysis Tool</div>
+  <div class="tab" data-tab="vmstat">💾 VMStat Swap Analysis</div>
+  <div class="tab" data-tab="cpu">🖥️ CPU Charts from ATP files</div>
+  <div class="tab" data-tab="alertlog">🧩 Alert Log Analyzer</div>
+  <div class="tab" data-tab="listener">🎧 Listener Log Analyzer</div>
+</div>
+
 
   <!-- RDS -->
   <div id="rds" class="tabContent active">
@@ -130,6 +132,17 @@
     <p>Analyze Oracle alert logs with filters, context search, and timeline visualization of key events.</p>
     <a class="tool-btn" href="alertlog_analyzer.html" target="_blank">Open Tool</a>
   </div>
+
+  <!-- Listener Log -->
+  <div id="listener" class="tabContent">
+    <h3>🎧 Listener Log Analyzer</h3>
+    <p>Analyze Oracle listener logs to visualize connection spikes and frequency per second.</p>
+    <a class="tool-btn" href="listener_log_analyzer.html" target="_blank">Open Tool</a>
+    <div class="command-hint" id="listenerHint">
+      Tip: upload multiple <strong>listener*.log</strong> files for aggregated analysis.
+    </div>
+  </div>
+
 
   <footer>
     © 2025 Paulo Portugal – Oracle XTeam

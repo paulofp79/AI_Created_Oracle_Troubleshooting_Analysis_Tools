@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Listener Log Analyzer - Oracle X-Team</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #progressContainer{width:100%;background:#2a2a2a;border-radius:10px;height:10px;margin-top:12px;overflow:hidden;}
+    #progressBar{width:0;height:10px;background:#00b4d8;transition:width .15s linear;}
+  </style>
+</head>
+
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col">
+  <header class="p-6 bg-gray-800 shadow-md flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-blue-400">Listener Log Analyzer</h1>
+    <a href="index.html" class="text-sm text-gray-400 hover:text-blue-300">← Back to Main Dashboard</a>
+  </header>
+
+  <main class="flex-1 p-6">
+    <section class="max-w-4xl mx-auto bg-gray-800 p-6 rounded-2xl shadow-lg">
+      <h2 class="text-xl font-semibold mb-4 text-blue-300">Upload Listener Log Files</h2>
+
+      <input type="file" id="logFiles" multiple accept=".log"
+             class="block w-full text-sm mb-4 text-gray-300 bg-gray-700 border border-gray-600 rounded p-2" />
+
+      <!-- Aggregation selectors -->
+      <div class="flex items-center gap-4 mb-4 flex-wrap">
+        <label class="font-semibold text-gray-300">Time aggregation:</label>
+        <select id="timeAgg"
+                class="bg-gray-700 text-gray-200 border border-gray-600 rounded px-3 py-1">
+          <option value="hour" selected>By Hour</option>
+          <option value="minute">By Minute</option>
+          <option value="none">None (total)</option>
+        </select>
+
+        <label class="font-semibold text-gray-300">Group by Service Name:</label>
+        <input type="checkbox" id="svcToggle" class="w-5 h-5 accent-blue-500">
+      </div>
+
+      <div class="flex gap-3 mb-4">
+        <button id="analyzeBtn"
+          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white font-semibold">Analyze Logs</button>
+        <button id="downloadBtn"
+          class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white font-semibold hidden">Download CSV</button>
+      </div>
+
+      <div id="message" class="mt-2 text-gray-400 text-sm">Ready.</div>
+      <div id="progressContainer" class="hidden"><div id="progressBar"></div></div>
+    </section>
+
+    <section class="max-w-6xl mx-auto mt-10">
+      <canvas id="connectionChart"
+        class="w-full h-[500px] bg-gray-800 p-4 rounded-2xl shadow"></canvas>
+    </section>
+  </main>
+
+  <footer class="p-4 text-center text-gray-500 text-sm bg-gray-800 mt-10">
+    © 2025 Paulo Portugal – Oracle X-Team
+  </footer>
+
+  <script>
+    const analyzeBtn=document.getElementById('analyzeBtn');
+    const downloadBtn=document.getElementById('downloadBtn');
+    const message=document.getElementById('message');
+    const progressContainer=document.getElementById('progressContainer');
+    const progressBar=document.getElementById('progressBar');
+    const chartCanvas=document.getElementById('connectionChart');
+    const timeAgg=document.getElementById('timeAgg');
+    const svcToggle=document.getElementById('svcToggle');
+    let chartInstance=null, parsedResults={}, timeline=[];
+
+    analyzeBtn.addEventListener('click',async()=>{
+      const files=document.getElementById('logFiles').files;
+      if(!files.length){message.textContent="⚠️ Please upload at least one listener log file.";return;}
+      progressContainer.classList.remove('hidden');
+      progressBar.style.width='0%';
+      message.textContent="⏳ Reading files...";
+
+      parsedResults={};
+      timeline=[];
+      let processedFiles=0;
+
+      for(const f of files){
+        const text=await f.text();
+        const lines=text.split(/\r?\n/);
+        if(!lines.length) continue;
+
+        const worker=new Worker('listener_worker.js');
+        worker.postMessage({
+          lines,
+          mode: timeAgg.value,
+          groupByService: svcToggle.checked
+        });
+        worker.onmessage=e=>{
+          const {type,data,progress}=e.data;
+          if(type==='progress'){
+            const overallPct=Math.min(100,((processedFiles/files.length)*100)+(progress/files.length));
+            progressBar.style.width=overallPct+'%';
+            message.textContent=`⏳ Processing ${f.name} (${progress.toFixed(1)}%)`;
+          }else if(type==='done'){
+            parsedResults[f.name]=data.counts;
+            timeline=Array.from(new Set([...timeline, ...data.keys]));
+            processedFiles++;
+            if(processedFiles===files.length){
+              progressBar.style.width='100%';
+              progressContainer.classList.add('hidden');
+              buildChart(parsedResults, timeline, timeAgg.value, svcToggle.checked);
+            }
+          }
+        };
+      }
+    });
+
+    function buildChart(results, isoTimeline, timeMode, groupSvc){
+      if(chartInstance){chartInstance.destroy();}
+      const palette=['#00b4d8','#ffb703','#90be6d','#f94144','#577590','#f3722c','#4cc9f0','#e07a5f','#3a86ff','#8338ec'];
+      const datasets=[];
+      let ci=0;
+      const labels=isoTimeline.sort((a,b)=>new Date(a.replace(' ','T'))-new Date(b.replace(' ','T')));
+
+      if(groupSvc){
+        // Each service (from all files) becomes a dataset
+        const allServices=new Set();
+        for(const data of Object.values(results)){
+          Object.keys(data).forEach(k=>{
+            const svc=k.split('|')[1]; if(svc) allServices.add(svc);
+          });
+        }
+        const serviceList=Array.from(allServices).sort();
+
+        for(const svc of serviceList){
+          const values=[];
+          for(const label of labels){
+            const keyBase=label.split(' ')[0]+' '+label.split(' ')[1];
+            let sum=0;
+            for(const fileData of Object.values(results)){
+              const val=fileData[`${keyBase}|${svc}`]||0;
+              sum+=val;
+            }
+            values.push(sum);
+          }
+          datasets.push({
+            label:svc,
+            data:values,
+            borderColor:palette[ci%palette.length],
+            backgroundColor:palette[ci%palette.length]+'55',
+            borderWidth:2,
+            tension:0.25,
+            fill:false
+          });
+          ci++;
+        }
+      } else {
+        // Normal time aggregation per file
+        for(const [fname,counts] of Object.entries(results)){
+          const values=labels.map(k=>counts[k]||0);
+          datasets.push({
+            label:fname,
+            data:values,
+            borderColor:palette[ci%palette.length],
+            borderWidth:2,
+            tension:0.25,
+            fill:false
+          });
+          ci++;
+        }
+      }
+
+      chartInstance=new Chart(chartCanvas,{
+        type:'line',
+        data:{labels,datasets},
+        options:{
+          responsive:true,
+          interaction:{mode:'index',intersect:false},
+          scales:{
+            x:{ticks:{color:'#ccc',maxRotation:45,minRotation:45},grid:{color:'#333'}},
+            y:{ticks:{color:'#ccc'},grid:{color:'#333'},beginAtZero:true,
+               title:{display:true,text:'Connections',color:'#ccc'}}
+          },
+		plugins:{
+  legend:{
+    labels:{color:'#bbb'},
+    onClick: (e, legendItem, legend) => {
+      const chart = legend.chart;
+      const index = legendItem.datasetIndex;
+      const ci = chart;
+      const meta = ci.getDatasetMeta(index);
+      // Toggle visibility
+      meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+      ci.update();
+    }
+  },
+  title:{
+    display:true,
+    text: groupSvc
+      ? `Connections per ${timeMode} by Service Name`
+      : `Database Connections per ${timeMode}`,
+    color:'#00b4d8',
+    font:{size:18}
+  }
+}
+
+        }
+      });
+
+      message.textContent=`✅ Analysis complete (${Object.keys(results).length} files, aggregated by ${timeMode}${groupSvc?' and Service':''}).`;
+      downloadBtn.classList.remove('hidden');
+      downloadBtn.onclick=()=>{
+        let csv="file,key,count\n";
+        for(const [fname,counts] of Object.entries(results)){
+          for(const [k,v] of Object.entries(counts)){
+            csv+=`${fname},${k},${v}\n`;
+          }
+        }
+        const blob=new Blob([csv],{type:'text/csv'});
+        const link=document.createElement('a');
+        link.href=URL.createObjectURL(blob);
+        link.download=`listener_connections_${timeMode}${groupSvc?'_service':''}.csv`;
+        link.click();
+      };
+    }
+  </script>
+</body>
+</html>
+

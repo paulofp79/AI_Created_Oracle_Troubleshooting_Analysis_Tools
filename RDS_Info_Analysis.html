@@ -22,26 +22,22 @@
       color: #48e1f9;
       text-align: center;
       font-size: 2.4rem;
-      font-family: 'Roboto', Arial, sans-serif;
       font-weight: 900;
-      letter-spacing: 1.5px;
       margin-top: 38px;
       margin-bottom: 8px;
       text-shadow: 0 2px 6px #132d4265;
     }
     h3 {
       color: #7bc8f8;
-      letter-spacing: 1px;
       font-size: 2rem;
-      margin-top: 0;
       margin-bottom: 30px;
       font-weight: 700;
       text-align: center;
     }
     .container {
-      max-width: 780px;
-      margin: 32px auto 0 auto;
-      padding: 40px 24px 32px 24px;
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 40px 24px;
       background: #23243a;
       border-radius: 18px;
       box-shadow: 0 4px 40px #0e0f1f77;
@@ -51,7 +47,6 @@
       display: flex;
       background: #131325;
       border-radius: 18px 18px 0 0;
-      box-shadow: 0 1px 8px #0b0b1b55;
       margin-bottom: 0;
       overflow: hidden;
     }
@@ -62,13 +57,10 @@
       border: none;
       border-right: 1px solid #23243a;
       color: #b2dffc;
-      font-family: inherit;
       font-size: 1.08em;
       font-weight: 700;
-      letter-spacing: 1px;
       cursor: pointer;
       transition: background 0.18s, color 0.18s;
-      outline: none;
     }
     .tab-nav button:last-child { border-right: none; }
     .tab-nav button.active {
@@ -83,11 +75,6 @@
     }
     .tab-content.active {
       display: block;
-      animation: fadeIn 0.33s;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(14px);}
-      to   {opacity: 1; transform: none;}
     }
     label {
       display: block;
@@ -95,7 +82,6 @@
       margin-bottom: 0.7em;
       font-size: 1.04em;
       color: #bfcbe7;
-      font-weight: 400;
     }
     input[type="file"] {
       background: #171726;
@@ -105,8 +91,6 @@
       border: none;
       width: 100%;
       margin-bottom: 12px;
-      font-family: inherit;
-      font-size: 1em;
     }
     select {
       background: #1e2433;
@@ -114,46 +98,51 @@
       border: 1px solid #343a50;
       border-radius: 10px;
       padding: 10px;
-      font-family: inherit;
-      font-size: 1em;
       margin-bottom: 18px;
       width: 100%;
       min-height: 100px;
-      outline: none;
-      box-shadow: 0 2px 12px #0001;
-      resize: vertical;
     }
-    #updateBtn {
+    #updateBtn,
+    .btn-secondary {
       background: linear-gradient(90deg,#047cfb,#1adaa6);
       color: #fff;
       border: none;
       border-radius: 10px;
       padding: 14px 32px;
       font-size: 1.09em;
-      font-family: inherit;
       font-weight: bold;
-      margin-top: 24px;
-      margin-bottom: 32px;
       cursor: pointer;
       box-shadow: 0 2px 12px #0ed8fc24;
       transition: background 0.21s;
-      display: block;
-      width: 100%;
-      letter-spacing: 0.5px;
     }
-    #updateBtn:hover, #updateBtn:focus {
+    #updateBtn {
+      width: 100%;
+      margin-top: 24px;
+      margin-bottom: 32px;
+    }
+    .btn-secondary {
+      width: auto;
+      padding: 10px 24px;
+      font-size: 0.95em;
+      margin-left: 5px;
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+    #updateBtn:hover, #updateBtn:focus,
+    .btn-secondary:hover, .btn-secondary:focus {
       background: linear-gradient(90deg,#1adaa6,#047cfb);
       color: #f6fcff;
       outline: none;
     }
-    #myChart {
+    canvas {
       display: block;
-      margin: 35px auto 24px auto;
+      margin: 35px auto;
       background: #13121b;
       border-radius: 17px;
       box-shadow: 0 2px 20px #283a6340;
       border: 1.5px solid #222843;
-      max-width: 100%;
+      width: 100%;
+      max-height: 400px;
     }
     #result {
       font-family: "Roboto Mono", monospace;
@@ -162,19 +151,18 @@
       background: #212c40;
       border-radius: 10px;
       padding: 17px 19px;
-      margin: 28px 0 12px 0;
-      word-break: break-all;
-      box-shadow: 0 1px 5px #234;
+      margin-top: 28px;
       border-left: 4px solid #1adaa6;
+      word-break: break-word;
     }
     .rds-congestion-list {
       background: #23243a;
       border-radius: 14px;
-      box-shadow: 0 2px 10px #143;
       padding: 29px 24px;
-      margin: 24px auto;
       max-width: 500px;
+      margin: 0 auto 24px auto;
       color: #ffe066;
+      box-shadow: 0 2px 10px #143;
     }
     .rds-congestion-list h4 {
       margin-top: 0;
@@ -182,7 +170,6 @@
       color: #81e6f0;
       font-weight: 700;
       font-size: 1.22em;
-      letter-spacing: 0.7px;
     }
     .rds-congestion-list ul {
       list-style: none;
@@ -194,34 +181,110 @@
       border-radius: 6px;
       padding: 11px 16px;
       font-family: "Roboto Mono", monospace;
-      font-size: 1.1em;
+      font-size: 1.0em;
       color: #ffe066;
       border-left: 3px solid #1adaa6;
       box-shadow: 0 1px 8px #093c4c13;
-      letter-spacing: 0.1px;
+    }
+    .resping-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 12px;
+      color: #c7d9ff;
+      font-size: 0.95em;
+    }
+    .resping-controls input[type="number"] {
+      background: #1e2433;
+      color: #eee;
+      border: 1px solid #343a50;
+      border-radius: 8px;
+      padding: 7px 10px;
+      width: 100px;
+      outline: none;
+      box-shadow: 0 2px 8px #0002;
+    }
+    .view-mode-toggle {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+      align-items: center;
+    }
+    .view-mode-toggle label {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      padding: 8px 16px;
+      background: #1e2433;
+      border-radius: 8px;
+      border: 1px solid #343a50;
+      transition: all 0.2s;
+    }
+    .view-mode-toggle input[type="radio"] {
+      accent-color: #1adaa6;
+    }
+    .view-mode-toggle label:has(input:checked) {
+      background: linear-gradient(90deg,#047cfb55,#1adaa655);
+      border-color: #1adaa6;
+    }
+    .mode-hint {
+      font-size: 0.85em;
+      color: #8899bb;
+      margin-bottom: 18px;
+      padding: 10px 14px;
+      background: #1a1b2e;
+      border-radius: 8px;
+      border-left: 3px solid #047cfb;
     }
     @media (max-width: 890px) {
       .container { padding: 24px 8px; }
-      #myChart { width: 100vw; }
+      canvas { width: 100vw; }
+      .resping-controls { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
+
   <h1>RDS Analysis - Paulo Portugal - XTeam</h1>
   <div class="container">
+
     <div class="tab-nav">
       <button class="active" onclick="showTab(0)">Counter Analytics</button>
-      <button onclick="showTab(1)">Key RDS Congestion Counters</button>
+      <button onclick="showTab(1)">Key RDS Counters</button>
+      <button onclick="showTab(2)">rds-ping Analysis</button>
     </div>
+
+    <!-- TAB 0: Counter Analytics -->
     <div class="tab-content active" id="tab-0">
-      <h3>Counter Analytics &#x2728;</h3>
+      <h3>Counter Analytics</h3>
       <input type="file" id="fileInput" multiple accept=".dat,.dat.xz,.txt,.xz" />
+      
+      <div class="view-mode-toggle">
+        <span style="color:#bfcbe7; margin-right: 10px;">View Mode:</span>
+        <label>
+          <input type="radio" name="viewMode" value="delta" checked>
+          Delta (Rate of Change)
+        </label>
+        <label>
+          <input type="radio" name="viewMode" value="raw">
+          Raw Values
+        </label>
+      </div>
+      <div class="mode-hint" id="modeHint">
+        <strong>Delta mode:</strong> Shows the change between each sample interval. This is the recommended view for cumulative counters - values should always be ≥ 0.
+      </div>
+      
       <label for="counterSelect">Select counter(s) to plot (Ctrl/Command + Click to multi-select):</label>
       <select id="counterSelect" multiple></select>
       <button id="updateBtn">Update Chart</button>
-      <canvas id="myChart" width="600" height="300"></canvas>
-      <div id="result" style="white-space: pre-line"></div>
+      <canvas id="myChart"></canvas>
+      <div id="result"></div>
     </div>
+
+    <!-- TAB 1: Key RDS Counters -->
     <div class="tab-content" id="tab-1">
       <h3>Key RDS Congestion Counters</h3>
       <div class="rds-congestion-list">
@@ -237,174 +300,492 @@
         </ul>
       </div>
     </div>
+
+    <!-- TAB 2: rds-ping Analysis -->
+    <div class="tab-content" id="tab-2">
+      <h3>rds-ping Analysis</h3>
+
+      <div class="rds-congestion-list">
+        <h4>Top 5 Highest rds-ping Spikes</h4>
+        <div class="resping-controls">
+          <label for="resPingThreshold">Spike threshold (&gt; usec):</label>
+          <input type="number" id="resPingThreshold" value="1000">
+          <button class="btn-secondary" id="resPingUpdateBtn">Analyze</button>
+          <button class="btn-secondary" id="resPingExportBtn">Export CSV</button>
+        </div>
+        <ul id="resPingList"></ul>
+      </div>
+
+      <canvas id="resPingChart"></canvas>
+    </div>
+
   </div>
-  <script>
-    // Tab logic
-    function showTab(index) {
-      document.querySelectorAll('.tab-nav button').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
-      });
-      document.querySelectorAll('.tab-content').forEach((el, i) => {
-        el.classList.toggle('active', i === index);
-      });
+
+<script>
+  // ---------- Tab logic ----------
+  function showTab(i) {
+    document.querySelectorAll('.tab-nav button').forEach((btn, idx) =>
+      btn.classList.toggle('active', idx === i)
+    );
+    document.querySelectorAll('.tab-content').forEach((tab, idx) =>
+      tab.classList.toggle('active', idx === i)
+    );
+  }
+
+  // ---------- Global data ----------
+  let unifiedText = "";
+  let countersToSeries = {};      // counterName -> [values...]
+  let resPingValues = [];        // [{ts, value}, ...]
+  let sampleTimestamps = [];     // ['YYYY-MM-DD HH:MM:SS', ...] one per sample
+  let chart = null;
+  let resPingChart = null;
+
+  // ---------- View mode toggle ----------
+  document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      updateModeHint();
+      plotCounters();
+    });
+  });
+
+  function getViewMode() {
+    const checked = document.querySelector('input[name="viewMode"]:checked');
+    return checked ? checked.value : 'delta';
+  }
+
+  function updateModeHint() {
+    const hint = document.getElementById('modeHint');
+    if (getViewMode() === 'delta') {
+      hint.innerHTML = '<strong>Delta mode:</strong> Shows the change between each sample interval. This is the recommended view for cumulative counters - values should always be ≥ 0.';
+    } else {
+      hint.innerHTML = '<strong>Raw mode:</strong> Shows the actual counter values as reported. These are cumulative totals that increase over time.';
+    }
+  }
+
+  // ---------- File input ----------
+  document.getElementById('fileInput').addEventListener('change', async e => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    // Sort files by date in filename (e.g., 2025_10_30_07_29_22_RDSinfoExaWatcher_...)
+    const filenameRegex = /^(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_/;
+    
+    const sortedFiles = files.slice().sort((a, b) => {
+      const matchA = filenameRegex.exec(a.name);
+      const matchB = filenameRegex.exec(b.name);
+      
+      if (!matchA && !matchB) return 0;
+      if (!matchA) return 1;
+      if (!matchB) return -1;
+      
+      // Create comparable date strings: YYYY-MM-DD HH:MM:SS
+      const dateA = `${matchA[1]}-${matchA[2]}-${matchA[3]} ${matchA[4]}:${matchA[5]}:${matchA[6]}`;
+      const dateB = `${matchB[1]}-${matchB[2]}-${matchB[3]} ${matchB[4]}:${matchB[5]}:${matchB[6]}`;
+      
+      return dateA.localeCompare(dateB);
+    });
+
+    console.log("Files sorted by filename date:", sortedFiles.map(f => f.name));
+
+    // Read files in sorted order
+    const contents = await Promise.all(sortedFiles.map(readFile));
+    
+    unifiedText = contents.join("\n");
+    
+    extractCountersAndTimestamps();
+    populateCounterDropdown();
+    if (Object.keys(countersToSeries).length > 0) {
+      plotCounters();
+    }
+    analyzeRdsPing();
+  });
+
+  function readFile(file) {
+    return new Promise(resolve => {
+      const r = new FileReader();
+      if (file.name.endsWith(".xz")) {
+        r.onload = evt => {
+          try {
+            const uint8 = new Uint8Array(evt.target.result);
+            const dec = fflate.xzDecompress(uint8);
+            resolve(new TextDecoder().decode(dec));
+          } catch (err) {
+            alert("Could not decompress " + file.name + ": " + err.message);
+            resolve("");
+          }
+        };
+        r.readAsArrayBuffer(file);
+      } else {
+        r.onload = evt => resolve(evt.target.result);
+        r.readAsText(file);
+      }
+    });
+  }
+
+  // ---------- Helper: format timestamp to A (YYYY-MM-DD HH:MM:SS) ----------
+  function formatTimestampA(raw) {
+    // raw like "10/30/2025 09:09:56"
+    const parts = raw.split(" ");
+    if (parts.length !== 2) return raw;
+    const [mdy, time] = parts;
+    const dparts = mdy.split("/");
+    if (dparts.length !== 3) return raw;
+    const [mm, dd, yyyy] = dparts;
+    const MM = mm.padStart(2, "0");
+    const DD = dd.padStart(2, "0");
+    return `${yyyy}-${MM}-${DD} ${time}`;
+  }
+
+  // ---------- Parsing counters + timestamps + rds-ping ----------
+  function extractCountersAndTimestamps() {
+    countersToSeries = {};
+    resPingValues = [];
+    sampleTimestamps = [];
+
+    const lines = unifiedText.split(/\r?\n/);
+    let currentTs = null;
+
+    const tsRegex = /zzz\s*<([^>]+)>/;                  // zzz <10/30/2025 09:09:56>
+    const counterRegex = /^\s*([a-zA-Z0-9_\-]+)\s+(\d+)$/;
+    const rdsPingRegex = /rds-ping.*?\b(\d+):\s+(\d+)\s+usec/;
+
+    for (let line of lines) {
+      // A) Sample timestamp
+      const tsMatch = tsRegex.exec(line);
+      if (tsMatch) {
+        const rawTs = tsMatch[1].trim(); // e.g. "10/30/2025 09:09:56"
+        const formattedTs = formatTimestampA(rawTs);
+        currentTs = formattedTs;
+        sampleTimestamps.push(formattedTs);
+        continue;
+      }
+
+      // Ignore data before first zzz timestamp
+      if (!currentTs) continue;
+
+      // B) rds-ping line
+      const rp = rdsPingRegex.exec(line);
+      if (rp) {
+        const usec = parseInt(rp[2], 10);
+        resPingValues.push({ ts: currentTs, value: usec });
+        continue;
+      }
+
+      // C) Counter line
+      const c = counterRegex.exec(line);
+      if (c) {
+        const name = c[1];
+        const val = parseInt(c[2], 10);
+        if (!(name in countersToSeries)) countersToSeries[name] = [];
+        countersToSeries[name].push(val);
+      }
     }
 
-    // Chart logic
-    let chart = null;
-    let unifiedText = '';
-    let allCounters = [];
-    let countersToSeries = {};
+    console.log("Sample timestamps:", sampleTimestamps);
+    console.log("rds-ping values:", resPingValues);
+  }
 
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-      const files = Array.from(e.target.files);
-      if (!files.length) return;
+  // ---------- Helper: Calculate deltas from raw values ----------
+  function calculateDeltas(values) {
+    if (!values || values.length < 2) return [];
+    const deltas = [];
+    for (let i = 1; i < values.length; i++) {
+      let delta = values[i] - values[i - 1];
+      // Handle counter wrap-around (assuming 64-bit counters)
+      // If delta is negative, the counter likely wrapped or was reset
+      // In this case, we use the current value as the delta (assuming reset to 0)
+      if (delta < 0) {
+        // Counter wrapped or reset - use current value as the increment from 0
+        // Or set to 0 if we want to ignore resets
+        delta = Math.max(0, values[i]);
+      }
+      deltas.push(delta);
+    }
+    return deltas;
+  }
 
-      Promise.all(files.map(file =>
-        new Promise(resolve => {
-          // If file is .xz, decompress using fflate
-          if (file.name.endsWith('.xz')) {
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-              try {
-                const uint8 = new Uint8Array(evt.target.result);
-                // Use fflate: xzDecompress returns Uint8Array
-                const decompressed = fflate.xzDecompress(uint8);
-                const text = new TextDecoder().decode(decompressed);
-                resolve(text);
-              } catch (err) {
-                alert("Could not decompress " + file.name + ": " + err.message);
-                resolve(""); // skip broken/unreadable files
-              }
-            };
-            reader.readAsArrayBuffer(file);
-          } else {
-            const reader = new FileReader();
-            reader.onload = evt => resolve(evt.target.result);
-            reader.readAsText(file);
-          }
-        })
-      )).then(contents => {
-        unifiedText = contents.join('\n');
-        extractCounters();
-        populateCounterDropdown();
-        if (allCounters.length > 0) {
-          document.getElementById('counterSelect').selectedIndex = 0;
-          plotCounters();
-        }
+  // ---------- Counter Analytics (TAB 0) ----------
+  function populateCounterDropdown() {
+    const select = document.getElementById("counterSelect");
+    select.innerHTML = "";
+    Object.keys(countersToSeries).sort().forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c;
+      opt.textContent = c;
+      select.appendChild(opt);
+    });
+  }
+
+  document.getElementById("updateBtn").addEventListener("click", plotCounters);
+
+  function plotCounters() {
+    const selected = Array.from(document.getElementById("counterSelect").selectedOptions).map(o => o.value);
+    const resultDiv = document.getElementById("result");
+    const viewMode = getViewMode();
+
+    if (!selected.length) {
+      resultDiv.textContent = "Please select at least one counter.";
+      if (chart) chart.destroy();
+      return;
+    }
+
+    const colors = [
+      '#7bc8f8', '#f25f5c', '#70c1b3', '#ffe066', '#bdb2ff', '#247ba0',
+      '#ffb6b9', '#b5ead7', '#ffdac1', '#caff70', '#fea82f', '#2ec4b6'
+    ];
+
+    const datasets = [];
+    let output = '';
+    let maxLen = 0;
+
+    selected.forEach((counter, idx) => {
+      const rawValues = countersToSeries[counter];
+      if (!rawValues || rawValues.length < 2) {
+        output += `\n${counter}: Not enough data for statistics.\n`;
+        return;
+      }
+
+      // Calculate statistics from raw values
+      const first = rawValues[0];
+      const last = rawValues[rawValues.length - 1];
+      const diff = last - first;
+      const perInterval = diff / (rawValues.length - 1);
+      const percentIncrease = first === 0
+        ? 'Initial value is 0, percentage increase cannot be computed.'
+        : `${((diff / first) * 100).toFixed(2)}%`;
+
+      // Calculate deltas for analysis
+      const deltas = calculateDeltas(rawValues);
+      const avgDelta = deltas.length > 0 ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
+      const maxDelta = deltas.length > 0 ? Math.max(...deltas) : 0;
+      const minDelta = deltas.length > 0 ? Math.min(...deltas) : 0;
+
+      // Choose which values to plot based on view mode
+      let plotValues;
+      if (viewMode === 'delta') {
+        plotValues = deltas;
+      } else {
+        plotValues = rawValues;
+      }
+
+      maxLen = Math.max(maxLen, plotValues.length);
+
+      output +=
+        `<b>${counter}</b><br>
+Total samples: <span style="color:#ffeead">${rawValues.length}</span><br>
+First value:   <span style="color:#b2dffc">${first.toLocaleString()}</span><br>
+Last value:    <span style="color:#fad7ac">${last.toLocaleString()}</span><br>
+Total increase: <span style="color:#b5ead7">${diff.toLocaleString()}</span><br>
+Avg per interval: <span style="color:#ffe066">${avgDelta.toFixed(2)}</span><br>
+Max delta: <span style="color:#ffb6b9">${maxDelta.toLocaleString()}</span><br>
+Min delta: <span style="color:#70c1b3">${minDelta.toLocaleString()}</span><br>
+Percent increase: <span style="color:#bdb2ff">${percentIncrease}</span><br><br>`;
+
+      datasets.push({
+        label: counter + (viewMode === 'delta' ? ' (Δ)' : ''),
+        data: plotValues,
+        borderColor: colors[idx % colors.length],
+        backgroundColor: colors[idx % colors.length] + '44',
+        borderWidth: 3,
+        pointRadius: 3,
+        tension: 0.2
       });
     });
 
-    function extractCounters() {
-      countersToSeries = {};
-      // Match all 'name value' lines, allowing for leading spaces
-      const re = /^\s*([a-zA-Z0-9_]+)\s+(\d+)$/gm;
-      let match;
-      while ((match = re.exec(unifiedText)) !== null) {
-        const name = match[1];
-        const value = parseInt(match[2], 10);
-        if (!(name in countersToSeries)) countersToSeries[name] = [];
-        countersToSeries[name].push(value);
-      }
-      allCounters = Object.keys(countersToSeries).sort();
+    // X-axis labels: use timestamps
+    // For delta mode, we have one fewer point, so we skip the first timestamp
+    let labels;
+    if (viewMode === 'delta') {
+      labels = sampleTimestamps.slice(1, maxLen + 1);
+    } else {
+      labels = sampleTimestamps.slice(0, maxLen);
     }
 
-    function populateCounterDropdown() {
-      const select = document.getElementById('counterSelect');
-      select.innerHTML = '';
-      allCounters.forEach(counter => {
-        const opt = document.createElement('option');
-        opt.value = counter;
-        opt.textContent = counter;
-        select.appendChild(opt);
-      });
-    }
-
-    document.getElementById('updateBtn').addEventListener('click', plotCounters);
-
-    function plotCounters() {
-      const select = document.getElementById('counterSelect');
-      const selected = Array.from(select.selectedOptions).map(opt => opt.value);
-      if (!selected.length) {
-        document.getElementById('result').textContent = 'Please select at least one counter.';
-        if (chart) chart.destroy();
-        return;
-      }
-      const colors = [
-        '#7bc8f8', '#f25f5c', '#70c1b3', '#ffe066', '#bdb2ff', '#247ba0',
-        '#ffb6b9', '#b5ead7', '#ffdac1', '#caff70', '#fea82f', '#2ec4b6'
-      ];
-      const datasets = [];
-      let output = '';
-      let maxLength = 0;
-
-      selected.forEach((counter, idx) => {
-        const values = countersToSeries[counter];
-        if (!values || values.length < 2) {
-          output += `\n${counter}: Not enough data for statistics.\n`;
-          return;
-        }
-        maxLength = Math.max(maxLength, values.length);
-        const first = values[0];
-        const last = values[values.length - 1];
-        const diff = last - first;
-        const perLineIncrease = diff / (values.length - 1);
-        let percentIncrease = first === 0
-            ? 'Initial value is 0, percentage increase cannot be computed.'
-            : `${((diff / first) * 100).toFixed(2)}%`;
-        output +=
-          `<b>${counter}</b>
-  Total samples: <span style="color:#ffeead">${values.length}</span>
-  First value:   <span style="color:#b2dffc">${first}</span>
-  Last value:    <span style="color:#fad7ac">${last}</span>
-  Total increase: <span style="color:#b5ead7">${diff}</span>
-  Increase per interval: <span style="color:#ffe066">${perLineIncrease.toFixed(2)}</span>
-  Percent increase: <span style="color:#ffb6b9">${percentIncrease}</span>
-\n`;
-        datasets.push({
-          label: counter,
-          data: values,
-          borderColor: colors[idx % colors.length],
-          backgroundColor: colors[idx % colors.length] + '44',
-          fill: false,
-          pointRadius: 4,
-          borderWidth: 3,
-          tension: 0.18
-        });
-      });
-
-      const labels = Array.from({length: maxLength}, (_, i) => `Sample ${i + 1}`);
-
-      const ctx = document.getElementById('myChart').getContext('2d');
-      if (chart) chart.destroy();
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets },
-        options: {
-          plugins: {
-            legend: {
-              labels: {
-                color: "#fff",
-                font: { size: 15, family: "'Roboto', Arial, sans-serif" },
-                padding: 14
-              }
+    const ctx = document.getElementById("myChart").getContext("2d");
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        plugins: {
+          legend: {
+            labels: {
+              color: "#fff",
+              font: { size: 14, family: "'Roboto', Arial, sans-serif" }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color:"#c0d1f7", maxRotation: 60, minRotation: 45 },
+            grid: { color:"#35374c44" },
+            title: {
+              display: true,
+              text: 'Sample Time',
+              color:"#e1edf7",
+              font: { weight: 'bold' }
             }
           },
-          scales: {
-            x: {
-              ticks: { color: "#c0d1f7" },
-              grid: { color: "#35374c44" },
-              title: { display: true, text: 'Sample/Interval', color: "#e1edf7", font: { weight: 'bold' } }
-            },
-            y: {
-              ticks: { color: "#d8e3fa" },
-              grid: { color: "#35374c44" },
-              title: { display: true, text: 'Value', color: "#e1edf7", font: { weight: 'bold' } }
+          y: {
+            ticks: { color:"#d8e3fa" },
+            grid: { color:"#35374c44" },
+            beginAtZero: viewMode === 'delta', // Start at 0 for delta mode
+            title: {
+              display: true,
+              text: viewMode === 'delta' ? 'Delta (Change per Interval)' : 'Value',
+              color:"#e1edf7",
+              font: { weight: 'bold' }
             }
           }
         }
-      });
-      document.getElementById('result').innerHTML = output.trim().replace(/\n/g, '<br>');
+      }
+    });
+
+    resultDiv.innerHTML = output || 'No counters selected or insufficient data.';
+  }
+
+  // ---------- rds-ping Analysis (TAB 2) ----------
+  document.getElementById("resPingUpdateBtn").addEventListener("click", analyzeRdsPing);
+  document.getElementById("resPingExportBtn").addEventListener("click", exportRdsPingCSV);
+
+  function getRdsThreshold() {
+    const el = document.getElementById("resPingThreshold");
+    const v = parseInt(el.value, 10);
+    return isNaN(v) || v <= 0 ? 1000 : v;
+  }
+
+  function analyzeRdsPing() {
+    const listEl = document.getElementById("resPingList");
+    listEl.innerHTML = "";
+
+    if (!resPingValues || resPingValues.length === 0) {
+      listEl.innerHTML = "<li>No rds-ping values found in the file(s).</li>";
+      if (resPingChart) {
+        resPingChart.destroy();
+        resPingChart = null;
+      }
+      return;
     }
-  </script>
+
+    const threshold = getRdsThreshold();
+
+    const spikes = resPingValues
+      .filter(e => e.value > threshold)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    if (spikes.length === 0) {
+      listEl.innerHTML = `<li>No rds-ping spikes &gt; ${threshold} usec found.</li>`;
+    } else {
+      spikes.forEach(s => {
+        const li = document.createElement("li");
+        li.textContent = `${s.ts} — ${s.value} usec`;
+        listEl.appendChild(li);
+      });
+    }
+
+    drawRdsPingChart(threshold);
+  }
+
+  function drawRdsPingChart(threshold) {
+    const labels = resPingValues.map(e => e.ts);
+    const allData = resPingValues.map(e => e.value);
+    const spikeData = resPingValues.map(e => e.value > threshold ? e.value : null);
+
+    const ctx = document.getElementById("resPingChart").getContext("2d");
+    if (resPingChart) resPingChart.destroy();
+
+    resPingChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "rds-ping usec",
+            data: allData,
+            borderColor: "#7bc8f8",
+            backgroundColor: "#7bc8f822",
+            borderWidth: 3,
+            pointRadius: 3,
+            tension: 0.2
+          },
+          {
+            label: `Spikes > ${threshold} usec`,
+            data: spikeData,
+            borderColor: "#ffe066",
+            backgroundColor: "#ffe066",
+            borderWidth: 0,
+            pointRadius: 6,
+            showLine: false
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          legend: {
+            labels: {
+              color: "#fff",
+              font: { size: 14, family: "'Roboto', Arial, sans-serif" }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color:"#c0d1f7", maxRotation: 60, minRotation: 45 },
+            grid: { color:"#35374c44" },
+            title: {
+              display: true,
+              text: 'Sample Time',
+              color:"#e1edf7",
+              font: { weight: 'bold' }
+            }
+          },
+          y: {
+            ticks: { color:"#d8e3fa" },
+            grid: { color:"#35374c44" },
+            title: {
+              display: true,
+              text: 'rds-ping (usec)',
+              color:"#e1edf7",
+              font: { weight: 'bold' }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function exportRdsPingCSV() {
+    if (!resPingValues || resPingValues.length === 0) {
+      alert("No rds-ping data to export.");
+      return;
+    }
+    const threshold = getRdsThreshold();
+    const spikes = resPingValues
+      .filter(e => e.value > threshold)
+      .sort((a, b) => b.value - a.value);
+
+    if (spikes.length === 0) {
+      alert(`No rds-ping spikes > ${threshold} usec to export.`);
+      return;
+    }
+
+    let csv = "timestamp,usec\n";
+    spikes.forEach(s => {
+      csv += `${s.ts},${s.value}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "rds_ping_spikes.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+</script>
+
 </body>
 </html>
