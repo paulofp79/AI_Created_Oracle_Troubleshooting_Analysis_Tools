@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VMStat Continuous Plotter (Split Swap)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../assets/common.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 20px;
+      background: #181920;
+      color: #eee;
+    }
+    h2, h3 { color: #48e1f9; margin-bottom: 15px; }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    input[type=file] {
+      background: #1f1f1f;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 5px;
+      padding: 8px;
+    }
+
+    button {
+      background: #2a3a4a;
+      color: #fff;
+      border: 1px solid #3a5a6a;
+      border-radius: 5px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    button:hover { background: #3a5a6a; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .export-btn {
+      background: #1a5a3a;
+      border-color: #2a7a4a;
+    }
+    .export-btn:hover { background: #2a7a4a; }
+
+    canvas {
+      margin-top: 20px;
+      max-width: 100%;
+      background: #13121b;
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid #333;
+    }
+
+    table {
+      margin-top: 20px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background: #2a2a2a;
+      color: #48e1f9;
+    }
+
+    .alert-yes { color: #ffc107; }
+    .alert-no { color: #4caf50; }
+
+    .status-text {
+      color: #7bc8f8;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #48e1f9;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .loading-message { margin-top: 15px; color: #fff; font-size: 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Stats summary */
+    .stats-box {
+      background: #1a2a3a;
+      border: 1px solid #345;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+    }
+    .stat-item { text-align: center; }
+    .stat-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #48e1f9;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: #888;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h2>VMStat Continuous Plotter</h2>
+  <p>Select one or more vmstat files to stitch together into a continuous timeline:</p>
+
+  <div class="controls">
+    <input type="file" id="fileInput" multiple>
+    <button onclick="handleFiles()">Plot & Analyze</button>
+    <button class="export-btn" id="exportBtn" onclick="exportToCsv()" disabled>Export CSV</button>
+    <button onclick="clearAll()">Clear</button>
+  </div>
+
+  <div id="statusText" class="status-text"></div>
+
+  <div id="statsBox" class="stats-box" style="display: none;">
+    <div class="stat-item">
+      <div class="stat-value" id="statRecords">0</div>
+      <div class="stat-label">Records</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statAvgUsr">0</div>
+      <div class="stat-label">Avg %usr</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statAvgSys">0</div>
+      <div class="stat-label">Avg %sys</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statAvgWa">0</div>
+      <div class="stat-label">Avg %wa</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statMaxSi">0</div>
+      <div class="stat-label">Max Swap In</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statMaxSo">0</div>
+      <div class="stat-label">Max Swap Out</div>
+    </div>
+  </div>
+
+  <h3>Memory + CPU Usage</h3>
+  <canvas id="chart1" width="1400" height="450"></canvas>
+
+  <h3>Swap In (si)</h3>
+  <canvas id="chart2" width="1400" height="250"></canvas>
+
+  <h3>Swap Out (so)</h3>
+  <canvas id="chart3" width="1400" height="250"></canvas>
+
+  <h3>Swap Utilization Alerts</h3>
+  <table id="alertTable">
+    <tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>
+  </table>
+
+  <script>
+    let chart1, chart2, chart3;
+    let allRecords = [];
+    let fileResults = [];
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showLoading(message) {
+      hideLoading();
+      const overlay = document.createElement('div');
+      overlay.id = 'loadingOverlay';
+      overlay.className = 'loading-overlay';
+      overlay.innerHTML = `
+        <div class="loading-spinner"></div>
+        <div class="loading-message">${escapeHtml(message)}</div>
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) overlay.remove();
+    }
+
+    function setStatus(message) {
+      document.getElementById('statusText').textContent = message;
+    }
+
+    function parseVmstat(text, fileName) {
+      const lines = text.split('\n');
+      let startTime = null;
+
+      // Try to find starting time in header
+      const startMatch = text.match(/# Starting Time:\s*([0-9/]+)\s+([0-9:]+)/);
+      if (startMatch) {
+        startTime = new Date(startMatch[1] + ' ' + startMatch[2]);
+      }
+
+      const intervalSec = 1; // vmstat default interval
+      let t = startTime ? new Date(startTime) : null;
+
+      const records = [];
+
+      for (let line of lines) {
+        line = line.trim();
+
+        // Match lines starting with timestamp HH:MM:SS
+        if (!line.match(/^\d\d:\d\d:\d\d/)) continue;
+
+        const parts = line.split(/\s+/);
+        if (parts.length < 17) continue;
+
+        try {
+          const free = parseInt(parts[4]) || 0;
+          const si = parseInt(parts[6]) || 0;
+          const so = parseInt(parts[7]) || 0;
+          const us = parseInt(parts[parts.length - 5]) || 0;
+          const sy = parseInt(parts[parts.length - 4]) || 0;
+          const id = parseInt(parts[parts.length - 3]) || 0;
+          const wa = parseInt(parts[parts.length - 2]) || 0;
+
+          const ts = t ? new Date(t) : new Date();
+          if (t) t = new Date(t.getTime() + intervalSec * 1000);
+
+          records.push({
+            ts,
+            free,
+            si,
+            so,
+            us,
+            sy,
+            id,
+            wa,
+            file: fileName
+          });
+        } catch (e) {
+          console.warn('Failed to parse line:', line);
+        }
+      }
+
+      return records;
+    }
+
+    function handleFiles() {
+      const files = document.getElementById('fileInput').files;
+      if (!files.length) {
+        alert('Please select at least one vmstat file!');
+        return;
+      }
+
+      showLoading('Reading files...');
+      allRecords = [];
+      fileResults = [];
+
+      const readers = [];
+      for (let i = 0; i < files.length; i++) {
+        readers.push(new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const records = parseVmstat(reader.result, files[i].name);
+            resolve({ name: files[i].name, records });
+          };
+          reader.onerror = () => reject(new Error(`Failed to read ${files[i].name}`));
+          reader.readAsText(files[i]);
+        }));
+      }
+
+      Promise.all(readers)
+        .then(results => {
+          fileResults = results;
+
+          // Merge all records
+          results.forEach(r => {
+            allRecords = allRecords.concat(r.records);
+          });
+
+          // Sort by timestamp
+          allRecords.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+
+          if (allRecords.length === 0) {
+            setStatus('No valid vmstat data found in the selected files.');
+            hideLoading();
+            return;
+          }
+
+          plotCharts();
+          showAlerts();
+          updateStats();
+
+          document.getElementById('exportBtn').disabled = false;
+          setStatus(`Loaded ${allRecords.length} records from ${files.length} file(s)`);
+          hideLoading();
+        })
+        .catch(err => {
+          console.error('Error:', err);
+          setStatus('Error reading files: ' + err.message);
+          hideLoading();
+        });
+    }
+
+    function updateStats() {
+      if (!allRecords.length) return;
+
+      const n = allRecords.length;
+      let sumUsr = 0, sumSys = 0, sumWa = 0, maxSi = 0, maxSo = 0;
+
+      for (const r of allRecords) {
+        sumUsr += r.us;
+        sumSys += r.sy;
+        sumWa += r.wa;
+        maxSi = Math.max(maxSi, r.si);
+        maxSo = Math.max(maxSo, r.so);
+      }
+
+      document.getElementById('statRecords').textContent = n.toLocaleString();
+      document.getElementById('statAvgUsr').textContent = (sumUsr / n).toFixed(1) + '%';
+      document.getElementById('statAvgSys').textContent = (sumSys / n).toFixed(1) + '%';
+      document.getElementById('statAvgWa').textContent = (sumWa / n).toFixed(1) + '%';
+      document.getElementById('statMaxSi').textContent = maxSi.toLocaleString();
+      document.getElementById('statMaxSo').textContent = maxSo.toLocaleString();
+      document.getElementById('statsBox').style.display = 'grid';
+    }
+
+    function plotCharts() {
+      const times = allRecords.map(r => r.ts.toLocaleString());
+      const freeMem = allRecords.map(r => r.free);
+      const usrCpu = allRecords.map(r => r.us);
+      const sysCpu = allRecords.map(r => r.sy);
+      const idleCpu = allRecords.map(r => r.id);
+      const waCpu = allRecords.map(r => r.wa);
+      const siVals = allRecords.map(r => r.si);
+      const soVals = allRecords.map(r => r.so);
+
+      const ctx1 = document.getElementById('chart1').getContext('2d');
+      const ctx2 = document.getElementById('chart2').getContext('2d');
+      const ctx3 = document.getElementById('chart3').getContext('2d');
+
+      if (chart1) chart1.destroy();
+      if (chart2) chart2.destroy();
+      if (chart3) chart3.destroy();
+
+      // Memory + CPU chart
+      chart1 = new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels: times,
+          datasets: [
+            { label: 'Free Mem (KB)', data: freeMem, borderColor: '#3b82f6', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+            { label: 'User CPU %', data: usrCpu, borderColor: '#ef4444', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
+            { label: 'System CPU %', data: sysCpu, borderColor: '#f97316', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
+            { label: 'Idle CPU %', data: idleCpu, borderColor: '#22c55e', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
+            { label: 'Wait CPU %', data: waCpu, borderColor: '#a855f7', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { labels: { color: '#fff' } },
+            title: { display: true, text: 'Memory + CPU Usage (Continuous)', color: '#fff' }
+          },
+          scales: {
+            x: { ticks: { color: '#aaa', maxRotation: 45 }, grid: { color: '#333' } },
+            y: { type: 'linear', position: 'left', title: { display: true, text: 'Free Mem (KB)', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } },
+            y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: 'CPU %', color: '#fff' }, ticks: { color: '#aaa' }, grid: { display: false } }
+          }
+        }
+      });
+
+      // Swap In chart
+      chart2 = new Chart(ctx2, {
+        type: 'line',
+        data: {
+          labels: times,
+          datasets: [{ label: 'Swap In (si)', data: siVals, borderColor: '#06b6d4', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(6, 182, 212, 0.1)' }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#fff' } },
+            title: { display: true, text: 'Swap In Activity (Continuous)', color: '#fff' }
+          },
+          scales: {
+            x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+            y: { type: 'linear', position: 'left', title: { display: true, text: 'Pages / sec', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } }
+          }
+        }
+      });
+
+      // Swap Out chart
+      chart3 = new Chart(ctx3, {
+        type: 'line',
+        data: {
+          labels: times,
+          datasets: [{ label: 'Swap Out (so)', data: soVals, borderColor: '#dc2626', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(220, 38, 38, 0.1)' }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#fff' } },
+            title: { display: true, text: 'Swap Out Activity (Continuous)', color: '#fff' }
+          },
+          scales: {
+            x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+            y: { type: 'linear', position: 'left', title: { display: true, text: 'Pages / sec', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } }
+          }
+        }
+      });
+    }
+
+    function showAlerts() {
+      const table = document.getElementById('alertTable');
+      table.innerHTML = '<tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>';
+
+      fileResults.forEach(r => {
+        const siMax = Math.max(...r.records.map(x => x.si), 0);
+        const soMax = Math.max(...r.records.map(x => x.so), 0);
+        const swapDetected = siMax > 0 || soMax > 0;
+
+        const row = table.insertRow();
+        row.insertCell(0).textContent = r.name;
+
+        const statusCell = row.insertCell(1);
+        statusCell.innerHTML = swapDetected
+          ? '<span class="alert-yes">YES</span>'
+          : '<span class="alert-no">NO</span>';
+
+        row.insertCell(2).textContent = swapDetected
+          ? `Max si=${siMax}, Max so=${soMax}`
+          : 'No swap activity detected';
+      });
+    }
+
+    function exportToCsv() {
+      if (!allRecords.length) {
+        alert('No data to export.');
+        return;
+      }
+
+      const headers = ['Timestamp', 'Free_KB', 'Swap_In', 'Swap_Out', 'User_CPU', 'Sys_CPU', 'Idle_CPU', 'Wait_CPU', 'Source_File'];
+      const rows = allRecords.map(r => [
+        r.ts.toISOString(),
+        r.free,
+        r.si,
+        r.so,
+        r.us,
+        r.sy,
+        r.id,
+        r.wa,
+        r.file
+      ]);
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(r => r.map(v => typeof v === 'string' && v.includes(',') ? `"${v}"` : v).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'vmstat_analysis.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function clearAll() {
+      allRecords = [];
+      fileResults = [];
+
+      if (chart1) { chart1.destroy(); chart1 = null; }
+      if (chart2) { chart2.destroy(); chart2 = null; }
+      if (chart3) { chart3.destroy(); chart3 = null; }
+
+      document.getElementById('alertTable').innerHTML = '<tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>';
+      document.getElementById('statsBox').style.display = 'none';
+      document.getElementById('exportBtn').disabled = true;
+      document.getElementById('fileInput').value = '';
+      setStatus('');
+    }
+  </script>
+</body>
+</html>

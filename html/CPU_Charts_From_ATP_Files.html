@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CPU Chart from Zipped JSON</title>
+  <script src="../assets/common.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --muted: #9ca3af;
+      --text: #e5e7eb;
+      --accent: #38bdf8;
+      --border: #1f2937;
+      --success: #10b981;
+      --error: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1022, #0a0f1d 60%, #0a0e19);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header { padding: 24px 16px 8px; text-align: center; }
+    header h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: 0.2px; }
+    header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .wrap { max-width: 1100px; margin: 18px auto 36px; padding: 0 16px; }
+
+    .uploader {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .dropzone {
+      border: 2px dashed var(--muted);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+    .dropzone.dragover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+    }
+    .controls button, .controls label {
+      border: 1px solid var(--border);
+      background: #0b1223;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .controls button:hover:not(:disabled) {
+      background: #1a2a3a;
+      border-color: var(--accent);
+    }
+    .controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .controls input[type="file"] { display: none; }
+    .file-label { display: inline-flex; align-items: center; gap: 8px; }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+    .chip {
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #0b1223;
+      color: var(--muted);
+    }
+    .chip.success { border-color: var(--success); color: var(--success); }
+    .chip.error { border-color: var(--error); color: var(--error); }
+
+    .card {
+      margin-top: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .card h3 {
+      margin: 0;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 16px;
+      color: var(--text);
+    }
+    .card .content { padding: 14px; }
+
+    canvas { width: 100%; height: 420px; }
+
+    .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
+    .legend label { font-size: 12px; color: var(--muted); cursor: pointer; }
+    .legend input { margin-right: 4px; }
+
+    footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px 0 36px; }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .loading-message { margin-top: 15px; color: #fff; font-size: 16px; }
+    .loading-progress {
+      margin-top: 10px;
+      width: 200px;
+      height: 6px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .loading-progress-bar {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error message */
+    .error-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--error);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      color: var(--error);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CPU Chart from Zipped JSON</h1>
+    <p>Upload <strong>.zip</strong> files containing CPUManager_*.json, then click <em>Load Selected</em>. Everything runs in your browser.</p>
+  </header>
+
+  <div class="wrap">
+    <section class="uploader">
+      <div id="dropzone" class="dropzone">
+        <p>Drag and drop .zip files here, or click to browse</p>
+        <div class="controls">
+          <label class="file-label">
+            <input id="fileInput" type="file" accept=".zip,application/zip" multiple>
+            Choose .zip files
+          </label>
+          <button id="loadBtn" type="button" title="Load chosen files" disabled>Load Selected</button>
+          <button id="clearBtn" type="button" title="Clear data">Clear All</button>
+          <button id="downloadBtn" type="button" title="Download combined CSV" disabled>Download CSV</button>
+        </div>
+        <div id="status" style="margin-top: 10px; font-size: 13px; color: var(--muted);"></div>
+        <div id="files" class="chips"></div>
+        <div id="errorBox"></div>
+      </div>
+
+      <div class="card">
+        <h3>CPU Utilization Over Time</h3>
+        <div class="content">
+          <canvas id="chart"></canvas>
+          <div class="legend" id="seriesToggles"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Summary Statistics</h3>
+        <div class="content" id="summary">No data loaded yet.</div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Works offline after initial load. Uses JSZip + Chart.js. | Paulo Portugal - Oracle XTeam
+  </footer>
+
+  <!-- JS libs -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+  <script>
+    // Check for required libraries
+    if (typeof JSZip === 'undefined') {
+      document.getElementById('errorBox').innerHTML = '<div class="error-box">Error: JSZip library failed to load. Check your internet connection.</div>';
+    }
+    if (typeof Chart === 'undefined') {
+      document.getElementById('errorBox').innerHTML += '<div class="error-box">Error: Chart.js library failed to load. Check your internet connection.</div>';
+    }
+
+    // --- Utilities ---
+    const formatNumber = (n, d = 2) => (typeof n === 'number' && isFinite(n)) ? n.toFixed(d) : 'N/A';
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function normalizeJsonText(txt) {
+      // Fix '-.123' -> '-0.123'
+      txt = txt.replace(/-\.(?=\d)/g, '-0.');
+      // Fix '.123' when not preceded by a digit
+      txt = txt.replace(/(^|[^0-9])\.(\d+)/g, (m, p1, p2) => `${p1}0.${p2}`);
+      return txt;
+    }
+
+    function showLoading(message, progress = null) {
+      hideLoading();
+      const overlay = document.createElement('div');
+      overlay.id = 'loadingOverlay';
+      overlay.className = 'loading-overlay';
+      overlay.innerHTML = `
+        <div class="loading-spinner"></div>
+        <div class="loading-message">${escapeHtml(message)}</div>
+        ${progress !== null ? '<div class="loading-progress"><div class="loading-progress-bar" id="progressBar"></div></div>' : ''}
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    function updateLoading(message, progress = null) {
+      const msgEl = document.querySelector('#loadingOverlay .loading-message');
+      if (msgEl) msgEl.textContent = message;
+      if (progress !== null) {
+        const bar = document.getElementById('progressBar');
+        if (bar) bar.style.width = `${progress}%`;
+      }
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) overlay.remove();
+    }
+
+    function showError(message) {
+      document.getElementById('errorBox').innerHTML = `<div class="error-box">${escapeHtml(message)}</div>`;
+    }
+
+    function clearError() {
+      document.getElementById('errorBox').innerHTML = '';
+    }
+
+    function extractRowsFromObject(obj, source) {
+      const rows = [];
+      try {
+        const statNames = obj?.statNames;
+        const values = obj?.values;
+        if (!Array.isArray(statNames) || !Array.isArray(values)) return rows;
+
+        for (const v of values) {
+          if (!Array.isArray(v) || v.length !== statNames.length) continue;
+          const rec = Object.fromEntries(statNames.map((k, i) => [k, v[i]]));
+          let t = rec.timestamp;
+          if (typeof t === 'string') t = Number(t);
+          const ts = (typeof t === 'number' && t >= 1e12) ? new Date(t) : new Date(t * 1000);
+
+          if (isNaN(ts.getTime())) continue;
+
+          rows.push({
+            timestamp: ts,
+            '%usr': +rec['%usr'] || 0,
+            '%nice': +rec['%nice'] || 0,
+            '%sys': +rec['%sys'] || 0,
+            '%idle': +rec['%idle'] || 0,
+            '%wio': +rec['%wio'] || 0,
+            '%irq': +rec['%irq'] || 0,
+            '%softirq': +rec['%softirq'] || 0,
+            '%steal': +rec['%steal'] || 0,
+            _source: source || ''
+          });
+        }
+      } catch (e) {
+        console.warn('extractRowsFromObject failed for', source, e);
+      }
+      return rows;
+    }
+
+    function rowsToCsv(rows) {
+      if (!rows.length) return '';
+      const cols = ['timestamp', '%usr', '%nice', '%sys', '%idle', '%wio', '%irq', '%softirq', '%steal', '_source'];
+      const header = cols.join(',');
+      const lines = rows.map(r => [
+        new Date(r.timestamp).toISOString(),
+        r['%usr'], r['%nice'], r['%sys'], r['%idle'], r['%wio'], r['%irq'], r['%softirq'], r['%steal'],
+        '"' + String(r._source || '').replace(/"/g, '""') + '"'
+      ].join(','));
+      return [header, ...lines].join('\n');
+    }
+
+    function summarize(rows) {
+      if (!rows.length) return { count: 0 };
+      const sum = { usr: 0, sys: 0, idle: 0, wio: 0 };
+      for (const r of rows) {
+        sum.usr += r['%usr'] || 0;
+        sum.sys += r['%sys'] || 0;
+        sum.idle += r['%idle'] || 0;
+        sum.wio += r['%wio'] || 0;
+      }
+      const n = rows.length;
+      return {
+        count: n,
+        from: rows[0].timestamp,
+        to: rows[n - 1].timestamp,
+        avgUsr: sum.usr / n,
+        avgSys: sum.sys / n,
+        avgIdle: sum.idle / n,
+        avgWio: sum.wio / n
+      };
+    }
+
+    // --- State ---
+    let allRows = [];
+    let pendingFiles = [];
+    let chart;
+
+    function renderChart() {
+      const ctx = document.getElementById('chart');
+      const labels = allRows.map(r => r.timestamp);
+
+      const makeDS = (label, field, color, hidden = false) => ({
+        label,
+        data: allRows.map(r => r[field]),
+        borderColor: color,
+        backgroundColor: color + '20',
+        borderWidth: 1.8,
+        pointRadius: 0,
+        tension: 0.15,
+        hidden
+      });
+
+      const datasets = [
+        makeDS('%usr', '%usr', '#ef4444'),
+        makeDS('%sys', '%sys', '#f97316'),
+        makeDS('%wio', '%wio', '#a855f7'),
+        makeDS('%nice', '%nice', '#22c55e', true),
+        makeDS('%irq', '%irq', '#3b82f6', true),
+        makeDS('%softirq', '%softirq', '#06b6d4', true),
+        makeDS('%steal', '%steal', '#ec4899', true),
+        makeDS('%idle', '%idle', '#6b7280', true)
+      ];
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, labels: { color: '#e5e7eb' } },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)}%`
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: { tooltipFormat: 'yyyy-MM-dd HH:mm:ss' },
+              ticks: { color: '#9ca3af' },
+              grid: { color: '#1f2937' }
+            },
+            y: {
+              beginAtZero: true,
+              max: 100,
+              title: { display: true, text: 'Percent', color: '#e5e7eb' },
+              ticks: { color: '#9ca3af' },
+              grid: { color: '#1f2937' }
+            }
+          }
+        }
+      });
+
+      // Series toggles
+      const toggles = document.getElementById('seriesToggles');
+      toggles.innerHTML = '';
+      chart.data.datasets.forEach((ds, i) => {
+        const wrap = document.createElement('label');
+        wrap.innerHTML = `<input type="checkbox" ${ds.hidden ? '' : 'checked'} data-idx="${i}"> ${ds.label}`;
+        const checkbox = wrap.querySelector('input');
+        checkbox.addEventListener('change', (e) => {
+          chart.setDatasetVisibility(i, e.target.checked);
+          chart.update();
+        });
+        toggles.appendChild(wrap);
+      });
+    }
+
+    function updateSummaryBox() {
+      const box = document.getElementById('summary');
+      if (!allRows.length) {
+        box.textContent = 'No data loaded yet.';
+        return;
+      }
+      const s = summarize(allRows);
+      box.innerHTML = `
+        <p>Loaded <strong>${s.count.toLocaleString()}</strong> data points</p>
+        <p>Time range: <strong>${new Date(s.from).toLocaleString()}</strong> to <strong>${new Date(s.to).toLocaleString()}</strong></p>
+        <p>
+          Avg %usr: <strong style="color:#ef4444">${formatNumber(s.avgUsr)}</strong> |
+          Avg %sys: <strong style="color:#f97316">${formatNumber(s.avgSys)}</strong> |
+          Avg %wio: <strong style="color:#a855f7">${formatNumber(s.avgWio)}</strong> |
+          Avg %idle: <strong style="color:#6b7280">${formatNumber(s.avgIdle)}</strong>
+        </p>
+      `;
+    }
+
+    function refreshUI() {
+      allRows.sort((a, b) => a.timestamp - b.timestamp);
+      renderChart();
+      updateSummaryBox();
+      document.getElementById('downloadBtn').disabled = allRows.length === 0;
+    }
+
+    async function processZipFiles(files) {
+      const filesDiv = document.getElementById('files');
+      const status = document.getElementById('status');
+      clearError();
+
+      let processed = 0;
+      const total = files.length;
+
+      showLoading(`Processing ${total} file(s)...`, 0);
+
+      for (const f of files) {
+        if (!f.name.toLowerCase().endsWith('.zip')) continue;
+
+        updateLoading(`Reading ${f.name}...`, (processed / total) * 100);
+
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = f.name;
+        filesDiv.appendChild(chip);
+
+        try {
+          const data = await f.arrayBuffer();
+          const zip = await JSZip.loadAsync(data);
+          const jsonFiles = Object.keys(zip.files).filter(k => k.toLowerCase().endsWith('.json'));
+
+          let fileRows = 0;
+          for (const name of jsonFiles) {
+            const file = zip.files[name];
+            const txt = await file.async('string');
+            const fixed = normalizeJsonText(txt);
+
+            try {
+              const obj = JSON.parse(fixed);
+              const rows = extractRowsFromObject(obj, `${f.name}/${name}`);
+              allRows.push(...rows);
+              fileRows += rows.length;
+            } catch (parseErr) {
+              console.warn('JSON parse failed for', name, parseErr);
+            }
+          }
+
+          chip.classList.add('success');
+          chip.textContent = `${f.name} (${fileRows} rows)`;
+          status.textContent = `Processed ${f.name}`;
+
+        } catch (e) {
+          console.error('Failed processing zip', f.name, e);
+          chip.classList.add('error');
+          chip.textContent = `${f.name} (failed)`;
+        }
+
+        processed++;
+        updateLoading(`Processing files... (${processed}/${total})`, (processed / total) * 100);
+      }
+
+      hideLoading();
+      status.textContent = `Loaded ${allRows.length} total data points from ${processed} file(s)`;
+      refreshUI();
+    }
+
+    // ---- Event Listeners ----
+    const fileInput = document.getElementById('fileInput');
+    const loadBtn = document.getElementById('loadBtn');
+
+    fileInput.addEventListener('change', (e) => {
+      pendingFiles = Array.from(e.target.files || []);
+      document.getElementById('files').innerHTML = '';
+      clearError();
+
+      for (const f of pendingFiles) {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = f.name;
+        document.getElementById('files').appendChild(chip);
+      }
+
+      loadBtn.disabled = pendingFiles.length === 0;
+    });
+
+    loadBtn.addEventListener('click', async () => {
+      if (!pendingFiles.length) return;
+      loadBtn.disabled = true;
+      document.getElementById('files').innerHTML = '';
+      await processZipFiles(pendingFiles);
+      pendingFiles = [];
+      fileInput.value = '';
+    });
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      const csv = rowsToCsv(allRows);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'cpu_metrics_combined.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      allRows = [];
+      pendingFiles = [];
+      document.getElementById('files').innerHTML = '';
+      document.getElementById('status').textContent = '';
+      document.getElementById('downloadBtn').disabled = true;
+      loadBtn.disabled = true;
+      clearError();
+      if (chart) { chart.destroy(); chart = null; }
+      document.getElementById('seriesToggles').innerHTML = '';
+      document.getElementById('summary').textContent = 'No data loaded yet.';
+    });
+
+    // Drag & Drop
+    const dz = document.getElementById('dropzone');
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dz.classList.remove('dragover');
+      const items = Array.from(e.dataTransfer?.files || []);
+      if (!items.length) return;
+
+      pendingFiles = items.filter(f => f.name.toLowerCase().endsWith('.zip'));
+      if (pendingFiles.length === 0) {
+        showError('Please drop .zip files only');
+        return;
+      }
+
+      document.getElementById('files').innerHTML = '';
+      clearError();
+
+      for (const f of pendingFiles) {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = f.name;
+        document.getElementById('files').appendChild(chip);
+      }
+
+      loadBtn.disabled = pendingFiles.length === 0;
+    });
+
+    // Click on dropzone opens file dialog
+    dz.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+        fileInput.click();
+      }
+    });
+  </script>
+</body>
+</html>
