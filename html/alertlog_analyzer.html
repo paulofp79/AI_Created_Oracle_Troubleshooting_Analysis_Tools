@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oracle Alert Log Analyzer + Timeline (v2)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../assets/common.js"></script>
+  <style>
+    body {
+      font-family: Consolas, 'Courier New', monospace;
+      background: #1e1e1e;
+      color: #ddd;
+      margin: 20px;
+      line-height: 1.4;
+    }
+    h1 { color: #00bfff; margin-bottom: 10px; }
+    h2 { color: #48e1f9; margin-top: 20px; }
+
+    input, button {
+      margin: 5px;
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: 1px solid #444;
+      background: #222;
+      color: #ddd;
+      font-family: inherit;
+    }
+    button {
+      cursor: pointer;
+      background: #333;
+      transition: background 0.2s;
+    }
+    button:hover { background: #444; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    details {
+      margin-bottom: 10px;
+      border: 1px solid #555;
+      border-radius: 8px;
+      padding: 5px;
+      background: #111;
+    }
+    summary {
+      cursor: pointer;
+      color: #00bfff;
+      font-weight: bold;
+      padding: 5px;
+    }
+
+    .log-block {
+      max-height: 70vh;
+      overflow-y: auto;
+      white-space: pre;
+      background: #000;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    /* Syntax highlighting classes */
+    .ora { color: #ff5050; font-weight: bold; }
+    .error { color: #ffb84d; font-weight: bold; }
+    .fatal { color: #ff3333; font-weight: bold; }
+    .fail { color: #ff8080; font-weight: bold; }
+    .warning { color: #ffd966; }
+    .timestamp { color: #66d9ef; }
+
+    .filter-input {
+      width: 30%;
+      min-width: 200px;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+
+    #progress {
+      color: #00bfff;
+      margin-top: 10px;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    .line {
+      display: block;
+      margin: 0;
+      padding: 2px 0;
+      line-height: 1.2;
+    }
+    .line:hover { background: #222; }
+
+    /* Tab styles */
+    .tabs {
+      margin-bottom: 15px;
+    }
+    .tabs button {
+      margin-right: 10px;
+      padding: 8px 16px;
+      background: #222;
+      border: 1px solid #444;
+      color: #ddd;
+      border-radius: 5px;
+    }
+    .tabs button.active {
+      background: #00bfff;
+      color: #000;
+      font-weight: bold;
+    }
+    .tab { display: none; }
+    .tab.active { display: block; }
+
+    /* Stats box */
+    .stats-box {
+      background: #1a2a3a;
+      border: 1px solid #345;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+    .stat-item {
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00bfff;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #888;
+    }
+
+    /* Error display */
+    .error-box {
+      background: #3a1a1a;
+      border: 1px solid #a33;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+      color: #ff8080;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #00bfff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .loading-message {
+      margin-top: 15px;
+      color: #fff;
+      font-size: 16px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Export button */
+    .export-btn {
+      background: #1a5a3a;
+      border-color: #2a7a4a;
+    }
+    .export-btn:hover {
+      background: #2a7a4a;
+    }
+  </style>
+</head>
+<body>
+  <h1>Oracle Alert Log Analyzer</h1>
+
+  <div class="tabs">
+    <button id="tabBtnLogs" class="active">Log View</button>
+    <button id="tabBtnTimeline">Timeline</button>
+  </div>
+
+  <!-- LOG VIEW TAB -->
+  <div id="tabLogs" class="tab active">
+    <div>
+      <input type="file" id="folderInput" webkitdirectory directory multiple>
+      <button id="listBtn">List Alert Logs</button>
+    </div>
+
+    <div style="margin-top: 15px;">
+      <input type="text" id="fileFilter" class="filter-input" placeholder="Filter by instance (e.g. cdbpr835)">
+      <input type="text" id="excludeFilter" class="filter-input" placeholder="Exclude files containing (e.g. test)">
+    </div>
+
+    <div id="fileList"></div>
+
+    <div style="margin-top: 15px;">
+      <label>Start Time: <input type="datetime-local" id="startTime"></label>
+      <label>End Time: <input type="datetime-local" id="endTime"></label>
+      <input type="text" id="searchBox" placeholder="Search keyword (optional)" style="width: 200px;">
+      <button id="analyzeBtn">Analyze</button>
+      <button id="exportBtn" class="export-btn" disabled>Export CSV</button>
+    </div>
+
+    <div id="progress"></div>
+
+    <div id="statsBox" class="stats-box" style="display: none;">
+      <div class="stat-item">
+        <div class="stat-value" id="statFiles">0</div>
+        <div class="stat-label">Files Analyzed</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="statLines">0</div>
+        <div class="stat-label">Lines Matched</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="statOraErrors">0</div>
+        <div class="stat-label">ORA- Errors</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="statFatal">0</div>
+        <div class="stat-label">FATAL Events</div>
+      </div>
+    </div>
+
+    <div id="output"></div>
+  </div>
+
+  <!-- TIMELINE TAB -->
+  <div id="tabTimeline" class="tab">
+    <h2>Event Timeline</h2>
+    <p>After analyzing logs, filter events to plot on timeline:</p>
+    <input id="timelineFilter" class="filter-input" placeholder="Keyword (e.g. ORA-, FATAL)">
+    <button id="buildTimeline">Build Timeline</button>
+    <canvas id="timelineChart" style="width: 100%; max-height: 600px; margin-top: 20px;"></canvas>
+  </div>
+
+<script>
+// State variables
+let alertFiles = [];
+let filteredFiles = [];
+let parsedEvents = [];
+let chartObj = null;
+
+// Statistics counters
+let stats = {
+  files: 0,
+  lines: 0,
+  oraErrors: 0,
+  fatalEvents: 0
+};
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+  if (typeof text !== 'string') return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Apply syntax highlighting to escaped text
+ */
+function highlightSafe(text) {
+  let safe = escapeHtml(text);
+  safe = safe.replace(/(ORA-\d+)/g, '<span class="ora">$1</span>');
+  safe = safe.replace(/(ERROR)/gi, '<span class="error">$1</span>');
+  safe = safe.replace(/(FATAL)/gi, '<span class="fatal">$1</span>');
+  safe = safe.replace(/(FAIL)/gi, '<span class="fail">$1</span>');
+  safe = safe.replace(/(WARNING)/gi, '<span class="warning">$1</span>');
+  return safe;
+}
+
+/**
+ * Parse timestamp from log line
+ */
+function parseTimestamp(line) {
+  // ISO format: 2025-08-05T10:00:00
+  const isoMatch = line.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
+  if (isoMatch) return new Date(isoMatch[0]);
+
+  // Oracle format: Mon Aug 05 10:00:00 2025
+  const oracleMatch = line.match(/(\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})/);
+  if (oracleMatch) return new Date(oracleMatch[0]);
+
+  return null;
+}
+
+/**
+ * Show loading overlay
+ */
+function showLoading(message) {
+  hideLoading();
+  const overlay = document.createElement('div');
+  overlay.id = 'loadingOverlay';
+  overlay.className = 'loading-overlay';
+  overlay.innerHTML = `
+    <div class="loading-spinner"></div>
+    <div class="loading-message">${escapeHtml(message)}</div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+/**
+ * Update loading message
+ */
+function updateLoading(message) {
+  const msgEl = document.querySelector('#loadingOverlay .loading-message');
+  if (msgEl) msgEl.textContent = message;
+}
+
+/**
+ * Hide loading overlay
+ */
+function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.remove();
+}
+
+/**
+ * Render file list with filters applied
+ */
+function renderFileList(includeFilter = '', excludeFilter = '') {
+  const list = document.getElementById('fileList');
+
+  filteredFiles = alertFiles.filter(f => {
+    const name = f.name.toLowerCase();
+    if (includeFilter && !name.includes(includeFilter.toLowerCase())) return false;
+    if (excludeFilter && name.includes(excludeFilter.toLowerCase())) return false;
+    return true;
+  });
+
+  if (filteredFiles.length === 0) {
+    list.innerHTML = '<p style="color: #888;">No alert_*.log files found matching filters.</p>';
+    return;
+  }
+
+  list.innerHTML = filteredFiles.map((f, i) =>
+    `<label style="display: block; margin: 3px 0;">
+      <input type="checkbox" class="fileCheckbox" data-idx="${i}" checked>
+      ${escapeHtml(f.name)} (${formatFileSize(f.size)})
+    </label>`
+  ).join('');
+}
+
+/**
+ * Format file size for display
+ */
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Update statistics display
+ */
+function updateStats() {
+  document.getElementById('statFiles').textContent = stats.files;
+  document.getElementById('statLines').textContent = stats.lines;
+  document.getElementById('statOraErrors').textContent = stats.oraErrors;
+  document.getElementById('statFatal').textContent = stats.fatalEvents;
+  document.getElementById('statsBox').style.display = 'grid';
+}
+
+/**
+ * Show full file in new window
+ */
+async function showFullFile(file) {
+  try {
+    const txt = await file.text();
+    const blob = new Blob([txt], { type: 'text/plain' });
+    window.open(URL.createObjectURL(blob), '_blank');
+  } catch (err) {
+    alert('Error opening file: ' + err.message);
+  }
+}
+
+/**
+ * Main analysis function with streaming
+ */
+async function streamAnalyze(files, startTime, endTime, searchTerm) {
+  const out = document.getElementById('output');
+  const prog = document.getElementById('progress');
+
+  out.innerHTML = '';
+  prog.textContent = '';
+  parsedEvents = [];
+  stats = { files: 0, lines: 0, oraErrors: 0, fatalEvents: 0 };
+
+  showLoading('Analyzing log files...');
+
+  try {
+    for (const [i, file] of files.entries()) {
+      updateLoading(`Processing ${file.name} (${i + 1}/${files.length})`);
+
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.textContent = `${file.name} (${i + 1}/${files.length})`;
+      const block = document.createElement('div');
+      block.className = 'log-block';
+      details.appendChild(summary);
+      details.appendChild(block);
+
+      let lines = [];
+
+      try {
+        const reader = file.stream().getReader();
+        const decoder = new TextDecoder();
+        let leftover = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const txt = leftover + decoder.decode(value, { stream: true });
+          const arr = txt.split(/\r?\n/);
+          leftover = arr.pop() || '';
+          lines.push(...arr);
+
+          // Yield to UI
+          await new Promise(r => setTimeout(r, 0));
+        }
+
+        if (leftover) lines.push(leftover);
+
+      } catch (readErr) {
+        console.error('Error reading file:', file.name, readErr);
+        block.innerHTML = `<span class="error">Error reading file: ${escapeHtml(readErr.message)}</span>`;
+        out.appendChild(details);
+        continue;
+      }
+
+      // Find matches
+      let hits = [];
+      if (searchTerm) {
+        const key = searchTerm.toLowerCase();
+        for (let j = 0; j < lines.length; j++) {
+          if (lines[j].toLowerCase().includes(key)) hits.push(j);
+        }
+      }
+
+      // Build set of lines to show
+      let show = new Set();
+      if (searchTerm && hits.length) {
+        for (const h of hits) {
+          for (let j = Math.max(0, h - 3); j <= Math.min(lines.length - 1, h + 3); j++) {
+            show.add(j);
+          }
+        }
+      } else if (!searchTerm) {
+        for (let j = 0; j < lines.length; j++) show.add(j);
+      }
+
+      let cnt = 0;
+      let lastTs = null;
+
+      for (const j of Array.from(show).sort((a, b) => a - b)) {
+        const line = lines[j];
+        if (!line.trim()) continue;
+
+        let ts = parseTimestamp(line);
+        if (ts) lastTs = ts;
+        else if (lastTs) ts = lastTs;
+
+        // Apply time filters
+        if (startTime && ts && ts < startTime) continue;
+        if (endTime && ts && ts > endTime) continue;
+
+        // Count errors
+        if (/ORA-\d+/.test(line)) stats.oraErrors++;
+        if (/FATAL/i.test(line)) stats.fatalEvents++;
+
+        // Create safe output
+        const timestamp = ts ? `<span class="timestamp">${ts.toISOString()}</span> ` : '';
+        block.insertAdjacentHTML('beforeend',
+          `<span class="line" title="Double-click to open full file">${timestamp}${highlightSafe(line)}</span>`
+        );
+
+        parsedEvents.push({ file: file.name, ts: ts || new Date(), line });
+        cnt++;
+        stats.lines++;
+      }
+
+      if (!searchTerm || cnt > 0) {
+        out.appendChild(details);
+        stats.files++;
+      }
+
+      block.addEventListener('dblclick', () => showFullFile(file));
+      prog.textContent = `Processed ${file.name} (${cnt} lines)`;
+    }
+
+    updateStats();
+    document.getElementById('exportBtn').disabled = parsedEvents.length === 0;
+    prog.textContent = searchTerm
+      ? `Done. ${stats.lines} lines with ±3 context from ${stats.files} files.`
+      : `Done. Displayed all lines from ${stats.files} files.`;
+
+  } catch (err) {
+    console.error('Analysis error:', err);
+    out.innerHTML = `<div class="error-box">Analysis failed: ${escapeHtml(err.message)}</div>`;
+  } finally {
+    hideLoading();
+  }
+}
+
+/**
+ * Export results to CSV
+ */
+function exportToCsv() {
+  if (!parsedEvents.length) {
+    alert('No data to export. Run analysis first.');
+    return;
+  }
+
+  const headers = ['Timestamp', 'File', 'Line'];
+  const rows = parsedEvents.map(e => [
+    e.ts ? e.ts.toISOString() : '',
+    e.file,
+    '"' + e.line.replace(/"/g, '""') + '"'
+  ]);
+
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'alertlog_analysis.csv';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// ========== Event Listeners ==========
+
+// Tab switching
+document.getElementById('tabBtnLogs').addEventListener('click', () => {
+  document.getElementById('tabLogs').classList.add('active');
+  document.getElementById('tabTimeline').classList.remove('active');
+  document.getElementById('tabBtnLogs').classList.add('active');
+  document.getElementById('tabBtnTimeline').classList.remove('active');
+});
+
+document.getElementById('tabBtnTimeline').addEventListener('click', () => {
+  document.getElementById('tabTimeline').classList.add('active');
+  document.getElementById('tabLogs').classList.remove('active');
+  document.getElementById('tabBtnTimeline').classList.add('active');
+  document.getElementById('tabBtnLogs').classList.remove('active');
+});
+
+// List files button
+document.getElementById('listBtn').addEventListener('click', () => {
+  const files = document.getElementById('folderInput').files;
+  alertFiles = Array.from(files).filter(f => f.name.startsWith('alert_'));
+  renderFileList();
+});
+
+// Filter inputs
+document.getElementById('fileFilter').addEventListener('input', () => {
+  renderFileList(
+    document.getElementById('fileFilter').value,
+    document.getElementById('excludeFilter').value
+  );
+});
+
+document.getElementById('excludeFilter').addEventListener('input', () => {
+  renderFileList(
+    document.getElementById('fileFilter').value,
+    document.getElementById('excludeFilter').value
+  );
+});
+
+// Analyze button
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+  const selectedFiles = [...document.querySelectorAll('.fileCheckbox:checked')]
+    .map(cb => filteredFiles[cb.dataset.idx]);
+
+  if (!selectedFiles.length) {
+    alert('Please select at least one file.');
+    return;
+  }
+
+  const startVal = document.getElementById('startTime').value;
+  const endVal = document.getElementById('endTime').value;
+  const startTime = startVal ? new Date(startVal) : null;
+  const endTime = endVal ? new Date(endVal) : null;
+  const keyword = document.getElementById('searchBox').value.trim().toLowerCase();
+
+  await streamAnalyze(selectedFiles, startTime, endTime, keyword);
+});
+
+// Export button
+document.getElementById('exportBtn').addEventListener('click', exportToCsv);
+
+// Timeline builder
+document.getElementById('buildTimeline').addEventListener('click', () => {
+  if (!parsedEvents.length) {
+    alert('Run Analyze first to collect events.');
+    return;
+  }
+
+  const keyword = document.getElementById('timelineFilter').value.trim().toLowerCase();
+  const data = parsedEvents
+    .filter(e => !keyword || e.line.toLowerCase().includes(keyword))
+    .sort((a, b) => a.ts - b.ts);
+
+  if (!data.length) {
+    alert('No events matched the filter.');
+    return;
+  }
+
+  const uniqueFiles = [...new Set(data.map(e => e.file))];
+  const colors = ['#00bfff', '#ff5050', '#66ff66', '#ffd966', '#ff66cc', '#a366ff', '#ffaa00', '#00ffaa'];
+
+  const datasets = uniqueFiles.map((f, idx) => ({
+    label: f,
+    data: data.filter(e => e.file === f).map(e => ({ x: e.ts, y: f })),
+    backgroundColor: colors[idx % colors.length],
+    pointRadius: 5
+  }));
+
+  const ctx = document.getElementById('timelineChart');
+
+  if (chartObj) chartObj.destroy();
+
+  chartObj = new Chart(ctx, {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          type: 'time',
+          title: { text: 'Time', display: true, color: '#ddd' },
+          ticks: { color: '#aaa' }
+        },
+        y: {
+          type: 'category',
+          title: { text: 'Instance/File', display: true, color: '#ddd' },
+          ticks: { color: '#aaa' }
+        }
+      },
+      plugins: {
+        legend: { labels: { color: '#ddd' } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.raw.y} → ${ctx.raw.x.toISOString()}`
+          }
+        }
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>

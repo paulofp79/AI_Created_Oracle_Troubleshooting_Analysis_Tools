@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Oracle Exadata Tools Dashboard</title>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; margin: 20px; background: #121212; color: #f0f0f0; }
+    h2 { color: #00e5ff; margin-bottom: 5px; }
+    p { color: #ccc; }
+
+    .tabs { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      background: #1f1f1f;
+      color: #ccc;
+      border: 1px solid #333;
+      transition: background 0.2s, color 0.2s;
+    }
+    .tab:hover { background: #2a2a2a; color: #00e5ff; }
+    .tab.active {
+      background: #272727;
+      border-bottom: none;
+      font-weight: bold;
+      color: #00e5ff;
+    }
+    .tabContent {
+      display: none;
+      border: 1px solid #333;
+      padding: 20px;
+      background: #1a1a1a;
+      border-radius: 0 8px 8px 8px;
+    }
+    .tabContent.active { display: block; }
+
+    a.tool-btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #00e5ff;
+      color: #000;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    a.tool-btn:hover { background: #33eeff; }
+
+    .command-hint {
+      margin-top: 12px;
+      font-family: "Courier New", monospace;
+      font-size: 13px;
+      color: #00e5ff;
+      background: #000;
+      padding: 8px;
+      border-radius: 6px;
+      display: inline-block;
+      cursor: pointer;
+      user-select: none;
+    }
+    .command-hint:hover { background: #002b36; }
+    .copied { color: #00ff99; font-size: 13px; margin-top: 6px; }
+
+    footer {
+      text-align: right;
+      font-size: 13px;
+      color: #888;
+      margin-top: 25px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h2>🚀 Oracle Exadata Tools Dashboard – Paulo Portugal – XTeam</h2>
+  <p>Select a tool below to open it in a new tab.</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="rds">📊 RDS Info Analysis</div>
+    <div class="tab" data-tab="exacc">📈 ExaCC Metrics Dashboard</div>
+    <div class="tab" data-tab="ecs">⚙️ ECS Analysis Tool</div>
+    <div class="tab" data-tab="vmstat">💾 VMStat Swap Analysis</div>
+    <div class="tab" data-tab="cpu">🖥️ CPU Charts from ATP files</div><!-- ✅ NEW -->
+    <div class="tab" data-tab="alertlog">🧩 Alert Log Analyzer</div>
+  </div>
+
+  <!-- RDS -->
+  <div id="rds" class="tabContent active">
+    <h3>📊 RDS Info Analysis</h3>
+    <p>Visualize and analyze RDS info collected from ExaWatcher or AHF data for performance diagnostics.</p>
+    <a class="tool-btn" href="RDS_Info_Analysis.html" target="_blank">Open Tool</a>
+  </div>
+
+  <!-- ExaCC -->
+  <div id="exacc" class="tabContent">
+    <h3>📈 ExaCC Metrics Dashboard</h3>
+    <p>Interactive charts and alert summaries for Exadata Cloud@Customer metrics analysis.</p>
+    <a class="tool-btn" href="Exa_Cell_Metrics_Chart.html" target="_blank">Open Tool</a>
+  </div>
+
+  <!-- ECS -->
+  <div id="ecs" class="tabContent">
+    <h3>⚙️ ECS Analysis Tool</h3>
+    <p>ECStat SD/MD performance parser and visualizer with interactive metrics comparison.</p>
+    <a class="tool-btn" href="ECS_Analysis.html" target="_blank">Open Tool</a>
+    <div class="command-hint" id="copyCmd">
+      Run first:<br>
+      python3 -m streamlit run ECS_Analysis.py --server.port 8501 &
+    </div>
+    <div id="copiedMsg" class="copied" style="display:none;">Copied!</div>
+  </div>
+
+  <!-- VMStat -->
+  <div id="vmstat" class="tabContent">
+    <h3>💾 VMStat Swap Analysis</h3>
+    <p>Multi-file vmstat parser showing memory, CPU, and swap trends with anomaly detection.</p>
+    <a class="tool-btn" href="vmstat_multi_plot_with_swap_alerts_highlight.html" target="_blank">Open Tool</a>
+  </div>
+
+  <!-- CPU (NEW) -->
+  <div id="cpu" class="tabContent">
+    <h3>🖥️ CPU Charts from ATP files</h3>
+    <p>Load zipped CPUManager JSON exports and visualize CPU utilization over time (fully client-side).</p>
+    <a class="tool-btn" href="CPU_Charts_From_ATP_Files.html" target="_blank">Open Tool</a>
+  </div>
+
+  <!-- Alert Log -->
+  <div id="alertlog" class="tabContent">
+    <h3>🧩 Alert Log Analyzer</h3>
+    <p>Analyze Oracle alert logs with filters, context search, and timeline visualization of key events.</p>
+    <a class="tool-btn" href="alertlog_analyzer.html" target="_blank">Open Tool</a>
+  </div>
+
+  <footer>
+    © 2025 Paulo Portugal – Oracle XTeam
+  </footer>
+
+  <script>
+    // Tab switching
+    function switchTab(tabName) {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tabContent").forEach(c => c.classList.remove("active"));
+      document.querySelector(`.tab[data-tab='${tabName}']`).classList.add("active");
+      document.getElementById(tabName).classList.add("active");
+    }
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+    });
+
+    // Copy Streamlit command
+    const cmd = "python3 -m streamlit run ECS_Analysis.py --server.port 8501 &";
+    const copyBtn = document.getElementById("copyCmd");
+    const copiedMsg = document.getElementById("copiedMsg");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(cmd);
+          copiedMsg.style.display = "block";
+          setTimeout(() => copiedMsg.style.display = "none", 2000);
+        } catch (err) {
+          alert("Failed to copy command.");
+        }
+      });
+    }
+  </script>
+</body>
+</html>

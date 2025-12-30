@@ -2,177 +2,404 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Oracle Exadata Tools Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oracle Exadata Troubleshooting Tools - Dashboard</title>
   <style>
-    body { font-family: "Segoe UI", sans-serif; margin: 20px; background: #121212; color: #f0f0f0; }
-    h2 { color: #00e5ff; margin-bottom: 5px; }
-    p { color: #ccc; }
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: #334155;
+      --success: #22c55e;
+    }
 
-    .tabs { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
-    .tab {
-      padding: 10px 20px;
-      cursor: pointer;
-      border-radius: 8px 8px 0 0;
-      background: #1f1f1f;
-      color: #ccc;
-      border: 1px solid #333;
-      transition: background 0.2s, color 0.2s;
-    }
-    .tab:hover { background: #2a2a2a; color: #00e5ff; }
-    .tab.active {
-      background: #272727;
-      border-bottom: none;
-      font-weight: bold;
-      color: #00e5ff;
-    }
-    .tabContent {
-      display: none;
-      border: 1px solid #333;
-      padding: 20px;
-      background: #1a1a1a;
-      border-radius: 0 8px 8px 8px;
-    }
-    .tabContent.active { display: block; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    a.tool-btn {
-      display: inline-block;
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1a2e 100%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    header {
+      text-align: center;
+      padding: 40px 20px 30px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+    }
+
+    .author {
       margin-top: 10px;
-      padding: 10px 20px;
-      background: #00e5ff;
-      color: #000;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: 0.2s;
+      font-size: 0.9rem;
+      color: var(--accent);
     }
-    a.tool-btn:hover { background: #33eeff; }
 
-    .command-hint {
-      margin-top: 12px;
-      font-family: "Courier New", monospace;
-      font-size: 13px;
-      color: #00e5ff;
-      background: #000;
-      padding: 8px;
-      border-radius: 6px;
-      display: inline-block;
-      cursor: pointer;
-      user-select: none;
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px 20px;
     }
-    .command-hint:hover { background: #002b36; }
-    .copied { color: #00ff99; font-size: 13px; margin-top: 6px; }
+
+    .tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .tab-btn {
+      padding: 12px 24px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px 8px 0 0;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: #2d3a4f;
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .tool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tool-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+    }
+
+    .tool-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      border-color: var(--accent);
+    }
+
+    .tool-icon {
+      font-size: 2rem;
+      margin-bottom: 15px;
+    }
+
+    .tool-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    .tool-desc {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-bottom: 15px;
+    }
+
+    .tool-link {
+      display: inline-block;
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #000;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .tool-link:hover {
+      background: var(--accent-hover);
+      transform: scale(1.02);
+    }
+
+    .tool-type {
+      display: inline-block;
+      padding: 4px 10px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    /* Python tool special styling */
+    .python-card .tool-type {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--success);
+    }
+
+    .command-box {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 15px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      color: var(--success);
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 5px 10px;
+      background: var(--border);
+      border: none;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .copy-btn.copied {
+      background: var(--success);
+      color: #fff;
+    }
 
     footer {
-      text-align: right;
-      font-size: 13px;
-      color: #888;
-      margin-top: 25px;
-      font-style: italic;
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <h2>🚀 Oracle Exadata Tools Dashboard – Paulo Portugal – XTeam</h2>
-  <p>Select a tool below to open it in a new tab.</p>
+  <header>
+    <h1>Oracle Exadata Troubleshooting Tools</h1>
+    <p class="subtitle">Browser-based and Python tools for performance analysis and troubleshooting</p>
+    <p class="author">Paulo Portugal - Oracle XTeam</p>
+  </header>
 
-<div class="tabs">
-  <div class="tab active" data-tab="rds">📊 RDS Info Analysis</div>
-  <div class="tab" data-tab="exacc">📈 ExaCC Metrics Dashboard</div>
-  <div class="tab" data-tab="ecs">⚙️ ECS Analysis Tool</div>
-  <div class="tab" data-tab="vmstat">💾 VMStat Swap Analysis</div>
-  <div class="tab" data-tab="cpu">🖥️ CPU Charts from ATP files</div>
-  <div class="tab" data-tab="alertlog">🧩 Alert Log Analyzer</div>
-  <div class="tab" data-tab="listener">🎧 Listener Log Analyzer</div>
-</div>
-
-
-  <!-- RDS -->
-  <div id="rds" class="tabContent active">
-    <h3>📊 RDS Info Analysis</h3>
-    <p>Visualize and analyze RDS info collected from ExaWatcher or AHF data for performance diagnostics.</p>
-    <a class="tool-btn" href="RDS_Info_Analysis.html" target="_blank">Open Tool</a>
-  </div>
-
-  <!-- ExaCC -->
-  <div id="exacc" class="tabContent">
-    <h3>📈 ExaCC Metrics Dashboard</h3>
-    <p>Interactive charts and alert summaries for Exadata Cloud@Customer metrics analysis.</p>
-    <a class="tool-btn" href="Exa_Cell_Metrics_Chart.html" target="_blank">Open Tool</a>
-  </div>
-
-  <!-- ECS -->
-  <div id="ecs" class="tabContent">
-    <h3>⚙️ ECS Analysis Tool</h3>
-    <p>ECStat SD/MD performance parser and visualizer with interactive metrics comparison.</p>
-    <a class="tool-btn" href="ECS_Analysis.html" target="_blank">Open Tool</a>
-    <div class="command-hint" id="copyCmd">
-      Run first:<br>
-      python3 -m streamlit run ECS_Analysis.py --server.port 8501 &
+  <main>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="browser">Browser Tools</button>
+      <button class="tab-btn" data-tab="python">Python Tools</button>
+      <button class="tab-btn" data-tab="docs">Documentation</button>
     </div>
-    <div id="copiedMsg" class="copied" style="display:none;">Copied!</div>
-  </div>
 
-  <!-- VMStat -->
-  <div id="vmstat" class="tabContent">
-    <h3>💾 VMStat Swap Analysis</h3>
-    <p>Multi-file vmstat parser showing memory, CPU, and swap trends with anomaly detection.</p>
-    <a class="tool-btn" href="vmstat_multi_plot_with_swap_alerts_highlight.html" target="_blank">Open Tool</a>
-  </div>
+    <!-- Browser Tools Tab -->
+    <div id="browser" class="tab-content active">
+      <div class="tools-grid">
+        <!-- CPU Charts -->
+        <div class="tool-card">
+          <span class="tool-type">HTML/JavaScript</span>
+          <div class="tool-icon">CPU</div>
+          <h3 class="tool-title">CPU Charts from ATP Files</h3>
+          <p class="tool-desc">Visualize CPU utilization from zipped CPUManager JSON exports. Supports drag-and-drop, multi-file batch processing, and CSV export.</p>
+          <a href="html/CPU_Charts_From_ATP_Files.html" class="tool-link">Open Tool</a>
+        </div>
 
-  <!-- CPU (NEW) -->
-  <div id="cpu" class="tabContent">
-    <h3>🖥️ CPU Charts from ATP files</h3>
-    <p>Load zipped CPUManager JSON exports and visualize CPU utilization over time (fully client-side).</p>
-    <a class="tool-btn" href="CPU_Charts_From_ATP_Files.html" target="_blank">Open Tool</a>
-  </div>
+        <!-- RDS Analysis -->
+        <div class="tool-card">
+          <span class="tool-type">HTML/JavaScript</span>
+          <div class="tool-icon">RDS</div>
+          <h3 class="tool-title">RDS Info Analysis</h3>
+          <p class="tool-desc">Analyze RDS congestion counters from ExaWatcher/AHF data. Supports XZ compression and multi-file loading.</p>
+          <a href="html/RDS_Info_Analysis.html" class="tool-link">Open Tool</a>
+        </div>
 
-  <!-- Alert Log -->
-  <div id="alertlog" class="tabContent">
-    <h3>🧩 Alert Log Analyzer</h3>
-    <p>Analyze Oracle alert logs with filters, context search, and timeline visualization of key events.</p>
-    <a class="tool-btn" href="alertlog_analyzer.html" target="_blank">Open Tool</a>
-  </div>
+        <!-- ExaCC Metrics -->
+        <div class="tool-card">
+          <span class="tool-type">HTML/JavaScript</span>
+          <div class="tool-icon">EXA</div>
+          <h3 class="tool-title">ExaCC Metrics Dashboard</h3>
+          <p class="tool-desc">Interactive dashboard for Exadata Cloud@Customer metrics with Flash Cache, Smart I/O, and Cell Disk alerts.</p>
+          <a href="html/Exa_Cell_Metrics_Chart.html" class="tool-link">Open Tool</a>
+        </div>
 
-  <!-- Listener Log -->
-  <div id="listener" class="tabContent">
-    <h3>🎧 Listener Log Analyzer</h3>
-    <p>Analyze Oracle listener logs to visualize connection spikes and frequency per second.</p>
-    <a class="tool-btn" href="listener_log_analyzer.html" target="_blank">Open Tool</a>
-    <div class="command-hint" id="listenerHint">
-      Tip: upload multiple <strong>listener*.log</strong> files for aggregated analysis.
+        <!-- Alert Log Analyzer -->
+        <div class="tool-card">
+          <span class="tool-type">HTML/JavaScript</span>
+          <div class="tool-icon">LOG</div>
+          <h3 class="tool-title">Alert Log Analyzer</h3>
+          <p class="tool-desc">Parse and analyze Oracle alert logs with syntax highlighting, timeline visualization, and keyword search.</p>
+          <a href="html/alertlog_analyzer.html" class="tool-link">Open Tool</a>
+        </div>
+
+        <!-- VMStat Plotter -->
+        <div class="tool-card">
+          <span class="tool-type">HTML/JavaScript</span>
+          <div class="tool-icon">MEM</div>
+          <h3 class="tool-title">VMStat Continuous Plotter</h3>
+          <p class="tool-desc">Analyze vmstat data for memory pressure and swap issues. Merges multiple files into continuous timeline with alerts.</p>
+          <a href="html/vmstat_multi_plot_with_swap_alerts_highlight.html" class="tool-link">Open Tool</a>
+        </div>
+      </div>
     </div>
-  </div>
 
+    <!-- Python Tools Tab -->
+    <div id="python" class="tab-content">
+      <div class="tools-grid">
+        <div class="tool-card python-card">
+          <span class="tool-type">Python/Streamlit</span>
+          <div class="tool-icon">ECS</div>
+          <h3 class="tool-title">ECS Analysis</h3>
+          <p class="tool-desc">Interactive Streamlit app for ECStatJSONExaWatcher cell disk metrics. Visualizes SD vs MD metrics with IOPS/MB conversion.</p>
+          <div class="command-box">
+            <code>streamlit run python/ECS_Analysis.py</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 30px; padding: 20px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border);">
+        <h3 style="margin-bottom: 15px; color: var(--accent);">Python Setup</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 15px;">Install required dependencies:</p>
+        <div class="command-box">
+          <code>pip install -r requirements.txt</code>
+          <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documentation Tab -->
+    <div id="docs" class="tab-content">
+      <div style="background: var(--bg-secondary); border-radius: 12px; padding: 30px; border: 1px solid var(--border);">
+        <h3 style="margin-bottom: 20px; color: var(--accent);">Quick Start Guide</h3>
+
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">Browser Tools</h4>
+        <p style="color: var(--text-secondary);">
+          All HTML-based tools run entirely in your browser with no server required.
+          Simply click on any tool above to open it, then upload your data files.
+        </p>
+
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">Python Tools</h4>
+        <p style="color: var(--text-secondary);">
+          Python tools require Streamlit. Install dependencies with <code>pip install -r requirements.txt</code>
+          then run <code>streamlit run python/ECS_Analysis.py</code>.
+        </p>
+
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">File Formats</h4>
+        <ul style="color: var(--text-secondary); margin-left: 20px;">
+          <li><strong>ECS Analysis:</strong> .dat files from ECStatJSONExaWatcher</li>
+          <li><strong>CPU Charts:</strong> .zip files containing CPUManager_*.json</li>
+          <li><strong>RDS Analysis:</strong> .dat, .txt, or .xz compressed files</li>
+          <li><strong>ExaCC Metrics:</strong> Tab-separated .lst or .txt files</li>
+          <li><strong>Alert Log:</strong> Oracle alert_*.log files</li>
+          <li><strong>VMStat:</strong> vmstat output files</li>
+        </ul>
+
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">Sample Files</h4>
+        <p style="color: var(--text-secondary);">
+          Check the <code>samples/</code> directory for example input file formats.
+        </p>
+      </div>
+    </div>
+  </main>
 
   <footer>
-    © 2025 Paulo Portugal – Oracle XTeam
+    <p>Oracle Exadata Troubleshooting Tools | <a href="README.md">Documentation</a></p>
+    <p style="margin-top: 5px;">Paulo Portugal - Oracle XTeam | August 2025</p>
   </footer>
 
   <script>
     // Tab switching
-    function switchTab(tabName) {
-      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-      document.querySelectorAll(".tabContent").forEach(c => c.classList.remove("active"));
-      document.querySelector(`.tab[data-tab='${tabName}']`).classList.add("active");
-      document.getElementById(tabName).classList.add("active");
-    }
-    document.querySelectorAll(".tab").forEach(tab => {
-      tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.tab;
+
+        // Update buttons
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update content
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+      });
     });
 
-    // Copy Streamlit command
-    const cmd = "python3 -m streamlit run ECS_Analysis.py --server.port 8501 &";
-    const copyBtn = document.getElementById("copyCmd");
-    const copiedMsg = document.getElementById("copiedMsg");
-    if (copyBtn) {
-      copyBtn.addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(cmd);
-          copiedMsg.style.display = "block";
-          setTimeout(() => copiedMsg.style.display = "none", 2000);
-        } catch (err) {
-          alert("Failed to copy command.");
-        }
+    // Copy command to clipboard
+    function copyCommand(btn) {
+      const code = btn.previousElementSibling.textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
       });
     }
   </script>

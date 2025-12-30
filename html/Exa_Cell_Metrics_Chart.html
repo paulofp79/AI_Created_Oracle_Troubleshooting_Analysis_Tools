@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExaCC Metrics Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../assets/common.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 20px;
+      background: #121212;
+      color: #f0f0f0;
+    }
+    h2, h3 { color: #fff; margin-bottom: 15px; }
+    h2 { display: flex; align-items: center; gap: 10px; }
+
+    .tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      background: #1f1f1f;
+      color: #ccc;
+      border: 1px solid #333;
+      transition: all 0.2s;
+    }
+    .tab:hover { background: #2a2a2a; }
+    .tab.active {
+      background: #272727;
+      border-bottom: none;
+      font-weight: bold;
+      color: #00e5ff;
+    }
+    .tabContent {
+      display: none;
+      border: 1px solid #333;
+      padding: 20px;
+      background: #1a1a1a;
+      border-radius: 0 8px 8px 8px;
+    }
+    .tabContent.active { display: block; }
+
+    canvas {
+      background: #222;
+      border: 1px solid #444;
+      margin-bottom: 30px;
+      border-radius: 8px;
+    }
+
+    select, input[type=file] {
+      background: #1f1f1f;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    select { min-width: 200px; }
+
+    label {
+      color: #aaa;
+      margin-right: 10px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background: #2a2a2a;
+      color: #00e5ff;
+      font-weight: 600;
+    }
+    tr { cursor: pointer; transition: background 0.2s; }
+    tr:hover { filter: brightness(1.1); }
+
+    .Normal { background-color: rgba(0, 200, 83, 0.2); }
+    .Warning { background-color: rgba(255, 193, 7, 0.2); }
+    .Critical { background-color: rgba(244, 67, 54, 0.2); }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status-Normal { background: #00c853; color: #000; }
+    .status-Warning { background: #ffc107; color: #000; }
+    .status-Critical { background: #f44336; color: #fff; }
+
+    footer {
+      text-align: right;
+      font-size: 13px;
+      color: #888;
+      margin-top: 25px;
+      font-style: italic;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #00e5ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .loading-message { margin-top: 15px; color: #fff; font-size: 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Status text */
+    .status-text {
+      color: #00e5ff;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    /* Export button */
+    .export-btn {
+      background: #1a5a3a;
+      border: 1px solid #2a7a4a;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .export-btn:hover { background: #2a7a4a; }
+    .export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <h2>ExaCC Metrics Dashboard - Paulo Portugal - XTeam</h2>
+
+  <div class="controls">
+    <input type="file" id="fileInput" accept=".lst,.txt">
+    <button class="export-btn" id="exportBtn" disabled>Export CSV</button>
+  </div>
+  <div id="statusText" class="status-text"></div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="charts">Charts</div>
+    <div class="tab" data-tab="alerts">Flash Cache</div>
+    <div class="tab" data-tab="sioAlerts">Smart I/O</div>
+    <div class="tab" data-tab="cdioAlerts">Cell Disk</div>
+    <div class="tab" data-tab="summary">Summary</div>
+  </div>
+
+  <!-- Charts Tab -->
+  <div id="charts" class="tabContent active">
+    <div class="controls">
+      <div>
+        <label for="metricSelect">Metric:</label>
+        <select id="metricSelect"></select>
+      </div>
+      <div>
+        <label for="targetSelect">Target/Database:</label>
+        <select id="targetSelect"></select>
+      </div>
+    </div>
+    <canvas id="lineChart" height="300"></canvas>
+    <canvas id="barChart" height="250"></canvas>
+  </div>
+
+  <!-- Flash Cache Alerts Tab -->
+  <div id="alerts" class="tabContent">
+    <h3>Flash Cache Performance Alerts</h3>
+    <div id="alertsTable"></div>
+  </div>
+
+  <!-- Smart I/O Alerts Tab -->
+  <div id="sioAlerts" class="tabContent">
+    <h3>Smart I/O Performance Alerts</h3>
+    <div id="sioAlertsTable"></div>
+  </div>
+
+  <!-- Cell Disk I/O Alerts Tab -->
+  <div id="cdioAlerts" class="tabContent">
+    <h3>Cell Disk I/O Performance Alerts</h3>
+    <div id="cdioAlertsTable"></div>
+  </div>
+
+  <!-- Summary Tab -->
+  <div id="summary" class="tabContent">
+    <h3>Overall Performance Summary</h3>
+    <div id="summaryTable"></div>
+  </div>
+
+  <footer>Paulo Portugal - Oracle XTeam</footer>
+
+  <script>
+    // State
+    let parsedData = [];
+    let lineChart, barChart;
+
+    const chartColors = ['#00e5ff', '#ff4081', '#76ff03', '#ffab40', '#ff1744', '#7c4dff', '#00bfa5', '#ff6e40'];
+
+    // Utilities
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showLoading(message) {
+      hideLoading();
+      const overlay = document.createElement('div');
+      overlay.id = 'loadingOverlay';
+      overlay.className = 'loading-overlay';
+      overlay.innerHTML = `
+        <div class="loading-spinner"></div>
+        <div class="loading-message">${escapeHtml(message)}</div>
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) overlay.remove();
+    }
+
+    function setStatus(message) {
+      document.getElementById('statusText').textContent = message;
+    }
+
+    // Tab switching
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tabContent').forEach(c => c.classList.remove('active'));
+      document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+      document.getElementById(tabName).classList.add('active');
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+
+    // File input handler
+    document.getElementById('fileInput').addEventListener('change', function(evt) {
+      const file = evt.target.files[0];
+      if (!file) return;
+
+      showLoading('Parsing file...');
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const lines = e.target.result.split(/\r?\n/);
+
+          parsedData = lines
+            .filter(l => l.trim())
+            .map(line => line.split(/\t+/).map(c => c.trim()))
+            .filter(cols => cols.length >= 5)
+            .map(cols => {
+              const numMatch = cols[3].replace(/,/g, '').match(/[-+]?\d*\.?\d+/);
+              return numMatch ? {
+                metric: cols[1],
+                target: cols[2],
+                value: parseFloat(numMatch[0]),
+                ts: cols[4]
+              } : null;
+            })
+            .filter(x => x);
+
+          if (parsedData.length === 0) {
+            setStatus('No valid data found in file. Check the format.');
+            hideLoading();
+            return;
+          }
+
+          // Populate metric dropdown
+          const metrics = [...new Set(parsedData.map(d => d.metric))].sort();
+          document.getElementById('metricSelect').innerHTML = metrics.map(m =>
+            `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
+          ).join('');
+          document.getElementById('metricSelect').dispatchEvent(new Event('change'));
+
+          // Generate all alert tables
+          generateAlerts();
+          generateSIOAlerts();
+          generateCDIOAlerts();
+          generateSummary();
+
+          // Enable export
+          document.getElementById('exportBtn').disabled = false;
+
+          setStatus(`Loaded ${parsedData.length} data points for ${metrics.length} metrics`);
+
+        } catch (err) {
+          console.error('Error parsing file:', err);
+          setStatus('Error parsing file: ' + err.message);
+        } finally {
+          hideLoading();
+        }
+      };
+
+      reader.onerror = function() {
+        setStatus('Error reading file');
+        hideLoading();
+      };
+
+      reader.readAsText(file);
+    });
+
+    // Metric selection handler
+    document.getElementById('metricSelect').addEventListener('change', function() {
+      const m = this.value;
+      const targets = [...new Set(parsedData.filter(d => d.metric === m).map(d => d.target))].sort();
+      document.getElementById('targetSelect').innerHTML = targets.map(t =>
+        `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`
+      ).join('');
+      document.getElementById('targetSelect').dispatchEvent(new Event('change'));
+    });
+
+    document.getElementById('targetSelect').addEventListener('change', drawCharts);
+
+    function drawCharts() {
+      const metric = document.getElementById('metricSelect').value;
+      const target = document.getElementById('targetSelect').value;
+
+      if (!metric || !target) return;
+
+      const data = parsedData.filter(d => d.metric === metric && d.target === target);
+      const labels = data.map(d => d.ts);
+      const values = data.map(d => d.value);
+
+      // Line chart
+      if (lineChart) lineChart.destroy();
+      lineChart = new Chart(document.getElementById('lineChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: `${metric} (${target})`,
+            data: values,
+            borderColor: chartColors[0],
+            backgroundColor: chartColors[0] + '30',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#fff' } },
+            title: { display: true, text: 'Time Series', color: '#fff' }
+          },
+          scales: {
+            x: { ticks: { color: '#aaa', maxRotation: 45 }, grid: { color: '#333' } },
+            y: { ticks: { color: '#aaa' }, grid: { color: '#333' }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Bar chart - all targets for this metric
+      const all = parsedData.filter(d => d.metric === metric);
+      const grouped = all.reduce((acc, d) => {
+        acc[d.target] = (acc[d.target] || []).concat(d.value);
+        return acc;
+      }, {});
+
+      const barLabels = Object.keys(grouped).sort();
+      const barValues = barLabels.map(t => {
+        const vals = grouped[t];
+        return vals.reduce((a, b) => a + b, 0) / vals.length;
+      });
+
+      if (barChart) barChart.destroy();
+      barChart = new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+          labels: barLabels,
+          datasets: [{
+            label: `${metric} (avg by target)`,
+            data: barValues,
+            backgroundColor: chartColors.slice(0, barLabels.length)
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#fff' } },
+            title: { display: true, text: 'Average by Target', color: '#fff' }
+          },
+          scales: {
+            x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+            y: { ticks: { color: '#aaa' }, grid: { color: '#333' }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    // Alert generation functions
+    function generateAlerts() {
+      const rules = [
+        { metric: 'FC_IO_RQ_R_MISS_SEC', warn: 100, crit: 500, desc: 'Flash cache read misses/sec' },
+        { metric: 'FC_IO_BY_W_POPULATE_SEC', warn: 100, crit: 500, desc: 'Flash cache populate writes/sec' },
+        { metric: 'FC_IO_RQ_W_SKIP_SEC', warn: 50, crit: 200, desc: 'Skipped writes/sec' },
+        { metric: 'FC_IO_RQ_BY_DISK_WRITER_SEC', warn: 50, crit: 200, desc: 'Disk writer flushes/sec' }
+      ];
+      renderAlertTable('alertsTable', rules);
+    }
+
+    function generateSIOAlerts() {
+      const rules = [
+        { metric: 'SIO_IO_RD_FC_SEC', warn: 50, crit: 20, desc: 'MB/sec from flash cache (low=bad)', lowBad: true },
+        { metric: 'SIO_IO_RD_HD_SEC', warn: 20, crit: 50, desc: 'MB/sec from hard disk (high=bad)' },
+        { metric: 'SIO_IO_SI_SV_SEC', warn: 50, crit: 20, desc: 'MB/sec saved by storage index (low=bad)', lowBad: true },
+        { metric: 'SIO_IO_WR_FC_SEC', warn: 20, crit: 50, desc: 'MB/sec writes into flash cache' }
+      ];
+      renderAlertTable('sioAlertsTable', rules);
+    }
+
+    function generateCDIOAlerts() {
+      const rules = [
+        { metric: 'CD_IO_LOAD', warn: 5, crit: 10, desc: 'Average I/O load (queue length)' },
+        { metric: 'CD_IO_UTIL', warn: 70, crit: 90, desc: 'Disk utilization (%)' },
+        { metric: 'CD_IO_ERRS', warn: 1, crit: 5, desc: 'I/O errors' },
+        { metric: 'CD_IO_BY_R_LG_SEC', warn: 500, crit: 1000, desc: 'MB/sec read large blocks' },
+        { metric: 'CD_IO_BY_W_LG_SEC', warn: 100, crit: 130, desc: 'MB/sec write large blocks' },
+        { metric: 'CD_IO_TM_R_LG_RQ', warn: 100, crit: 130, desc: 'Avg read latency large blocks (us)' }
+      ];
+      renderAlertTable('cdioAlertsTable', rules);
+    }
+
+    function generateSummary() {
+      const allRules = [
+        { metric: 'FC_IO_RQ_R_MISS_SEC', warn: 100, crit: 500, desc: 'Flash cache read misses/sec' },
+        { metric: 'FC_IO_BY_W_POPULATE_SEC', warn: 100, crit: 500, desc: 'Flash cache populate writes/sec' },
+        { metric: 'FC_IO_RQ_W_SKIP_SEC', warn: 50, crit: 200, desc: 'Skipped writes/sec' },
+        { metric: 'FC_IO_RQ_BY_DISK_WRITER_SEC', warn: 50, crit: 200, desc: 'Disk writer flushes/sec' },
+        { metric: 'SIO_IO_RD_FC_SEC', warn: 50, crit: 20, desc: 'MB/sec from flash cache (low=bad)', lowBad: true },
+        { metric: 'SIO_IO_RD_HD_SEC', warn: 20, crit: 50, desc: 'MB/sec from hard disk (high=bad)' },
+        { metric: 'SIO_IO_SI_SV_SEC', warn: 50, crit: 20, desc: 'MB/sec saved by storage index (low=bad)', lowBad: true },
+        { metric: 'SIO_IO_WR_FC_SEC', warn: 20, crit: 50, desc: 'MB/sec writes into flash cache' },
+        { metric: 'CD_IO_LOAD', warn: 5, crit: 10, desc: 'Average I/O load (queue length)' },
+        { metric: 'CD_IO_UTIL', warn: 70, crit: 90, desc: 'Disk utilization (%)' },
+        { metric: 'CD_IO_ERRS', warn: 1, crit: 5, desc: 'I/O errors' },
+        { metric: 'CD_IO_BY_R_LG_SEC', warn: 100, crit: 130, desc: 'MB/sec read large blocks' },
+        { metric: 'CD_IO_BY_W_LG_SEC', warn: 100, crit: 130, desc: 'MB/sec write large blocks' },
+        { metric: 'CD_IO_TM_R_LG_RQ', warn: 500, crit: 1000, desc: 'Avg read latency large blocks (us)' }
+      ];
+      renderAlertTable('summaryTable', allRules);
+    }
+
+    function renderAlertTable(containerId, rules) {
+      let html = `
+        <table>
+          <tr>
+            <th>Metric</th>
+            <th>Avg Value</th>
+            <th>Status</th>
+            <th>Description</th>
+          </tr>
+      `;
+
+      let hasData = false;
+
+      rules.forEach(rule => {
+        const vals = parsedData.filter(d => d.metric === rule.metric).map(d => d.value);
+        if (vals.length === 0) return;
+
+        hasData = true;
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        let status = 'Normal';
+
+        if (rule.lowBad) {
+          if (avg < rule.crit) status = 'Critical';
+          else if (avg < rule.warn) status = 'Warning';
+        } else {
+          if (avg > rule.crit) status = 'Critical';
+          else if (avg > rule.warn) status = 'Warning';
+        }
+
+        html += `
+          <tr class="${status}" onclick="jumpToChart('${escapeHtml(rule.metric)}')">
+            <td>${escapeHtml(rule.metric)}</td>
+            <td>${avg.toFixed(2)}</td>
+            <td><span class="status-badge status-${status}">${status}</span></td>
+            <td>${escapeHtml(rule.desc)}</td>
+          </tr>
+        `;
+      });
+
+      html += '</table>';
+
+      if (!hasData) {
+        html = '<p style="color: #888;">No matching metrics found in the loaded data.</p>';
+      }
+
+      document.getElementById(containerId).innerHTML = html;
+    }
+
+    function jumpToChart(metricName) {
+      switchTab('charts');
+      const sel = document.getElementById('metricSelect');
+      const option = Array.from(sel.options).find(o => o.value === metricName);
+      if (option) {
+        sel.value = metricName;
+        sel.dispatchEvent(new Event('change'));
+      }
+    }
+
+    // Export to CSV
+    document.getElementById('exportBtn').addEventListener('click', function() {
+      if (!parsedData.length) return;
+
+      const headers = ['Metric', 'Target', 'Value', 'Timestamp'];
+      const rows = parsedData.map(d => [
+        d.metric,
+        d.target,
+        d.value,
+        d.ts
+      ]);
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'exacc_metrics.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
