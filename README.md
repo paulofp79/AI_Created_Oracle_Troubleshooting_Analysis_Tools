@@ -129,6 +129,29 @@ pip install streamlit pandas plotly
 
 2. Or open individual tool HTML files directly in your browser.
 
+### Running a Local Web Server (Optional)
+
+To serve the tools over a network or access them from other machines, start a simple HTTP server:
+
+```bash
+# Start HTTP server in background (Linux)
+nohup python3 -m http.server 8080 --directory /path/to/exadata-tools > /path/to/exadata-tools/server.log 2>&1 &
+
+# Example with specific paths:
+nohup python3 -m http.server 8080 --directory /home/paportug/exadata-tools > /home/paportug/exadata-tools/exaweb.log 2>&1 &
+```
+
+Then access the dashboard at: `http://your-server:8080`
+
+To stop the server:
+```bash
+# Find the process
+ps aux | grep "http.server"
+
+# Kill it
+kill <PID>
+```
+
 ### Python Tool (ECS_Analysis.py)
 
 ```bash

@@ -317,18 +317,20 @@
           <div class="tool-icon">ECS</div>
           <h3 class="tool-title">ECS Analysis</h3>
           <p class="tool-desc">Interactive Streamlit app for ECStatJSONExaWatcher cell disk metrics. Visualizes SD vs MD metrics with IOPS/MB conversion.</p>
-          <div class="command-box">
-            <code>streamlit run python/ECS_Analysis.py</code>
-            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
-          </div>
+          <a href="http://100.70.110.80:8501" class="tool-link" target="_blank">Open Tool</a>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">ECS Tool: <a href="http://100.70.110.80:8501" target="_blank" style="color: var(--accent);">http://100.70.110.80:8501</a></p>
         </div>
       </div>
 
       <div style="margin-top: 30px; padding: 20px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border);">
-        <h3 style="margin-bottom: 15px; color: var(--accent);">Python Setup</h3>
-        <p style="color: var(--text-secondary); margin-bottom: 15px;">Install required dependencies:</p>
+        <h3 style="margin-bottom: 15px; color: var(--accent);">Python Setup (App Host Only)</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 15px;">The following commands must be run on the app host machine only to bring the program up:</p>
         <div class="command-box">
           <code>pip install -r requirements.txt</code>
+          <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+        </div>
+        <div class="command-box" style="margin-top: 10px;">
+          <code>streamlit run python/ECS_Analysis.py</code>
           <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
         </div>
       </div>
