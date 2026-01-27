@@ -476,7 +476,7 @@ st.plotly_chart(fig, use_container_width=True)
 
 # Optional data table
 with st.expander("View aggregated data", expanded=False):
-    st.dataframe(plot_df, use_container_width=True)
+    st.dataframe(plot_df)
 
     # CSV download button
     csv = plot_df.to_csv(index=False)
