@@ -1,0 +1,16 @@
+{
+  "name": "ai_created_oracle_troubleshooting_analysis_tools",
+  "version": "1.0.0",
+  "description": "A collection of browser-based and Python tools for analyzing and visualizing Oracle Exadata performance metrics, designed to help DBAs and SREs troubleshoot issues efficiently.",
+  "main": "listener_worker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jsdom": "^26.1.0",
+    "playwright": "^1.58.2"
+  }
+}

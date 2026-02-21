@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Metric Explorer - Exadata TSV Visualizer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../assets/common.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-panel: #111e3a;
+      --bg-card: #152445;
+      --border: #1f3a5f;
+      --accent: #38bdf8;
+      --accent-strong: #0ea5e9;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --danger: #f87171;
+      --success: #34d399;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+      background: radial-gradient(circle at top, #112244, #050814 70%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 32px 16px 18px;
+    }
+
+    header h1 {
+      margin: 0 0 10px;
+      font-size: 2rem;
+      letter-spacing: 0.4px;
+      color: var(--accent);
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 18px 48px;
+    }
+
+    .panel {
+      background: rgba(17, 30, 58, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.35);
+      backdrop-filter: blur(8px);
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    @media (min-width: 960px) {
+      .grid-two {
+        grid-template-columns: 320px minmax(0, 1fr);
+      }
+    }
+
+    .uploader {
+      border: 1px dashed rgba(148, 163, 184, 0.35);
+      border-radius: 14px;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.4);
+      text-align: center;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .uploader.dragover {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    .uploader h3 {
+      margin: 0 0 8px;
+      font-size: 1.15rem;
+    }
+
+    .uploader p {
+      margin: 6px 0 12px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .controls button,
+    .controls label {
+      background: rgba(21, 36, 69, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 0.92rem;
+      transition: all 0.2s;
+    }
+
+    .controls button:hover,
+    .controls label:hover {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.55);
+    }
+
+    .controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: rgba(15, 23, 42, 0.65);
+    }
+
+    .summary {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      margin-top: 18px;
+    }
+
+    .summary-card {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 12px;
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      padding: 12px 16px;
+    }
+
+    .summary-card h4 {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+    }
+
+    .summary-card p {
+      margin: 6px 0 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .filters {
+      display: grid;
+      gap: 12px;
+      margin: 18px 0 12px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .filters label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .filters input,
+    .filters select {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(10, 13, 24, 0.8);
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(56, 189, 248, 0.12);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    thead {
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      cursor: pointer;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    th .sort-indicator {
+      margin-left: 6px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    tbody tr:hover {
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .table-container {
+      max-height: 420px;
+      overflow: auto;
+      border-radius: 12px;
+    }
+
+    .chart-card {
+      margin-top: 20px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 16px;
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      padding: 18px;
+    }
+
+    .chart-controls {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: rgba(56, 189, 248, 0.15);
+      border-radius: 999px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: var(--accent);
+      font-size: 0.78rem;
+      margin-top: 8px;
+    }
+
+    footer {
+      margin-top: 32px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Metric Explorer</h1>
+    <p>Upload TSV or pipe-delimited exports to inspect Exadata platform metrics with filtering, sorting, and trend previews.</p>
+  </header>
+  <main>
+    <div class="panel">
+      <div class="grid-two">
+        <section class="uploader" id="dropzone">
+          <h3>Drop Files or Browse</h3>
+          <p>Supports <strong>.tsv</strong>, <strong>.txt</strong>, and <strong>.csv</strong> (tab or pipe delimited). Data stays in your browser.</p>
+          <label class="controls">
+            <span>
+              <input type="file" id="fileInput" accept=".tsv,.txt,.csv,text/tab-separated-values" multiple>
+              Choose files
+            </span>
+          </label>
+          <div class="controls">
+            <button id="loadBtn" type="button" disabled>Load Selected</button>
+            <button id="clearBtn" type="button">Clear</button>
+            <button id="downloadBtn" type="button" disabled>Download Filtered CSV</button>
+          </div>
+          <div id="status" class="badge" style="display:none"></div>
+          <div id="fileChips" class="chip-list"></div>
+        </section>
+
+        <section>
+          <div class="summary" id="summary"></div>
+          <div class="filters" id="filters" style="display:none">
+            <label>
+              Search All Columns
+              <input type="text" id="searchInput" placeholder="Type to filter rows...">
+            </label>
+            <label>
+              Filter Column
+              <select id="columnFilter"></select>
+            </label>
+            <label>
+              Comparison
+              <select id="comparison">
+                <option value="contains">Contains</option>
+                <option value="equals">Equals</option>
+                <option value=">=">Greater Than / Equal</option>
+                <option value="<=">Less Than / Equal</option>
+              </select>
+            </label>
+            <label>
+              Value
+              <input type="text" id="filterValue" placeholder="Enter comparison value">
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <section class="chart-card" id="chartSection" style="display:none">
+        <h2 style="margin:0 0 12px; font-size:1.2rem;">Quick Trend Preview</h2>
+        <p style="margin:0 0 16px; color:var(--muted); font-size:0.9rem;">Select a numeric metric to preview over the chosen axis. Useful for spotting sudden spikes or drift.</p>
+        <div class="chart-controls">
+          <label>
+            Metric Column (Y-axis)
+            <select id="metricSelect"></select>
+          </label>
+          <label>
+            Axis Column
+            <select id="axisSelect"></select>
+          </label>
+        </div>
+        <canvas id="metricChart" height="320"></canvas>
+      </section>
+
+      <section id="tableSection" style="margin-top:22px;">
+        <div class="table-container" id="tableContainer">
+          <div class="empty-state" id="emptyState">
+            <p>No data loaded yet.</p>
+            <p style="margin-top:10px;">Drop a TSV export above to begin exploring metrics.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+    <footer>
+      Metric Explorer | Paulo Portugal · Oracle XTeam · February 11, 2026
+    </footer>
+  </main>
+
+  <script>
+    const state = {
+      files: [],
+      headers: [],
+      rows: [],
+      filteredRows: [],
+      numericColumns: [],
+      sort: { column: null, direction: 'asc' },
+      chart: null
+    };
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const loadBtn = document.getElementById('loadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const fileChips = document.getElementById('fileChips');
+    const statusBadge = document.getElementById('status');
+    const summaryContainer = document.getElementById('summary');
+    const filtersPanel = document.getElementById('filters');
+    const searchInput = document.getElementById('searchInput');
+    const columnFilter = document.getElementById('columnFilter');
+    const comparisonSelect = document.getElementById('comparison');
+    const filterValue = document.getElementById('filterValue');
+    const tableContainer = document.getElementById('tableContainer');
+    const emptyState = document.getElementById('emptyState');
+    const chartSection = document.getElementById('chartSection');
+    const metricSelect = document.getElementById('metricSelect');
+    const axisSelect = document.getElementById('axisSelect');
+    const chartCanvas = document.getElementById('metricChart');
+
+    function updateFileDisplay() {
+      fileChips.innerHTML = '';
+      if (!state.files.length) {
+        loadBtn.disabled = true;
+        return;
+      }
+      loadBtn.disabled = false;
+      state.files.forEach(file => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = `${file.name} · ${formatFileSize(file.size)}`;
+        fileChips.appendChild(chip);
+      });
+    }
+
+    function resetData() {
+      state.headers = [];
+      state.rows = [];
+      state.filteredRows = [];
+      state.numericColumns = [];
+      state.sort = { column: null, direction: 'asc' };
+      summaryContainer.innerHTML = '';
+      filtersPanel.style.display = 'none';
+      downloadBtn.disabled = true;
+      chartSection.style.display = 'none';
+      tableContainer.innerHTML = '';
+      tableContainer.appendChild(emptyState);
+      emptyState.style.display = 'block';
+      if (state.chart) {
+        state.chart.destroy();
+        state.chart = null;
+      }
+    }
+
+    function detectNumericColumns(headers, rows) {
+      const numeric = [];
+      headers.forEach((header, idx) => {
+        const hasNumber = rows.some(row => row[idx] !== null && row[idx] !== '' && !isNaN(Number(row[idx])));
+        if (hasNumber) numeric.push({ header, index: idx });
+      });
+      return numeric;
+    }
+
+    function buildSummary(filesCount, rowsCount, headers) {
+      summaryContainer.innerHTML = '';
+      const cards = [
+        { label: 'Files Loaded', value: filesCount },
+        { label: 'Rows Parsed', value: rowsCount.toLocaleString() },
+        { label: 'Columns Detected', value: headers.length },
+        { label: 'Numeric Columns', value: state.numericColumns.length }
+      ];
+      cards.forEach(card => {
+        const div = document.createElement('div');
+        div.className = 'summary-card';
+        div.innerHTML = `<h4>${escapeHtml(card.label)}</h4><p>${escapeHtml(String(card.value))}</p>`;
+        summaryContainer.appendChild(div);
+      });
+    }
+
+    function renderFilters(headers) {
+      filtersPanel.style.display = 'grid';
+      columnFilter.innerHTML = '<option value="">All Columns</option>';
+      headers.forEach((header, idx) => {
+        const option = document.createElement('option');
+        option.value = idx;
+        option.textContent = header;
+        columnFilter.appendChild(option);
+      });
+    }
+
+    function applyFilters() {
+      const searchTerm = searchInput.value.trim().toLowerCase();
+      const columnIndex = columnFilter.value !== '' ? Number(columnFilter.value) : null;
+      const comparison = comparisonSelect.value;
+      const compareValue = filterValue.value.trim();
+
+      const filtered = state.rows.filter(row => {
+        let matchesSearch = true;
+        if (searchTerm) {
+          matchesSearch = row.some(cell => (cell ?? '').toString().toLowerCase().includes(searchTerm));
+        }
+
+        if (!matchesSearch) return false;
+
+        if (columnIndex === null || compareValue === '') return true;
+
+        const cellValue = row[columnIndex];
+        if (comparison === 'contains') {
+          return cellValue !== null && cellValue.toString().toLowerCase().includes(compareValue.toLowerCase());
+        }
+        if (comparison === 'equals') {
+          return cellValue !== null && cellValue.toString().toLowerCase() === compareValue.toLowerCase();
+        }
+
+        const numericCell = Number(cellValue);
+        const numericCompare = Number(compareValue);
+        if (Number.isNaN(numericCell) || Number.isNaN(numericCompare)) return false;
+        if (comparison === '>=') {
+          return numericCell >= numericCompare;
+        }
+        if (comparison === '<=') {
+          return numericCell <= numericCompare;
+        }
+        return true;
+      });
+
+      state.filteredRows = filtered;
+      renderTable();
+      updateStatusBadge(`${filtered.length.toLocaleString()} rows shown`);
+      downloadBtn.disabled = filtered.length === 0;
+      updateChartOptions();
+      drawChart();
+    }
+
+    function renderTable() {
+      if (!state.headers.length) {
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+
+      state.headers.forEach((header, idx) => {
+        const th = document.createElement('th');
+        th.textContent = header;
+        th.addEventListener('click', () => sortByColumn(idx));
+        const indicator = document.createElement('span');
+        indicator.className = 'sort-indicator';
+        if (state.sort.column === idx) {
+          indicator.textContent = state.sort.direction === 'asc' ? '▲' : '▼';
+        } else {
+          indicator.textContent = '⇅';
+        }
+        th.appendChild(indicator);
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+
+      const tbody = document.createElement('tbody');
+      state.filteredRows.forEach(row => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+          const td = document.createElement('td');
+          td.textContent = cell ?? '';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      tableContainer.innerHTML = '';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-container';
+      wrapper.appendChild(table);
+      tableContainer.appendChild(wrapper);
+    }
+
+    function sortByColumn(index) {
+      if (state.sort.column === index) {
+        state.sort.direction = state.sort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sort.column = index;
+        state.sort.direction = 'asc';
+      }
+
+      const direction = state.sort.direction === 'asc' ? 1 : -1;
+      state.filteredRows.sort((a, b) => {
+        const valueA = a[index] ?? '';
+        const valueB = b[index] ?? '';
+        const numA = Number(valueA);
+        const numB = Number(valueB);
+        if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
+          return (numA - numB) * direction;
+        }
+        return valueA.toString().localeCompare(valueB.toString()) * direction;
+      });
+
+      renderTable();
+    }
+
+    async function loadFiles() {
+      if (!state.files.length) return;
+      showLoading('Parsing metric files...');
+      resetData();
+
+      try {
+        for (const file of state.files) {
+          const text = await readFileAsText(file);
+          const parsed = parseDelimited(text);
+          if (!parsed.headers.length || !parsed.rows.length) continue;
+          if (!state.headers.length) {
+            state.headers = parsed.headers;
+            state.rows = parsed.rows;
+          } else {
+            // Align columns by header name
+            const headerMap = state.headers.reduce((acc, header, idx) => {
+              acc[header] = idx;
+              return acc;
+            }, {});
+
+            // Add any new headers encountered
+            parsed.headers.forEach(header => {
+              if (!headerMap.hasOwnProperty(header)) {
+                headerMap[header] = state.headers.length;
+                state.headers.push(header);
+                state.rows.forEach(row => row.push(''));
+              }
+            });
+
+            parsed.rows.forEach(row => {
+              const aligned = new Array(state.headers.length).fill('');
+              parsed.headers.forEach((header, idx) => {
+                const targetIdx = headerMap[header];
+                aligned[targetIdx] = row[idx];
+              });
+              state.rows.push(aligned);
+            });
+          }
+        }
+
+        state.filteredRows = [...state.rows];
+        state.numericColumns = detectNumericColumns(state.headers, state.rows);
+        buildSummary(state.files.length, state.rows.length, state.headers);
+        renderFilters(state.headers);
+        renderTable();
+        downloadBtn.disabled = state.rows.length === 0;
+        emptyState.style.display = state.rows.length ? 'none' : 'block';
+        updateChartOptions();
+        drawChart();
+        updateStatusBadge(`${state.rows.length.toLocaleString()} rows loaded`);
+      } catch (error) {
+        console.error(error);
+        showError('Failed to parse one or more files. Please verify the format.');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function parseDelimited(text) {
+      if (!text) return { headers: [], rows: [] };
+      const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      if (!lines.length) return { headers: [], rows: [] };
+
+      const delimiter = detectDelimiter(lines[0]);
+      const headers = lines[0].split(delimiter).map(h => h.trim());
+      const rows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cells = lines[i].split(delimiter).map(cell => cell.trim());
+        while (cells.length < headers.length) cells.push('');
+        rows.push(cells);
+      }
+
+      return { headers, rows };
+    }
+
+    function detectDelimiter(headerLine) {
+      if (headerLine.includes('\t')) return '\t';
+      if (headerLine.includes('|')) return '|';
+      if (headerLine.includes(',')) return ',';
+      return '\t';
+    }
+
+    function updateStatusBadge(message) {
+      statusBadge.textContent = message;
+      statusBadge.style.display = message ? 'inline-flex' : 'none';
+    }
+
+    function updateChartOptions() {
+      if (!state.headers.length) return;
+      metricSelect.innerHTML = '';
+      axisSelect.innerHTML = '';
+
+      const numeric = state.numericColumns.length ? state.numericColumns : state.headers.map((header, index) => ({ header, index }));
+
+      numeric.forEach(({ header, index }) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = header;
+        metricSelect.appendChild(option);
+      });
+
+      state.headers.forEach((header, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = header;
+        axisSelect.appendChild(option);
+      });
+
+      axisSelect.value = autoGuessAxisColumn();
+      chartSection.style.display = metricSelect.options.length ? 'block' : 'none';
+    }
+
+    function autoGuessAxisColumn() {
+      const lowerHeaders = state.headers.map(h => h.toLowerCase());
+      const candidates = ['timestamp', 'time', 'datetime', 'sample_time', 'begin_time'];
+      for (const candidate of candidates) {
+        const idx = lowerHeaders.indexOf(candidate);
+        if (idx !== -1) return idx;
+      }
+      return 0;
+    }
+
+    function drawChart() {
+      if (!state.filteredRows.length || !metricSelect.options.length) {
+        if (state.chart) {
+          state.chart.destroy();
+          state.chart = null;
+        }
+        return;
+      }
+
+      const metricIdx = Number(metricSelect.value);
+      const axisIdx = Number(axisSelect.value);
+
+      const labels = state.filteredRows.map(row => {
+        const value = row[axisIdx];
+        if (!value) return `Row ${row.rowIndex ?? ''}`;
+        return value;
+      });
+
+      const data = state.filteredRows.map(row => {
+        const value = Number(row[metricIdx]);
+        return Number.isNaN(value) ? null : value;
+      });
+
+      const datasetLabel = state.headers[metricIdx] || 'Metric';
+
+      if (state.chart) {
+        state.chart.destroy();
+      }
+
+      const ctx = chartCanvas.getContext('2d');
+      state.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: datasetLabel,
+            data,
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.15)',
+            pointRadius: 2,
+            spanGaps: true,
+            tension: 0.25
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#e2e8f0' } },
+            tooltip: {
+              callbacks: {
+                label: context => `${context.dataset.label}: ${context.formattedValue}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#cbd5f5' },
+              grid: { color: 'rgba(148, 163, 184, 0.15)' }
+            },
+            y: {
+              ticks: { color: '#cbd5f5' },
+              grid: { color: 'rgba(148, 163, 184, 0.12)' }
+            }
+          }
+        }
+      });
+    }
+
+    function downloadFiltered() {
+      if (!state.filteredRows.length) return;
+      const csvRows = [state.headers.join(',')];
+      state.filteredRows.forEach(row => {
+        const values = row.map(cell => {
+          if (cell === null || cell === undefined) return '';
+          const value = cell.toString();
+          if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+            return '"' + value.replace(/"/g, '""') + '"';
+          }
+          return value;
+        });
+        csvRows.push(values.join(','));
+      });
+      const csvContent = csvRows.join('\n');
+      downloadCsv(csvContent, 'metric_explorer_filtered.csv');
+    }
+
+    // Event wiring
+    dropzone.addEventListener('dragover', event => {
+      event.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+
+    dropzone.addEventListener('drop', event => {
+      event.preventDefault();
+      dropzone.classList.remove('dragover');
+      const files = Array.from(event.dataTransfer.files).filter(file => file.type.startsWith('text') || file.name.match(/\.(tsv|txt|csv)$/i));
+      if (!files.length) {
+        showError('No supported files detected. Accepted: .tsv, .txt, .csv.');
+        return;
+      }
+      state.files = files;
+      updateFileDisplay();
+    });
+
+    fileInput.addEventListener('change', event => {
+      state.files = Array.from(event.target.files);
+      updateFileDisplay();
+    });
+
+    loadBtn.addEventListener('click', loadFiles);
+    clearBtn.addEventListener('click', () => {
+      state.files = [];
+      fileInput.value = '';
+      updateFileDisplay();
+      resetData();
+      updateStatusBadge('');
+    });
+
+    downloadBtn.addEventListener('click', downloadFiltered);
+
+    searchInput.addEventListener('input', applyFilters);
+    columnFilter.addEventListener('change', applyFilters);
+    comparisonSelect.addEventListener('change', applyFilters);
+    filterValue.addEventListener('input', applyFilters);
+
+    metricSelect.addEventListener('change', drawChart);
+    axisSelect.addEventListener('change', drawChart);
+
+    window.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        dropzone.classList.remove('dragover');
+      }
+    });
+  </script>
+</body>
+</html>
