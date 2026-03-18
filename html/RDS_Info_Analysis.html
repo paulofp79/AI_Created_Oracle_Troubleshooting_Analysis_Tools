@@ -244,6 +244,74 @@
       color: #7bc8f8;
       margin-top: 10px;
     }
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .control-grid input,
+    .control-grid select {
+      min-height: auto;
+      margin-bottom: 0;
+      width: 100%;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin: 22px 0;
+    }
+    .summary-card {
+      background: #1a2130;
+      border: 1px solid #2e3750;
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow: 0 1px 8px rgba(0, 0, 0, 0.18);
+    }
+    .summary-card .label {
+      color: #94a8d6;
+      font-size: 0.88em;
+      margin-bottom: 5px;
+    }
+    .summary-card .value {
+      color: #f7fbff;
+      font-size: 1.35em;
+      font-weight: 700;
+    }
+    .data-table-wrapper {
+      margin-top: 18px;
+      overflow-x: auto;
+      border: 1px solid #2e3750;
+      border-radius: 10px;
+      background: #13121b;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95em;
+    }
+    .data-table th,
+    .data-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #23243a;
+      white-space: nowrap;
+    }
+    .data-table th {
+      color: #7bc8f8;
+      background: #1b2232;
+      position: sticky;
+      top: 0;
+    }
+    .data-table td {
+      color: #d9e7fb;
+    }
+    .hint-text {
+      color: #a8badf;
+      margin-top: 8px;
+      font-size: 0.92em;
+    }
 
     @media (max-width: 890px) {
       .container { padding: 24px 8px; }
@@ -256,7 +324,8 @@
   <div class="container">
     <div class="tab-nav">
       <button class="active" data-tab="0">Counter Analytics</button>
-      <button data-tab="1">Key RDS Congestion Counters</button>
+      <button data-tab="1">RDS Ping Latency</button>
+      <button data-tab="2">Key RDS Congestion Counters</button>
     </div>
 
     <div class="tab-content active" id="tab-0">
@@ -275,6 +344,42 @@
     </div>
 
     <div class="tab-content" id="tab-1">
+      <h3>RDS Ping Latency</h3>
+      <div class="hint-text">
+        Parses lines like <code>rds-ping ... 100.107.0.118: 1: 7757 usec</code> and highlights the highest latency samples.
+      </div>
+
+      <div class="control-grid">
+        <div>
+          <label for="pingEndpointSelect">Endpoint filter:</label>
+          <select id="pingEndpointSelect">
+            <option value="">All endpoints</option>
+          </select>
+        </div>
+        <div>
+          <label for="pingQueueSelect">Queue filter:</label>
+          <select id="pingQueueSelect">
+            <option value="">All queues</option>
+          </select>
+        </div>
+        <div>
+          <label for="pingThresholdInput">Minimum latency (`usec`):</label>
+          <input type="number" id="pingThresholdInput" min="0" step="100" value="0">
+        </div>
+        <div>
+          <label for="pingTopNInput">Top rows:</label>
+          <input type="number" id="pingTopNInput" min="1" max="200" step="1" value="30">
+        </div>
+      </div>
+
+      <button id="updatePingBtn" disabled>Update Latency View</button>
+
+      <canvas id="pingChart" width="600" height="300"></canvas>
+      <div id="pingSummary"></div>
+      <div id="pingResult"></div>
+    </div>
+
+    <div class="tab-content" id="tab-2">
       <h3>Key RDS Congestion Counters</h3>
       <div class="rds-congestion-list">
         <h4>Important counters for RDS Congestion analysis:</h4>
@@ -302,6 +407,8 @@
     let unifiedText = '';
     let allCounters = [];
     let countersToSeries = {};
+    let pingSamples = [];
+    let pingChart = null;
 
     // Utilities
     function escapeHtml(text) {
@@ -390,17 +497,34 @@
 
         unifiedText = contents.join('\n');
         extractCounters();
+        extractPingSamples();
         populateCounterDropdown();
+        populatePingFilters();
 
         if (allCounters.length > 0) {
           document.getElementById('counterSelect').selectedIndex = 0;
           document.getElementById('updateBtn').disabled = false;
           plotCounters();
-          setStatus(`Loaded ${allCounters.length} counters from ${files.length} file(s)`);
         } else {
-          setStatus('No counters found in the loaded files');
           document.getElementById('updateBtn').disabled = true;
         }
+
+        document.getElementById('updatePingBtn').disabled = pingSamples.length === 0;
+        if (pingSamples.length > 0) {
+          plotPingSamples();
+        } else {
+          clearPingView();
+        }
+
+        const statusParts = [];
+        if (allCounters.length > 0) statusParts.push(`${allCounters.length} counters`);
+        if (pingSamples.length > 0) statusParts.push(`${pingSamples.length} rds-ping samples`);
+
+        setStatus(
+          statusParts.length
+            ? `Loaded ${statusParts.join(' and ')} from ${files.length} file(s)`
+            : 'No supported counter or rds-ping data found in the loaded files'
+        );
 
       } catch (err) {
         console.error('Error loading files:', err);
@@ -424,6 +548,50 @@
       allCounters = Object.keys(countersToSeries).sort();
     }
 
+    function extractPingSamples() {
+      pingSamples = [];
+      const lines = unifiedText.split(/\r?\n/);
+
+      lines.forEach((line, index) => {
+        if (!line.includes('rds-ping') || !line.includes('usec')) return;
+
+        const fileMatch = line.match(/^([^:\n]+):/);
+        const timestampMatch = line.match(/\[INFO:(\d{4}-\d{2}-\d{2}-\d{2}:\d{2}:\d{2})\]/);
+        const queueMatch = line.match(/\s-Q\s+(\d+)/);
+        const pathMatch = line.match(/\s-I\s+(\d+\.\d+\.\d+\.\d+)\s+(\d+\.\d+\.\d+\.\d+):\s+\d+:\s+(\d+)\s+usec\b/);
+        const latencyMatch = line.match(/:\s+\d+:\s+(\d+)\s+usec\b/);
+
+        const timestampText = timestampMatch ? timestampMatch[1] : `Sample ${index + 1}`;
+        const normalizedTimestamp = timestampMatch ? timestampMatch[1].replace(
+          /^(\d{4}-\d{2}-\d{2})-(\d{2}:\d{2}:\d{2})$/,
+          '$1T$2'
+        ) : null;
+        const parsedTimestamp = normalizedTimestamp ? new Date(normalizedTimestamp) : null;
+
+        const sourceIp = pathMatch ? pathMatch[1] : 'unknown';
+        const targetIp = pathMatch ? pathMatch[2] : 'unknown';
+        const usec = pathMatch ? Number(pathMatch[3]) : Number(latencyMatch ? latencyMatch[1] : NaN);
+        const queue = Number(queueMatch ? queueMatch[1] : NaN);
+
+        if (Number.isNaN(usec)) return;
+
+        pingSamples.push({
+          file: fileMatch ? fileMatch[1] : 'unknown',
+          timestampText,
+          timestamp: parsedTimestamp && !Number.isNaN(parsedTimestamp.getTime()) ? parsedTimestamp : new Date(index * 1000),
+          queue,
+          sourceIp,
+          targetIp,
+          endpoint: `${sourceIp} -> ${targetIp}`,
+          usec,
+          lineNumber: index + 1,
+          rawLine: line
+        });
+      });
+
+      pingSamples.sort((a, b) => a.timestamp - b.timestamp);
+    }
+
     function populateCounterDropdown() {
       const select = document.getElementById('counterSelect');
       select.innerHTML = '';
@@ -435,7 +603,41 @@
       });
     }
 
+    function populatePingFilters() {
+      const endpointSelect = document.getElementById('pingEndpointSelect');
+      const queueSelect = document.getElementById('pingQueueSelect');
+      const selectedEndpoint = endpointSelect.value;
+      const selectedQueue = queueSelect.value;
+
+      const endpoints = Array.from(new Set(pingSamples.map(sample => sample.endpoint))).sort();
+      const queues = Array.from(new Set(pingSamples.map(sample => String(sample.queue)))).sort((a, b) => Number(a) - Number(b));
+
+      endpointSelect.innerHTML = '<option value="">All endpoints</option>';
+      endpoints.forEach(endpoint => {
+        const opt = document.createElement('option');
+        opt.value = endpoint;
+        opt.textContent = endpoint;
+        endpointSelect.appendChild(opt);
+      });
+
+      queueSelect.innerHTML = '<option value="">All queues</option>';
+      queues.forEach(queue => {
+        const opt = document.createElement('option');
+        opt.value = queue;
+        opt.textContent = queue;
+        queueSelect.appendChild(opt);
+      });
+
+      if (endpoints.includes(selectedEndpoint)) endpointSelect.value = selectedEndpoint;
+      if (queues.includes(selectedQueue)) queueSelect.value = selectedQueue;
+    }
+
     document.getElementById('updateBtn').addEventListener('click', plotCounters);
+    document.getElementById('updatePingBtn').addEventListener('click', plotPingSamples);
+    document.getElementById('pingEndpointSelect').addEventListener('change', plotPingSamples);
+    document.getElementById('pingQueueSelect').addEventListener('change', plotPingSamples);
+    document.getElementById('pingThresholdInput').addEventListener('input', plotPingSamples);
+    document.getElementById('pingTopNInput').addEventListener('input', plotPingSamples);
 
     function plotCounters() {
       const select = document.getElementById('counterSelect');
@@ -531,6 +733,156 @@
       });
 
       document.getElementById('result').innerHTML = output;
+    }
+
+    function clearPingView(message = 'No rds-ping samples found in the loaded files.') {
+      if (pingChart) {
+        pingChart.destroy();
+        pingChart = null;
+      }
+      document.getElementById('pingSummary').innerHTML = '';
+      document.getElementById('pingResult').innerHTML = `<div class="error-box">${escapeHtml(message)}</div>`;
+    }
+
+    function plotPingSamples() {
+      if (!pingSamples.length) {
+        clearPingView();
+        return;
+      }
+
+      const endpoint = document.getElementById('pingEndpointSelect').value;
+      const queue = document.getElementById('pingQueueSelect').value;
+      const minUsec = Number(document.getElementById('pingThresholdInput').value || 0);
+      const topN = Math.max(1, Number(document.getElementById('pingTopNInput').value || 30));
+
+      const filtered = pingSamples.filter(sample =>
+        (!endpoint || sample.endpoint === endpoint) &&
+        (!queue || String(sample.queue) === queue) &&
+        sample.usec >= minUsec
+      );
+
+      if (!filtered.length) {
+        clearPingView('No rds-ping rows match the current filters.');
+        return;
+      }
+
+      const sortedByLatency = [...filtered].sort((a, b) => b.usec - a.usec);
+      const topRows = sortedByLatency.slice(0, topN);
+      const avgUsec = filtered.reduce((sum, sample) => sum + sample.usec, 0) / filtered.length;
+      const maxSample = sortedByLatency[0];
+      const minSample = sortedByLatency[sortedByLatency.length - 1];
+
+      document.getElementById('pingSummary').innerHTML = `
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="label">Matching samples</div>
+            <div class="value">${filtered.length.toLocaleString()}</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Highest latency</div>
+            <div class="value">${maxSample.usec.toLocaleString()} usec</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Average latency</div>
+            <div class="value">${avgUsec.toFixed(1)} usec</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Lowest latency</div>
+            <div class="value">${minSample.usec.toLocaleString()} usec</div>
+          </div>
+        </div>
+      `;
+
+      const labels = filtered.map(sample => sample.timestampText);
+      const chartData = filtered.map(sample => sample.usec);
+      const pointColors = filtered.map(sample => sample.usec === maxSample.usec ? '#ff7b72' : '#48e1f9');
+
+      const ctx = document.getElementById('pingChart').getContext('2d');
+      if (pingChart) pingChart.destroy();
+
+      pingChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'rds-ping latency (usec)',
+            data: chartData,
+            borderColor: '#48e1f9',
+            backgroundColor: 'rgba(72, 225, 249, 0.15)',
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointColors,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.15
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              labels: { color: '#fff' }
+            },
+            tooltip: {
+              callbacks: {
+                afterLabel: (context) => {
+                  const sample = filtered[context.dataIndex];
+                  return [
+                    `Queue: ${sample.queue}`,
+                    `Path: ${sample.endpoint}`,
+                    `File: ${sample.file}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#c0d1f7', maxRotation: 45, minRotation: 45 },
+              grid: { color: 'rgba(53, 55, 76, 0.27)' },
+              title: { display: true, text: 'Timestamp', color: '#e1edf7', font: { weight: 'bold' } }
+            },
+            y: {
+              ticks: { color: '#d8e3fa' },
+              grid: { color: 'rgba(53, 55, 76, 0.27)' },
+              title: { display: true, text: 'Latency (usec)', color: '#e1edf7', font: { weight: 'bold' } }
+            }
+          }
+        }
+      });
+
+      const rows = topRows.map(sample => `
+        <tr>
+          <td>${escapeHtml(sample.timestampText)}</td>
+          <td>${sample.usec.toLocaleString()}</td>
+          <td>${sample.queue}</td>
+          <td>${escapeHtml(sample.sourceIp)}</td>
+          <td>${escapeHtml(sample.targetIp)}</td>
+          <td>${escapeHtml(sample.file)}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('pingResult').innerHTML = `
+        <div style="margin-bottom:12px; color:#bfcbe7;">
+          Showing top ${Math.min(topN, topRows.length)} highest-latency rows sorted by <code>usec</code> descending.
+        </div>
+        <div class="data-table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Latency (usec)</th>
+                <th>Queue</th>
+                <th>Source IP</th>
+                <th>Target IP</th>
+                <th>File</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
     }
   </script>
 </body>
