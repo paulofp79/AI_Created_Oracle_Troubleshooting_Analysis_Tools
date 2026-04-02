@@ -9,3 +9,6 @@ pandas>=2.0.0
 
 # Interactive plotting
 plotly>=5.18.0
+
+# Oracle database connectivity for AWR repository explorer
+oracledb>=2.4.0

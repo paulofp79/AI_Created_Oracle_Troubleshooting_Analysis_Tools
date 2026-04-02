@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RDS Analysis - Paulo Portugal - XTeam</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fflate/umd/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xz-decompress/dist/package/xz-decompress.js"></script>
   <script src="../assets/common.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
   <style>
@@ -398,8 +398,8 @@
 
   <script>
     // Check library availability
-    if (typeof fflate === 'undefined') {
-      document.getElementById('errorBox').innerHTML = '<div class="error-box">Warning: fflate library not loaded. XZ decompression unavailable.</div>';
+    if (!window['xz-decompress'] || !window['xz-decompress'].XzReadableStream) {
+      document.getElementById('errorBox').innerHTML = '<div class="error-box">Warning: XZ decompression library not loaded. .xz upload unavailable.</div>';
     }
 
     // State
@@ -407,6 +407,7 @@
     let unifiedText = '';
     let allCounters = [];
     let countersToSeries = {};
+    let counterSamples = [];
     let pingSamples = [];
     let pingChart = null;
 
@@ -451,6 +452,20 @@
       document.getElementById('statusText').textContent = message;
     }
 
+    async function readInputFile(file) {
+      if (!file.name.endsWith('.xz')) {
+        return await file.text();
+      }
+
+      const xzLib = window['xz-decompress'];
+      if (!xzLib || !xzLib.XzReadableStream) {
+        throw new Error('XZ decompression library not available');
+      }
+
+      const decompressedStream = new xzLib.XzReadableStream(file.stream());
+      return await new Response(decompressedStream).text();
+    }
+
     // Tab logic
     document.querySelectorAll('.tab-nav button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -473,25 +488,12 @@
       try {
         const contents = await Promise.all(files.map(async (file, idx) => {
           updateLoading(`Reading ${file.name} (${idx + 1}/${files.length})`);
-
-          if (file.name.endsWith('.xz')) {
-            try {
-              const buffer = await file.arrayBuffer();
-              const uint8 = new Uint8Array(buffer);
-
-              if (typeof fflate === 'undefined' || !fflate.xzDecompress) {
-                throw new Error('XZ decompression not available');
-              }
-
-              const decompressed = fflate.xzDecompress(uint8);
-              return new TextDecoder().decode(decompressed);
-            } catch (err) {
-              console.error('Decompression failed for', file.name, err);
-              showError(`Could not decompress ${file.name}: ${err.message}`);
-              return '';
-            }
-          } else {
-            return await file.text();
+          try {
+            return await readInputFile(file);
+          } catch (err) {
+            console.error('File read failed for', file.name, err);
+            showError(`Could not read ${file.name}: ${err.message}`);
+            return '';
           }
         }));
 
@@ -535,55 +537,116 @@
     });
 
     function extractCounters() {
+      counterSamples = [];
       countersToSeries = {};
-      // Match all 'name value' lines
-      const re = /^\s*([a-zA-Z0-9_]+)\s+(\d+)$/gm;
-      let match;
-      while ((match = re.exec(unifiedText)) !== null) {
-        const name = match[1];
-        const value = parseInt(match[2], 10);
-        if (!(name in countersToSeries)) countersToSeries[name] = [];
-        countersToSeries[name].push(value);
-      }
+      const lines = unifiedText.split(/\r?\n/);
+      let currentSample = null;
+
+      const pushCurrentSample = () => {
+        if (currentSample && Object.keys(currentSample.counters).length > 0) {
+          counterSamples.push(currentSample);
+        }
+      };
+
+      lines.forEach((line, index) => {
+        const markerMatch = line.match(/^\s*zzz\s*<([^>]+)>/i);
+        if (markerMatch) {
+          pushCurrentSample();
+          const markerText = markerMatch[1].trim();
+          const parsedTime = parseMarkerTimestamp(markerText);
+          currentSample = {
+            timestampText: formatMarkerLabel(markerText, parsedTime),
+            timestamp: parsedTime || new Date(index * 1000),
+            counters: {}
+          };
+          return;
+        }
+
+        const counterMatch = line.match(/^\s*([a-zA-Z0-9_]+)\s+(\d+)\s*$/);
+        if (!counterMatch) return;
+
+        if (!currentSample) {
+          currentSample = {
+            timestampText: `Sample ${counterSamples.length + 1}`,
+            timestamp: new Date(index * 1000),
+            counters: {}
+          };
+        }
+
+        currentSample.counters[counterMatch[1]] = parseInt(counterMatch[2], 10);
+      });
+
+      pushCurrentSample();
+
+      counterSamples.sort((a, b) => a.timestamp - b.timestamp);
+
+      counterSamples.forEach(sample => {
+        Object.entries(sample.counters).forEach(([name, value]) => {
+          if (!(name in countersToSeries)) countersToSeries[name] = [];
+          countersToSeries[name].push({
+            x: sample.timestampText,
+            y: value
+          });
+        });
+      });
+
       allCounters = Object.keys(countersToSeries).sort();
+    }
+
+    function parseMarkerTimestamp(markerText) {
+      const slashFormat = markerText.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/);
+      if (slashFormat) {
+        const [, month, day, year, time] = slashFormat;
+        const parsed = new Date(`${year}-${month}-${day}T${time}`);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      }
+
+      const isoLike = markerText.match(/^(\d{4}-\d{2}-\d{2})[- ](\d{2}:\d{2}:\d{2})/);
+      if (isoLike) {
+        const parsed = new Date(`${isoLike[1]}T${isoLike[2]}`);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      }
+
+      return null;
+    }
+
+    function formatMarkerLabel(markerText, parsedTime) {
+      if (parsedTime && !Number.isNaN(parsedTime.getTime())) {
+        const month = String(parsedTime.getMonth() + 1).padStart(2, '0');
+        const day = String(parsedTime.getDate()).padStart(2, '0');
+        const hours = String(parsedTime.getHours()).padStart(2, '0');
+        const minutes = String(parsedTime.getMinutes()).padStart(2, '0');
+        const seconds = String(parsedTime.getSeconds()).padStart(2, '0');
+        return `${month}/${day} ${hours}:${minutes}:${seconds}`;
+      }
+      return markerText;
     }
 
     function extractPingSamples() {
       pingSamples = [];
       const lines = unifiedText.split(/\r?\n/);
+      const pingRe = /^(?:(?<file>[^:\n]+):)?\[INFO:(?<timestamp>\d{4}-\d{2}-\d{2}-\d{2}:\d{2}:\d{2})\]\s+numactl\b.*?\brds-ping\b.*?\s-Q\s+(?<queue>\d+)\s+-I\s+(?<source>\d+\.\d+\.\d+\.\d+)\s+(?<target>\d+\.\d+\.\d+\.\d+):\s+\d+:\s+(?<usec>\d+)\s+usec\s*$/;
 
       lines.forEach((line, index) => {
-        if (!line.includes('rds-ping') || !line.includes('usec')) return;
+        const match = line.match(pingRe);
+        if (!match || !match.groups) return;
 
-        const fileMatch = line.match(/^([^:\n]+):/);
-        const timestampMatch = line.match(/\[INFO:(\d{4}-\d{2}-\d{2}-\d{2}:\d{2}:\d{2})\]/);
-        const queueMatch = line.match(/\s-Q\s+(\d+)/);
-        const pathMatch = line.match(/\s-I\s+(\d+\.\d+\.\d+\.\d+)\s+(\d+\.\d+\.\d+\.\d+):\s+\d+:\s+(\d+)\s+usec\b/);
-        const latencyMatch = line.match(/:\s+\d+:\s+(\d+)\s+usec\b/);
-
-        const timestampText = timestampMatch ? timestampMatch[1] : `Sample ${index + 1}`;
-        const normalizedTimestamp = timestampMatch ? timestampMatch[1].replace(
+        const timestampText = match.groups.timestamp;
+        const normalizedTimestamp = timestampText ? timestampText.replace(
           /^(\d{4}-\d{2}-\d{2})-(\d{2}:\d{2}:\d{2})$/,
           '$1T$2'
         ) : null;
         const parsedTimestamp = normalizedTimestamp ? new Date(normalizedTimestamp) : null;
 
-        const sourceIp = pathMatch ? pathMatch[1] : 'unknown';
-        const targetIp = pathMatch ? pathMatch[2] : 'unknown';
-        const usec = pathMatch ? Number(pathMatch[3]) : Number(latencyMatch ? latencyMatch[1] : NaN);
-        const queue = Number(queueMatch ? queueMatch[1] : NaN);
-
-        if (Number.isNaN(usec)) return;
-
         pingSamples.push({
-          file: fileMatch ? fileMatch[1] : 'unknown',
+          file: match.groups.file || 'unknown',
           timestampText,
           timestamp: parsedTimestamp && !Number.isNaN(parsedTimestamp.getTime()) ? parsedTimestamp : new Date(index * 1000),
-          queue,
-          sourceIp,
-          targetIp,
-          endpoint: `${sourceIp} -> ${targetIp}`,
-          usec,
+          queue: Number(match.groups.queue),
+          sourceIp: match.groups.source,
+          targetIp: match.groups.target,
+          endpoint: `${match.groups.source} -> ${match.groups.target}`,
+          usec: Number(match.groups.usec),
           lineNumber: index + 1,
           rawLine: line
         });
@@ -666,10 +729,11 @@
         }
 
         maxLength = Math.max(maxLength, values.length);
-        const first = values[0];
-        const last = values[values.length - 1];
+        const numericValues = values.map(point => point.y);
+        const first = numericValues[0];
+        const last = numericValues[numericValues.length - 1];
         const diff = last - first;
-        const perLineIncrease = diff / (values.length - 1);
+        const perLineIncrease = diff / (numericValues.length - 1);
         const percentIncrease = first === 0
           ? 'N/A (initial value is 0)'
           : `${((diff / first) * 100).toFixed(2)}%`;
@@ -677,7 +741,7 @@
         output += `
           <div style="margin-bottom:20px">
             <b style="color:#48e1f9">${escapeHtml(counter)}</b><br>
-            Total samples: <span style="color:#ffeead">${values.length}</span><br>
+            Total samples: <span style="color:#ffeead">${numericValues.length}</span><br>
             First value: <span style="color:#b2dffc">${first.toLocaleString()}</span><br>
             Last value: <span style="color:#fad7ac">${last.toLocaleString()}</span><br>
             Total increase: <span style="color:#b5ead7">${diff.toLocaleString()}</span><br>
@@ -688,7 +752,7 @@
 
         datasets.push({
           label: counter,
-          data: values,
+          data: numericValues,
           borderColor: colors[idx % colors.length],
           backgroundColor: colors[idx % colors.length] + '44',
           fill: false,
@@ -698,7 +762,7 @@
         });
       });
 
-      const labels = Array.from({ length: maxLength }, (_, i) => `Sample ${i + 1}`);
+      const labels = counterSamples.map(sample => sample.timestampText);
 
       const ctx = document.getElementById('myChart').getContext('2d');
       if (chart) chart.destroy();
@@ -719,9 +783,17 @@
           },
           scales: {
             x: {
-              ticks: { color: '#c0d1f7' },
+              ticks: {
+                color: '#c0d1f7',
+                maxRotation: 90,
+                minRotation: 60,
+                autoSkip: false,
+                callback: function(value, index) {
+                  return index % 10 === 0 ? this.getLabelForValue(value) : '';
+                }
+              },
               grid: { color: 'rgba(53, 55, 76, 0.27)' },
-              title: { display: true, text: 'Sample/Interval', color: '#e1edf7', font: { weight: 'bold' } }
+              title: { display: true, text: 'Timestamp', color: '#e1edf7', font: { weight: 'bold' } }
             },
             y: {
               ticks: { color: '#d8e3fa' },

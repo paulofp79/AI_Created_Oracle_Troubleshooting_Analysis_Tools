@@ -10,6 +10,7 @@ Date: 05-Aug-2025
 
 import re
 import json
+import lzma
 from datetime import datetime
 from collections import defaultdict
 from typing import List, Dict, Any, Optional
@@ -21,7 +22,7 @@ import plotly.express as px
 # Constants
 MAX_FILE_SIZE_MB = 200
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
-ALLOWED_EXTENSIONS = ['.dat', '.json', '.txt', '.log']
+ALLOWED_EXTENSIONS = ['.dat', '.json', '.txt', '.log', '.xz']
 
 # Page configuration
 st.set_page_config(page_title="ECStat Disk Charts (SD vs MD)", layout="wide")
@@ -328,50 +329,124 @@ def validate_file(uploaded_file) -> bool:
     return True
 
 
+def read_uploaded_text(uploaded_file) -> str:
+    """
+    Read uploaded file content as text.
+
+    Supports plain text uploads and .xz-compressed inputs.
+    """
+    file_name = uploaded_file.name.lower()
+    raw_bytes = uploaded_file.getvalue()
+
+    if file_name.endswith(".xz"):
+        try:
+            raw_bytes = lzma.decompress(raw_bytes)
+        except lzma.LZMAError as e:
+            raise ValueError(f"Could not decompress XZ file {uploaded_file.name}: {e}")
+
+    try:
+        return raw_bytes.decode("utf-8", errors="ignore")
+    except UnicodeDecodeError as e:
+        raise ValueError(f"Could not decode file {uploaded_file.name}: {e}")
+
+
+def read_uploaded_text_from_payload(file_name: str, raw_bytes: bytes) -> str:
+    """
+    Read payload bytes as text.
+
+    Supports plain text payloads and .xz-compressed inputs.
+    """
+    file_name = file_name.lower()
+
+    if file_name.endswith(".xz"):
+        try:
+            raw_bytes = lzma.decompress(raw_bytes)
+        except lzma.LZMAError as e:
+            raise ValueError(f"Could not decompress XZ file {file_name}: {e}")
+
+    try:
+        return raw_bytes.decode("utf-8", errors="ignore")
+    except UnicodeDecodeError as e:
+        raise ValueError(f"Could not decode file {file_name}: {e}")
+
+
+@st.cache_data(show_spinner=False)
+def parse_uploaded_payloads(file_payloads: List[tuple]):
+    """
+    Parse uploaded file payloads once and cache the result across Streamlit reruns.
+    """
+    raw_texts = []
+    intervals = []
+    file_details = []
+
+    for file_name, raw_bytes in file_payloads:
+        raw_text = read_uploaded_text_from_payload(file_name, raw_bytes)
+        raw_texts.append(raw_text)
+        intervals.append(parse_sample_interval(raw_text, default_sec=5))
+        file_details.append({
+            "name": file_name,
+            "size_kb": len(raw_bytes) / 1024,
+        })
+
+    interval_sec = intervals[0] if intervals else 5
+    combined_text = "\n".join(raw_texts)
+    blocks = json_blocks_from_dat(combined_text)
+    df = to_long_rows(blocks)
+
+    return {
+        "interval_sec": interval_sec,
+        "intervals": intervals,
+        "file_details": file_details,
+        "blocks": blocks,
+        "df": df,
+    }
+
+
 # ----------------------------
 # Main UI
 # ----------------------------
 
-uploaded = st.file_uploader(
-    "Upload your .dat file (ECStatJSONExaWatcher)",
-    type=["dat", "json", "txt", "log"],
+uploaded_files = st.file_uploader(
+    "Upload one or more ECStatJSONExaWatcher files",
+    type=["dat", "json", "txt", "log", "xz"],
+    accept_multiple_files=True,
     help=f"Maximum file size: {MAX_FILE_SIZE_MB}MB"
 )
 
-if not uploaded:
-    st.info("Upload your .dat file to get started.")
+if not uploaded_files:
+    st.info("Upload one or more `.dat` or `.xz` files to get started.")
     st.stop()
 
-# Validate file
-if not validate_file(uploaded):
-    st.stop()
+for uploaded in uploaded_files:
+    if not validate_file(uploaded):
+        st.stop()
 
-# Read file content
+file_payloads = [(uploaded.name, uploaded.getvalue()) for uploaded in uploaded_files]
+
 try:
-    raw_text = uploaded.read().decode("utf-8", errors="ignore")
-except UnicodeDecodeError as e:
-    st.error(f"Could not decode file: {e}")
+    parsed_payload = parse_uploaded_payloads(file_payloads)
+except ValueError as e:
+    st.error(str(e))
     st.stop()
 
-# Parse sample interval
-interval_sec = parse_sample_interval(raw_text, default_sec=5)
+interval_sec = parsed_payload["interval_sec"]
+intervals = parsed_payload["intervals"]
+file_details = parsed_payload["file_details"]
+blocks = parsed_payload["blocks"]
+df = parsed_payload["df"]
 
 with st.expander("Header Details", expanded=False):
     st.write(f"Sample Interval (s): **{interval_sec}**")
-    st.write(f"File size: **{len(raw_text) / 1024:.1f} KB**")
-
-# Parse JSON blocks
-with st.spinner("Parsing JSON blocks..."):
-    blocks = json_blocks_from_dat(raw_text)
+    st.write(f"Files loaded: **{len(uploaded_files)}**")
+    st.dataframe(pd.DataFrame(file_details))
+    if len(set(intervals)) > 1:
+        st.warning(f"Detected mixed sample intervals across files: {sorted(set(intervals))}. Using {interval_sec}s for rate calculations.")
 
 if not blocks:
     st.error("No JSON blocks found after 'zzz <...>' markers. Please check the file format.")
     st.stop()
 
 st.success(f"Found {len(blocks)} JSON blocks")
-
-# Convert to DataFrame
-df = to_long_rows(blocks)
 
 if df.empty:
     st.error("File parsed but no metrics found in 'stats' or 'IOReasons' sections.")

@@ -26,6 +26,7 @@ This toolkit provides interactive visualization and analysis capabilities for:
 - **CPU utilization** from ATP (Autonomous Transaction Processing) files
 - **Cell disk metrics** from ECStatJSONExaWatcher data
 - **RDS congestion counters** from ExaWatcher/AHF data
+- **AWR repository metrics** from `DBA_HIST_%` views with explicit DBID selection
 - **VMStat memory/swap analysis** with anomaly detection
 - **Oracle alert log parsing** with timeline visualization
 - **ExaCC metrics dashboards** with performance alerts
@@ -93,6 +94,16 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Automatic swap utilization alerts
 - CSV export
 
+### 7. AWR_Repository_Explorer.py (Streamlit App)
+**Purpose:** Connect to an Oracle AWR dump repository and chart `DBA_HIST_%` metrics by DBID
+
+**Features:**
+- Oracle login from the Streamlit UI
+- DBID discovery from `DBA_HIST_DATABASE_INSTANCE`
+- Built-in chart for events such as `gc current block congested`
+- Custom read-only `DBA_HIST_%` SQL with enforced `:dbid` bind
+- Interactive chart builder for query results
+
 ---
 
 ## Installation
@@ -100,7 +111,40 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 ### Prerequisites
 
 - Modern web browser (Chrome, Firefox, Edge, Safari)
-- Python 3.8+ (for ECS_Analysis.py only)
+- Python 3.8+ (for Streamlit-based tools)
+
+### Recommended Python Environment
+
+This repository now uses a local Python 3.12 virtual environment at `.venv`.
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --index-url https://pypi.org/simple -r requirements.txt
+```
+
+Use the virtualenv Python for all project commands:
+
+```bash
+source .venv/bin/activate
+python --version
+```
+
+### Start/Stop Helpers
+
+To stop all app processes:
+
+```bash
+./stopall.sh
+```
+
+This stops anything listening on ports `8080`, `8501`, and `8502`.
+
+To start the dashboard and both Streamlit apps:
+
+```bash
+./startall.sh
+```
 
 ### Python Dependencies
 
@@ -110,7 +154,7 @@ pip install -r requirements.txt
 
 Or install manually:
 ```bash
-pip install streamlit pandas plotly
+pip install streamlit pandas plotly oracledb
 ```
 
 ---
@@ -156,13 +200,23 @@ kill <PID>
 
 ```bash
 # Run with Streamlit
-python3 -m streamlit run python/ECS_Analysis.py --server.port 8501
+source .venv/bin/activate
+python -m streamlit run python/ECS_Analysis.py --server.port 8501
 
 # Or simply
 streamlit run python/ECS_Analysis.py
 ```
 
 Then open http://localhost:8501 in your browser.
+
+### Python Tool (AWR_Repository_Explorer.py)
+
+```bash
+source .venv/bin/activate
+python -m streamlit run python/AWR_Repository_Explorer.py --server.port 8502
+```
+
+Then open http://localhost:8502 in your browser.
 
 ---
 
@@ -216,7 +270,8 @@ cong_update_queued 67890
 ├── index.html                # Main dashboard
 │
 ├── python/                   # Python scripts
-│   └── ECS_Analysis.py       # Streamlit ECstat analyzer
+│   ├── ECS_Analysis.py       # Streamlit ECstat analyzer
+│   └── AWR_Repository_Explorer.py  # Streamlit AWR repository chart explorer
 │
 ├── html/                     # HTML-based tools
 │   ├── alertlog_analyzer.html
