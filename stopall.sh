@@ -13,7 +13,7 @@ kill_port() {
   fi
 }
 
-kill_port 8080
+kill_port 8079
 kill_port 8501
 kill_port 8502
 

@@ -8,7 +8,9 @@ Author: Paulo Portugal - Oracle XTeam
 Date: 18-Mar-2026
 """
 
+import json
 from datetime import date, datetime, time, timedelta
+from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 import pandas as pd
@@ -66,6 +68,9 @@ LOAD_STAT_NAMES = [
     "user commits",
 ]
 
+RECENT_CONNECTIONS_PATH = Path(__file__).resolve().parent.parent / ".awr_recent_connections.json"
+MAX_RECENT_CONNECTIONS = 8
+
 
 class ConnectionConfig:
     def __init__(self, username, password, host, port, service_name, mode):
@@ -78,6 +83,74 @@ class ConnectionConfig:
 
     def dsn(self) -> str:
         return oracle_driver.makedsn(self.host, self.port, service_name=self.service_name)
+
+
+def load_recent_connections() -> list[Dict[str, Any]]:
+    if not RECENT_CONNECTIONS_PATH.exists():
+        return []
+    try:
+        payload = json.loads(RECENT_CONNECTIONS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(payload, list):
+        return []
+    sanitized = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        try:
+            sanitized.append(
+                {
+                    "name": str(item["name"]),
+                    "host": str(item["host"]),
+                    "port": int(item["port"]),
+                    "service_name": str(item["service_name"]),
+                    "username": str(item["username"]),
+                    "mode": str(item.get("mode", "DEFAULT")),
+                }
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    return sanitized
+
+
+def save_recent_connections(connections: list[Dict[str, Any]]) -> None:
+    RECENT_CONNECTIONS_PATH.write_text(json.dumps(connections[:MAX_RECENT_CONNECTIONS], indent=2), encoding="utf-8")
+
+
+def connection_entry_name(host: str, port: int, service_name: str, username: str, mode: str) -> str:
+    return f"{username}@{host}:{port}/{service_name} [{mode}]"
+
+
+def store_recent_connection(host: str, port: int, service_name: str, username: str, mode: str) -> list[Dict[str, Any]]:
+    entry = {
+        "name": connection_entry_name(host, port, service_name, username, mode),
+        "host": host,
+        "port": int(port),
+        "service_name": service_name,
+        "username": username,
+        "mode": mode,
+    }
+    recent = [
+        item
+        for item in load_recent_connections()
+        if not (
+            item["host"] == entry["host"]
+            and int(item["port"]) == entry["port"]
+            and item["service_name"] == entry["service_name"]
+            and item["username"] == entry["username"]
+            and item["mode"] == entry["mode"]
+        )
+    ]
+    recent.insert(0, entry)
+    save_recent_connections(recent)
+    return recent
+
+
+def remove_recent_connection(name: str) -> list[Dict[str, Any]]:
+    recent = [item for item in load_recent_connections() if item["name"] != name]
+    save_recent_connections(recent)
+    return recent
 
 
 def get_connection(config: ConnectionConfig):
@@ -422,132 +495,131 @@ def run_gc_preset(
 
 
 def build_daily_load_sql(sysstat_columns: set) -> str:
-    if {"value_delta"}.issubset(sysstat_columns):
-        return """select trunc(sn.begin_interval_time) as bucket_day,
-       ss.stat_name,
-       sum(ss.value_delta) as stat_value
-from   dba_hist_sysstat ss
-join   dba_hist_snapshot sn
-  on   sn.dbid = ss.dbid
- and   sn.instance_number = ss.instance_number
- and   sn.snap_id = ss.snap_id
-where  ss.dbid = :dbid
-  and  sn.begin_interval_time >= :from_ts
-  and  sn.begin_interval_time <  :to_ts
-  and  ss.stat_name in ('execute count', 'user calls', 'user commits')
-group  by trunc(sn.begin_interval_time), ss.stat_name
-order  by bucket_day, ss.stat_name"""
+    if not {"value"}.issubset(sysstat_columns):
+        raise ValueError(
+            "DBA_HIST_SYSSTAT does not expose VALUE, which is required for the daily load snapshot."
+        )
 
-    if {"value"}.issubset(sysstat_columns):
-        return """with stat_deltas as (
-  select trunc(sn.begin_interval_time) as bucket_day,
+    return """with snaps as (
+  select dbid, instance_number, snap_id, begin_interval_time
+  from   dba_hist_snapshot
+  where  dbid = :dbid
+    and  begin_interval_time >= :start_day - 1
+    and  begin_interval_time <  :end_day
+),
+stat_base as (
+  select sn.begin_interval_time,
          ss.instance_number,
          ss.stat_name,
-         greatest(
-           ss.value - lag(ss.value) over (
-             partition by ss.dbid, ss.instance_number, ss.stat_name
-             order by ss.snap_id
-           ),
-           0
-         ) as value_delta
+         ss.value
   from   dba_hist_sysstat ss
-  join   dba_hist_snapshot sn
+  join   snaps sn
     on   sn.dbid = ss.dbid
    and   sn.instance_number = ss.instance_number
    and   sn.snap_id = ss.snap_id
   where  ss.dbid = :dbid
-    and  sn.begin_interval_time >= :from_ts - interval '1' day
-    and  sn.begin_interval_time <  :to_ts
-    and  ss.stat_name in ('execute count', 'user calls', 'user commits')
+    and  ss.stat_name in ('execute count','user calls','user commits')
+),
+stat_delta as (
+  select begin_interval_time,
+         stat_name,
+         greatest(
+           value - lag(value) over (
+             partition by instance_number, stat_name
+             order by begin_interval_time
+           ),
+           0
+         ) as delta
+  from   stat_base
 )
-select bucket_day,
-       stat_name,
-       sum(value_delta) as stat_value
-from   stat_deltas
-where  bucket_day >= trunc(:from_ts)
-  and  bucket_day <  trunc(:to_ts)
-group  by bucket_day, stat_name
-order  by bucket_day, stat_name"""
-
-    raise ValueError(
-        "DBA_HIST_SYSSTAT does not expose either VALUE_DELTA or VALUE in this repository."
-    )
+select to_char(trunc(begin_interval_time),'YYYY-MM-DD') as day_key,
+       round(sum(case when stat_name = 'execute count' then delta else 0 end) / 1e9, 2) as execs_b,
+       round(sum(case when stat_name = 'user calls' then delta else 0 end) / 1e9, 2) as calls_b,
+       round(sum(case when stat_name = 'user commits' then delta else 0 end) / 1e6, 2) as commits_m
+from   stat_delta
+where  begin_interval_time >= :start_day
+  and  begin_interval_time <  :end_day
+group  by trunc(begin_interval_time)
+order  by trunc(begin_interval_time)"""
 
 
 def build_daily_gc_sql(system_event_columns: set) -> str:
-    if {"total_waits_delta", "time_waited_micro_delta"}.issubset(system_event_columns):
-        return """select trunc(sn.begin_interval_time) as bucket_day,
-       case
-         when se.event_name = 'gc cr block congested' then 'CR'
-         when se.event_name = 'gc current block congested' then 'Current'
-         else se.event_name
-       end as gc_class,
-       sum(se.total_waits_delta) as waits,
-       round(sum(se.time_waited_micro_delta)/1e6, 3) as waited_seconds,
-       round((sum(se.time_waited_micro_delta) / nullif(sum(se.total_waits_delta), 0)) / 1000, 3) as avg_wait_ms
-from   dba_hist_system_event se
-join   dba_hist_snapshot sn
-  on   sn.dbid = se.dbid
- and   sn.instance_number = se.instance_number
- and   sn.snap_id = se.snap_id
-where  se.dbid = :dbid
-  and  sn.begin_interval_time >= :from_ts
-  and  sn.begin_interval_time <  :to_ts
-  and  se.event_name in ('gc cr block congested', 'gc current block congested')
-group  by trunc(sn.begin_interval_time),
-          case
-            when se.event_name = 'gc cr block congested' then 'CR'
-            when se.event_name = 'gc current block congested' then 'Current'
-            else se.event_name
-          end
-order  by bucket_day, gc_class"""
+    required_columns = {"total_waits_fg", "time_waited_micro_fg"}
+    if not required_columns.issubset(system_event_columns):
+        raise ValueError(
+            "DBA_HIST_SYSTEM_EVENT does not expose TOTAL_WAITS_FG and TIME_WAITED_MICRO_FG, "
+            "which are required for the daily GC congestion query."
+        )
 
-    if {"total_waits", "time_waited_micro"}.issubset(system_event_columns):
-        return """with event_deltas as (
-  select trunc(sn.begin_interval_time) as bucket_day,
-         case
-           when se.event_name = 'gc cr block congested' then 'CR'
-           when se.event_name = 'gc current block congested' then 'Current'
-           else se.event_name
-         end as gc_class,
-         greatest(
-           se.total_waits - lag(se.total_waits) over (
-             partition by se.dbid, se.instance_number, se.event_name
-             order by se.snap_id
-           ),
-           0
-         ) as waits_delta,
-         greatest(
-           se.time_waited_micro - lag(se.time_waited_micro) over (
-             partition by se.dbid, se.instance_number, se.event_name
-             order by se.snap_id
-           ),
-           0
-         ) as time_waited_micro_delta
+    return """with snaps as (
+  select dbid, instance_number, snap_id, begin_interval_time
+  from   dba_hist_snapshot
+  where  dbid = :dbid
+    and  begin_interval_time >= :start_day - 1
+    and  begin_interval_time <  :end_day
+),
+se_base as (
+  select sn.begin_interval_time,
+         se.instance_number,
+         se.event_name,
+         se.total_waits_fg,
+         se.time_waited_micro_fg
   from   dba_hist_system_event se
-  join   dba_hist_snapshot sn
+  join   snaps sn
     on   sn.dbid = se.dbid
    and   sn.instance_number = se.instance_number
    and   sn.snap_id = se.snap_id
   where  se.dbid = :dbid
-    and  sn.begin_interval_time >= :from_ts - interval '1' day
-    and  sn.begin_interval_time <  :to_ts
-    and  se.event_name in ('gc cr block congested', 'gc current block congested')
+    and  se.event_name in ('gc cr block congested','gc current block congested')
+),
+se_delta as (
+  select begin_interval_time,
+         event_name,
+         greatest(
+           total_waits_fg - lag(total_waits_fg) over (
+             partition by instance_number, event_name
+             order by begin_interval_time
+           ),
+           0
+         ) as waits,
+         greatest(
+           time_waited_micro_fg - lag(time_waited_micro_fg) over (
+             partition by instance_number, event_name
+             order by begin_interval_time
+           ),
+           0
+         ) as waited_us
+  from   se_base
 )
-select bucket_day,
-       gc_class,
-       sum(waits_delta) as waits,
-       round(sum(time_waited_micro_delta)/1e6, 3) as waited_seconds,
-       round((sum(time_waited_micro_delta) / nullif(sum(waits_delta), 0)) / 1000, 3) as avg_wait_ms
-from   event_deltas
-where  bucket_day >= trunc(:from_ts)
-  and  bucket_day <  trunc(:to_ts)
-group  by bucket_day, gc_class
-order  by bucket_day, gc_class"""
-
-    raise ValueError(
-        "DBA_HIST_SYSTEM_EVENT does not expose supported wait columns for daily GC analysis."
-    )
+select to_char(day_key, 'YYYY-MM-DD') as day_key,
+       round(max(case when event_name = 'gc cr block congested' then waits end) / 1e6, 2) as cr_waits_m,
+       round(max(case when event_name = 'gc cr block congested' then waited_us end) / 1e9, 2) as cr_waited_ks,
+       round(
+         max(case when event_name = 'gc cr block congested' then waited_us end)
+         / nullif(max(case when event_name = 'gc cr block congested' then waits end), 0)
+         / 1000,
+         2
+       ) as cr_avg_ms,
+       round(max(case when event_name = 'gc current block congested' then waits end) / 1e6, 2) as cur_waits_m,
+       round(max(case when event_name = 'gc current block congested' then waited_us end) / 1e9, 2) as cur_waited_ks,
+       round(
+         max(case when event_name = 'gc current block congested' then waited_us end)
+         / nullif(max(case when event_name = 'gc current block congested' then waits end), 0)
+         / 1000,
+         2
+       ) as cur_avg_ms
+from (
+  select trunc(begin_interval_time) as day_key,
+         event_name,
+         sum(waits) as waits,
+         sum(waited_us) as waited_us
+  from   se_delta
+  where  begin_interval_time >= :start_day
+    and  begin_interval_time <  :end_day
+  group  by trunc(begin_interval_time), event_name
+)
+group by day_key
+order by day_key"""
 
 
 def format_human_number(value: Any) -> str:
@@ -718,19 +790,52 @@ def render_gc_compare_chart(frame: pd.DataFrame, y_col: str, title: str):
     st.plotly_chart(fig, use_container_width=True)
 
 
+st.session_state.setdefault("awr_host", "localhost")
+st.session_state.setdefault("awr_port", 1521)
+st.session_state.setdefault("awr_service_name", "orclpdb1")
+st.session_state.setdefault("awr_username", "system")
+st.session_state.setdefault("awr_mode", "DEFAULT")
+
+
 with st.sidebar:
     st.header("Oracle Login")
-    host = st.text_input("Host", value=st.session_state.get("awr_host", "localhost"))
-    port = st.number_input("Port", min_value=1, max_value=65535, value=int(st.session_state.get("awr_port", 1521)))
-    service_name = st.text_input("Service Name", value=st.session_state.get("awr_service_name", "orclpdb1"))
-    username = st.text_input("Username", value=st.session_state.get("awr_username", "system"))
+    recent_connections = load_recent_connections()
+    recent_labels = ["Select a saved connection..."] + [item["name"] for item in recent_connections]
+    selected_recent = st.selectbox("Saved Connections", options=recent_labels, index=0)
+    recent_action_col1, recent_action_col2 = st.columns(2)
+    with recent_action_col1:
+        load_recent_clicked = st.button("Load Saved", use_container_width=True)
+    with recent_action_col2:
+        remove_recent_clicked = st.button("Remove Saved", use_container_width=True)
+
+    if load_recent_clicked and selected_recent != recent_labels[0]:
+        selected_entry = next((item for item in recent_connections if item["name"] == selected_recent), None)
+        if selected_entry is not None:
+            st.session_state["awr_host"] = selected_entry["host"]
+            st.session_state["awr_port"] = int(selected_entry["port"])
+            st.session_state["awr_service_name"] = selected_entry["service_name"]
+            st.session_state["awr_username"] = selected_entry["username"]
+            st.session_state["awr_mode"] = selected_entry["mode"]
+            st.rerun()
+
+    if remove_recent_clicked and selected_recent != recent_labels[0]:
+        remove_recent_connection(selected_recent)
+        st.session_state.pop("awr_selected_recent", None)
+        st.rerun()
+
+    host = st.text_input("Host", key="awr_host")
+    port = st.number_input("Port", min_value=1, max_value=65535, key="awr_port")
+    service_name = st.text_input("Service Name", key="awr_service_name")
+    username = st.text_input("Username", key="awr_username")
     password = st.text_input("Password", type="password")
-    mode = st.selectbox("Auth Mode", options=["DEFAULT", "SYSDBA"], index=0)
+    mode = st.selectbox("Auth Mode", options=["DEFAULT", "SYSDBA"], key="awr_mode")
+    save_current_clicked = st.button("Save Current Connection", use_container_width=True)
 
     connect_clicked = st.button("Connect / Refresh DBIDs", type="primary", use_container_width=True)
 
 
 connection_ready = all([host, port, service_name, username, password])
+save_ready = all([host, port, service_name, username, mode])
 config = None
 
 if connection_ready:
@@ -742,11 +847,18 @@ if connection_ready:
         service_name=service_name.strip(),
         mode=mode,
     )
-
-    st.session_state["awr_host"] = host
-    st.session_state["awr_port"] = int(port)
-    st.session_state["awr_service_name"] = service_name
-    st.session_state["awr_username"] = username
+if save_current_clicked:
+    if save_ready:
+        store_recent_connection(
+            host=host.strip(),
+            port=int(port),
+            service_name=service_name.strip(),
+            username=username.strip(),
+            mode=mode,
+        )
+        st.success("Connection saved.")
+    else:
+        st.error("Provide host, port, service name, username, and auth mode before saving.")
 
 if connect_clicked and not connection_ready:
     st.error("Provide host, port, service name, username, and password before connecting.")
@@ -755,6 +867,13 @@ dbid_frame = None
 if connect_clicked and config is not None:
     try:
         dbid_frame = fetch_dbids(config)
+        store_recent_connection(
+            host=config.host,
+            port=config.port,
+            service_name=config.service_name,
+            username=config.username,
+            mode=config.mode,
+        )
         st.session_state["awr_dbids"] = dbid_frame
         st.success(f"Connected successfully. Found {len(dbid_frame)} DBID value(s).")
     except Exception as exc:
@@ -905,21 +1024,35 @@ with tab_preset:
                         f"{event_name} over time for DBID {selected_dbid}"
                         + (f" and SQL_ID {sql_id_filter}" if sql_id_filter else "")
                     )
-                    if compare_mode:
-                        render_gc_compare_chart(result, metric_column, chart_title)
-                    else:
-                        render_chart(
-                            result,
-                            x_col="bucket_time",
-                            y_col=metric_column,
-                            chart_type="line",
-                            series_col="sql_id" if "sql_id" in result.columns else "event_name",
-                            title=chart_title,
-                        )
-                    st.dataframe(result, use_container_width=True)
-                    st.code(preset_sql, language="sql")
+                    st.session_state["awr_gc_preset_result"] = result
+                    st.session_state["awr_gc_preset_sql"] = preset_sql
+                    st.session_state["awr_gc_preset_metric"] = metric_column
+                    st.session_state["awr_gc_preset_compare_mode"] = compare_mode
+                    st.session_state["awr_gc_preset_chart_title"] = chart_title
             except Exception as exc:
                 st.exception(exc)
+
+    preset_result = st.session_state.get("awr_gc_preset_result")
+    preset_sql = st.session_state.get("awr_gc_preset_sql")
+    preset_metric = st.session_state.get("awr_gc_preset_metric")
+    preset_compare_mode = st.session_state.get("awr_gc_preset_compare_mode", False)
+    preset_chart_title = st.session_state.get("awr_gc_preset_chart_title")
+
+    if preset_result is not None and not preset_result.empty:
+        if preset_compare_mode:
+            render_gc_compare_chart(preset_result, preset_metric, preset_chart_title)
+        else:
+            render_chart(
+                preset_result,
+                x_col="bucket_time",
+                y_col=preset_metric,
+                chart_type="line",
+                series_col="sql_id" if "sql_id" in preset_result.columns else "event_name",
+                title=preset_chart_title,
+            )
+        st.dataframe(preset_result, use_container_width=True)
+        if preset_sql:
+            st.code(preset_sql, language="sql")
 
 with tab_custom:
     st.markdown(
@@ -1033,8 +1166,8 @@ with tab_load_gc:
                     load_sql,
                     {
                         "dbid": selected_dbid,
-                        "from_ts": from_ts,
-                        "to_ts": to_ts,
+                        "start_day": from_ts,
+                        "end_day": to_ts,
                     },
                 )
                 gc_result = run_query(
@@ -1042,8 +1175,8 @@ with tab_load_gc:
                     gc_sql,
                     {
                         "dbid": selected_dbid,
-                        "from_ts": from_ts,
-                        "to_ts": to_ts,
+                        "start_day": from_ts,
+                        "end_day": to_ts,
                     },
                 )
 
@@ -1054,6 +1187,12 @@ with tab_load_gc:
                 st.session_state["awr_daily_gc_result"] = gc_result
                 st.session_state["awr_daily_load_sql"] = load_sql
                 st.session_state["awr_daily_gc_sql"] = gc_sql
+                st.success(
+                    "Daily snapshot completed. Load rows: {} | GC rows: {}".format(
+                        len(load_result),
+                        len(gc_result),
+                    )
+                )
             except Exception as exc:
                 st.exception(exc)
 
@@ -1064,69 +1203,54 @@ with tab_load_gc:
 
     if load_result is not None and not load_result.empty:
         st.markdown("### Daily Load Snapshot")
-        load_pivot = (
-            load_result.pivot_table(
-                index="bucket_day",
-                columns="stat_name",
-                values="stat_value",
-                aggfunc="sum",
-                fill_value=0,
-            )
-            .reset_index()
-        )
-        load_pivot.columns.name = None
-        load_pivot = load_pivot.rename(
-            columns={
-                "execute count": "execs",
-                "user calls": "calls",
-                "user commits": "commits",
-            }
-        )
-        load_pivot = convert_datetime_columns(load_pivot)
-
-        for _, row in load_pivot.iterrows():
+        for _, row in load_result.iterrows():
             st.write(
-                "- {} -> {} execs | {} calls | {} commits".format(
-                    row["bucket_day"].strftime("%Y-%m-%d"),
-                    format_human_number(row.get("execs", 0)),
-                    format_human_number(row.get("calls", 0)),
-                    format_human_number(row.get("commits", 0)),
+                "- {} -> {}B execs | {}B calls | {}M commits".format(
+                    row["day_key"],
+                    format_human_number(row.get("execs_b", 0)),
+                    format_human_number(row.get("calls_b", 0)),
+                    format_human_number(row.get("commits_m", 0)),
                 )
             )
 
         render_dataframe_chart_controls(
-            load_pivot,
+            load_result,
             key_prefix="daily_load",
             title="Daily Load Snapshot for DBID {}".format(selected_dbid),
         )
-        st.dataframe(load_pivot, use_container_width=True)
+        st.dataframe(load_result, use_container_width=True)
         st.code(load_sql, language="sql")
+    elif load_result is not None:
+        st.info("Daily Load Snapshot returned no rows for the selected DBID and time window.")
+        if load_sql:
+            st.code(load_sql, language="sql")
 
     if gc_result is not None and not gc_result.empty:
         st.markdown("### Daily GC Congestion Trend")
-        gc_pivot = gc_result.sort_values(["bucket_day", "gc_class"]).copy()
-
-        for day_value in gc_pivot["bucket_day"].drop_duplicates():
-            day_rows = gc_pivot[gc_pivot["bucket_day"] == day_value]
-            parts = []
-            for _, row in day_rows.iterrows():
-                parts.append(
-                    "{} {} waits / {}s ({}ms)".format(
-                        row["gc_class"],
-                        format_human_number(row["waits"]),
-                        format_human_number(row["waited_seconds"]),
-                        "{:.2f}".format(row["avg_wait_ms"]),
-                    )
+        for _, row in gc_result.iterrows():
+            st.write(
+                "- {}: CR {}M waits / {}K s ({} ms) | Current {}M waits / {}K s ({} ms)".format(
+                    row["day_key"],
+                    format_human_number(row.get("cr_waits_m", 0)),
+                    format_human_number(row.get("cr_waited_ks", 0)),
+                    "{:.2f}".format(row.get("cr_avg_ms", 0) or 0),
+                    format_human_number(row.get("cur_waits_m", 0)),
+                    format_human_number(row.get("cur_waited_ks", 0)),
+                    "{:.2f}".format(row.get("cur_avg_ms", 0) or 0),
                 )
-            st.write("- {}: {}".format(day_value.strftime("%d-%b"), "; ".join(parts)))
+            )
 
         render_dataframe_chart_controls(
-            gc_pivot,
+            gc_result,
             key_prefix="daily_gc",
             title="Daily GC Congestion for DBID {}".format(selected_dbid),
         )
-        st.dataframe(gc_pivot, use_container_width=True)
+        st.dataframe(gc_result, use_container_width=True)
         st.code(gc_sql, language="sql")
+    elif gc_result is not None:
+        st.info("Daily GC Congestion Trend returned no rows for the selected DBID and time window.")
+        if gc_sql:
+            st.code(gc_sql, language="sql")
 
 with tab_top_sql:
     st.markdown(

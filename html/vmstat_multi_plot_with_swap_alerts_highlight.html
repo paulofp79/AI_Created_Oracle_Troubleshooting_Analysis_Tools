@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VMStat Continuous Plotter (Split Swap)</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xz-decompress/dist/package/xz-decompress.js"></script>
   <script src="../assets/common.js"></script>
   <style>
     body {
@@ -130,6 +131,69 @@
       color: #888;
       margin-top: 4px;
     }
+    .findings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin: 15px 0 20px;
+    }
+    .finding-card {
+      background: #141b24;
+      border: 1px solid #334155;
+      border-left: 4px solid #38bdf8;
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .finding-card.warning { border-left-color: #f59e0b; }
+    .finding-card.critical { border-left-color: #ef4444; }
+    .finding-card.info { border-left-color: #22c55e; }
+    .finding-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .finding-title {
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    .finding-badge {
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+    .finding-badge.warning {
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, 0.45);
+    }
+    .finding-badge.critical {
+      color: #fda4af;
+      border-color: rgba(239, 68, 68, 0.45);
+    }
+    .finding-badge.info {
+      color: #86efac;
+      border-color: rgba(34, 197, 94, 0.45);
+    }
+    .finding-summary {
+      color: #e2e8f0;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+    .finding-detail {
+      color: #94a3b8;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .mono-cell {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -137,7 +201,7 @@
   <p>Select one or more vmstat files to stitch together into a continuous timeline:</p>
 
   <div class="controls">
-    <input type="file" id="fileInput" multiple>
+    <input type="file" id="fileInput" multiple accept=".dat,.txt,.log,.xz,.dat.xz,text/plain">
     <button onclick="handleFiles()">Plot & Analyze</button>
     <button class="export-btn" id="exportBtn" onclick="exportToCsv()" disabled>Export CSV</button>
     <button onclick="clearAll()">Clear</button>
@@ -151,45 +215,70 @@
       <div class="stat-label">Records</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value" id="statAvgUsr">0</div>
-      <div class="stat-label">Avg %usr</div>
+      <div class="stat-value" id="statSpan">0</div>
+      <div class="stat-label">Time Span</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value" id="statAvgSys">0</div>
-      <div class="stat-label">Avg %sys</div>
+      <div class="stat-value" id="statP95Busy">0</div>
+      <div class="stat-label">P95 CPU Busy</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value" id="statAvgWa">0</div>
-      <div class="stat-label">Avg %wa</div>
+      <div class="stat-value" id="statMaxRunQ">0</div>
+      <div class="stat-label">Max Run Queue</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value" id="statMaxSi">0</div>
-      <div class="stat-label">Max Swap In</div>
+      <div class="stat-value" id="statMaxBlocked">0</div>
+      <div class="stat-label">Max Blocked</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value" id="statMaxSo">0</div>
-      <div class="stat-label">Max Swap Out</div>
+      <div class="stat-value" id="statMaxWa">0</div>
+      <div class="stat-label">Max %wa</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statMaxSwapIo">0</div>
+      <div class="stat-label">Max si+so</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statMaxSteal">0</div>
+      <div class="stat-label">Max %st</div>
     </div>
   </div>
 
-  <h3>Memory + CPU Usage</h3>
+  <h3>OS Findings</h3>
+  <div id="findingsBox" class="findings-grid"></div>
+
+  <h3>CPU, Run Queue, and Blocked Tasks</h3>
   <canvas id="chart1" width="1400" height="450"></canvas>
 
-  <h3>Swap In (si)</h3>
+  <h3>Memory and Swap Pressure</h3>
   <canvas id="chart2" width="1400" height="250"></canvas>
 
-  <h3>Swap Out (so)</h3>
+  <h3>I/O Throughput and Wait Signals</h3>
   <canvas id="chart3" width="1400" height="250"></canvas>
 
-  <h3>Swap Utilization Alerts</h3>
-  <table id="alertTable">
-    <tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>
+  <h3>Interrupts, Context Switches, and Steal Time</h3>
+  <canvas id="chart4" width="1400" height="250"></canvas>
+
+  <h3>Top Hot Intervals</h3>
+  <table id="incidentTable">
+    <tr><th>Timestamp</th><th>File</th><th>Score</th><th>Signals</th><th>r</th><th>b</th><th>CPU Busy</th><th>%wa</th><th>si/so</th><th>bi/bo</th></tr>
+  </table>
+
+  <h3>Per-File Health Summary</h3>
+  <table id="fileSummaryTable">
+    <tr><th>File</th><th>Coverage</th><th>Records</th><th>Signals</th><th>Peaks</th></tr>
   </table>
 
   <script>
-    let chart1, chart2, chart3;
+    let chart1, chart2, chart3, chart4;
     let allRecords = [];
     let fileResults = [];
+    let currentAnalysis = null;
+
+    const compactNumberFormatter = new Intl.NumberFormat(undefined, {
+      notation: 'compact',
+      maximumFractionDigits: 1
+    });
 
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -218,82 +307,599 @@
       document.getElementById('statusText').textContent = message;
     }
 
-    function parseVmstat(text, fileName) {
-      const lines = text.split('\n');
-      let startTime = null;
+    function formatTimestamp(ts) {
+      return ts ? new Date(ts).toLocaleString() : '-';
+    }
 
-      // Try to find starting time in header
-      const startMatch = text.match(/# Starting Time:\s*([0-9/]+)\s+([0-9:]+)/);
-      if (startMatch) {
-        startTime = new Date(startMatch[1] + ' ' + startMatch[2]);
+    function formatDuration(ms) {
+      if (!Number.isFinite(ms) || ms <= 0) return '0s';
+
+      const totalSeconds = Math.round(ms / 1000);
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (days > 0) return `${days}d ${hours}h`;
+      if (hours > 0) return `${hours}h ${minutes}m`;
+      if (minutes > 0) return `${minutes}m ${seconds}s`;
+      return `${seconds}s`;
+    }
+
+    function formatNumber(value, fractionDigits = 0) {
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue)) return '0';
+      return numericValue.toLocaleString(undefined, {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits
+      });
+    }
+
+    function formatCompactNumber(value) {
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue)) return '0';
+      if (Math.abs(numericValue) < 1000) return formatNumber(numericValue);
+      return compactNumberFormatter.format(numericValue);
+    }
+
+    function formatPercent(value, fractionDigits = 1) {
+      return `${formatNumber(value, fractionDigits)}%`;
+    }
+
+    function average(values) {
+      if (!values.length) return 0;
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function maxValue(values) {
+      return values.reduce((best, value) => (value > best ? value : best), 0);
+    }
+
+    function percentile(values, rank) {
+      if (!values.length) return 0;
+      const sorted = [...values].sort((a, b) => a - b);
+      const index = (rank / 100) * (sorted.length - 1);
+      const lower = Math.floor(index);
+      const upper = Math.ceil(index);
+      if (lower === upper) return sorted[lower];
+      const weight = index - lower;
+      return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+    }
+
+    function getMaxRecord(records, scorer) {
+      let bestRecord = null;
+      let bestScore = -Infinity;
+      for (const record of records) {
+        const score = scorer(record);
+        if (score > bestScore) {
+          bestScore = score;
+          bestRecord = record;
+        }
+      }
+      return bestRecord;
+    }
+
+    function destroyCharts() {
+      if (chart1) { chart1.destroy(); chart1 = null; }
+      if (chart2) { chart2.destroy(); chart2 = null; }
+      if (chart3) { chart3.destroy(); chart3 = null; }
+      if (chart4) { chart4.destroy(); chart4 = null; }
+    }
+
+    function resetOutputViews() {
+      destroyCharts();
+      document.getElementById('findingsBox').innerHTML = '';
+      document.getElementById('incidentTable').innerHTML = '<tr><th>Timestamp</th><th>File</th><th>Score</th><th>Signals</th><th>r</th><th>b</th><th>CPU Busy</th><th>%wa</th><th>si/so</th><th>bi/bo</th></tr>';
+      document.getElementById('fileSummaryTable').innerHTML = '<tr><th>File</th><th>Coverage</th><th>Records</th><th>Signals</th><th>Peaks</th></tr>';
+      document.getElementById('statsBox').style.display = 'none';
+      document.getElementById('exportBtn').disabled = true;
+    }
+
+    async function readVmstatFile(file) {
+      if (!file.name.toLowerCase().endsWith('.xz')) {
+        return await file.text();
       }
 
-      const intervalSec = 1; // vmstat default interval
+      const xzLib = window['xz-decompress'];
+      if (!xzLib || !xzLib.XzReadableStream) {
+        throw new Error(`XZ decompression library not available for ${file.name}`);
+      }
+
+      const decompressedStream = new xzLib.XzReadableStream(file.stream());
+      return await new Response(decompressedStream).text();
+    }
+
+    function formatLocalDateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function parseVmstatDateTime(dateText, timeText) {
+      const normalizedDate = dateText.trim().replace(/\./g, '/');
+      let year;
+      let month;
+      let day;
+
+      if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(normalizedDate)) {
+        const parts = normalizedDate.split(/[-/]/).map(Number);
+        [year, month, day] = parts;
+      } else {
+        const yearLastMatch = normalizedDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (!yearLastMatch) return null;
+
+        const first = parseInt(yearLastMatch[1], 10);
+        const second = parseInt(yearLastMatch[2], 10);
+        year = parseInt(yearLastMatch[3], 10);
+
+        if (first > 12 && second <= 12) {
+          day = first;
+          month = second;
+        } else {
+          month = first;
+          day = second;
+        }
+      }
+
+      const timestamp = new Date(
+        year,
+        month - 1,
+        day,
+        parseInt(timeText.slice(0, 2), 10),
+        parseInt(timeText.slice(3, 5), 10),
+        parseInt(timeText.slice(6, 8), 10)
+      );
+
+      return Number.isNaN(timestamp.getTime()) ? null : timestamp;
+    }
+
+    function parseVmstatTimestamp(line, currentDate) {
+      const datedLine = line.match(/^(\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4})[ T](\d{2}:\d{2}:\d{2})\s+/);
+      if (datedLine) {
+        const timestamp = parseVmstatDateTime(datedLine[1], datedLine[2]);
+        if (!timestamp) return null;
+        return {
+          timestamp,
+          payload: line.slice(datedLine[0].length).trim()
+        };
+      }
+
+      const timeOnly = line.match(/^(\d{2}:\d{2}:\d{2})\s+/);
+      if (timeOnly) {
+        if (!currentDate) return null;
+        const dateKey = formatLocalDateKey(currentDate);
+        return {
+          timestamp: new Date(`${dateKey}T${timeOnly[1]}`),
+          payload: line.slice(timeOnly[0].length).trim()
+        };
+      }
+
+      return null;
+    }
+
+    function parseVmstat(text, fileName, fallbackDate) {
+      const lines = text.split(/\r?\n/);
+      let startTime = null;
+      let currentDate = fallbackDate ? new Date(fallbackDate) : null;
+      if (currentDate && !Number.isNaN(currentDate.getTime())) {
+        currentDate.setHours(0, 0, 0, 0);
+      } else {
+        currentDate = null;
+      }
+
+      const startMatch = text.match(/# Starting Time:\s*([0-9./-]+)\s+([0-9:]+)/);
+      if (startMatch) {
+        const parsedStartTime = parseVmstatDateTime(startMatch[1], startMatch[2]);
+        if (parsedStartTime) {
+          startTime = parsedStartTime;
+          currentDate = new Date(startTime);
+        }
+      }
+
+      const intervalMatch = text.match(/# Sample Interval\(s\):\s*(\d+)/);
+      const intervalSec = intervalMatch ? parseInt(intervalMatch[1], 10) || 1 : 1;
       let t = startTime ? new Date(startTime) : null;
 
       const records = [];
 
       for (let line of lines) {
         line = line.trim();
+        if (!line || line.startsWith('procs ') || line.startsWith('r  b')) continue;
 
-        // Match lines starting with timestamp HH:MM:SS
-        if (!line.match(/^\d\d:\d\d:\d\d/)) continue;
+        const parsedTs = parseVmstatTimestamp(line, currentDate);
+        if (!parsedTs) continue;
 
-        const parts = line.split(/\s+/);
-        if (parts.length < 17) continue;
+        const parts = parsedTs.payload.split(/\s+/);
+        if (parts.length < 16) continue;
 
         try {
-          const free = parseInt(parts[4]) || 0;
-          const si = parseInt(parts[6]) || 0;
-          const so = parseInt(parts[7]) || 0;
-          const us = parseInt(parts[parts.length - 5]) || 0;
-          const sy = parseInt(parts[parts.length - 4]) || 0;
-          const id = parseInt(parts[parts.length - 3]) || 0;
-          const wa = parseInt(parts[parts.length - 2]) || 0;
+          const ts = parsedTs.timestamp || (t ? new Date(t) : new Date());
+          if (Number.isNaN(ts.getTime())) continue;
 
-          const ts = t ? new Date(t) : new Date();
-          if (t) t = new Date(t.getTime() + intervalSec * 1000);
+          if (currentDate && ts < currentDate) {
+            ts.setDate(ts.getDate() + 1);
+          }
+          currentDate = new Date(ts);
+          if (t) t = new Date(currentDate.getTime() + intervalSec * 1000);
+
+          const r = parseInt(parts[0], 10) || 0;
+          const b = parseInt(parts[1], 10) || 0;
+          const swpd = parseInt(parts[2], 10) || 0;
+          const free = parseInt(parts[3], 10) || 0;
+          const buff = parseInt(parts[4], 10) || 0;
+          const cache = parseInt(parts[5], 10) || 0;
+          const si = parseInt(parts[6], 10) || 0;
+          const so = parseInt(parts[7], 10) || 0;
+          const bi = parseInt(parts[8], 10) || 0;
+          const bo = parseInt(parts[9], 10) || 0;
+          const intr = parseInt(parts[10], 10) || 0;
+          const cs = parseInt(parts[11], 10) || 0;
+          const us = parseInt(parts[12], 10) || 0;
+          const sy = parseInt(parts[13], 10) || 0;
+          const id = parseInt(parts[14], 10) || 0;
+          const wa = parseInt(parts[15], 10) || 0;
+          const st = parts.length > 16 ? parseInt(parts[16], 10) || 0 : 0;
+          const cpuBusy = us + sy + st;
 
           records.push({
             ts,
+            r,
+            b,
+            swpd,
             free,
+            buff,
+            cache,
             si,
             so,
+            bi,
+            bo,
+            intr,
+            cs,
             us,
             sy,
             id,
             wa,
+            st,
+            cpuBusy,
             file: fileName
           });
-        } catch (e) {
-          console.warn('Failed to parse line:', line);
+        } catch (error) {
+          console.warn('Failed to parse line:', line, error);
         }
       }
 
       return records;
     }
 
-    function handleFiles() {
-      const files = document.getElementById('fileInput').files;
-      if (!files.length) {
-        alert('Please select at least one vmstat file!');
+    function createFinding(severity, title, summary, detail) {
+      return { severity, title, summary, detail };
+    }
+
+    function summarizeFile(result) {
+      const records = [...result.records].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+      if (!records.length) {
+        return {
+          name: result.name,
+          coverage: 'No valid data',
+          count: 0,
+          signals: 'parse gap',
+          peaks: 'No vmstat rows were parsed'
+        };
+      }
+
+      const cpuBusyValues = records.map(r => r.cpuBusy);
+      const waValues = records.map(r => r.wa);
+      const rValues = records.map(r => r.r);
+      const bValues = records.map(r => r.b);
+      const siValues = records.map(r => r.si);
+      const soValues = records.map(r => r.so);
+      const swpdValues = records.map(r => r.swpd);
+      const stValues = records.map(r => r.st);
+      const csValues = records.map(r => r.cs);
+      const intrValues = records.map(r => r.intr);
+
+      const signals = [];
+      if (percentile(cpuBusyValues, 95) >= 75 || maxValue(rValues) >= 6) signals.push('cpu');
+      if (maxValue(bValues) >= 1 || maxValue(waValues) >= 15) signals.push('io');
+      if (maxValue(siValues) > 0 || maxValue(soValues) > 0) {
+        signals.push('swap');
+      } else if (maxValue(swpdValues) > 0) {
+        signals.push('swap alloc');
+      }
+      if (maxValue(stValues) >= 2) signals.push('steal');
+      if (maxValue(csValues) >= Math.max(percentile(csValues, 50) * 2.5, 50000) ||
+          maxValue(intrValues) >= Math.max(percentile(intrValues, 50) * 2.5, 50000)) {
+        signals.push('kernel');
+      }
+      if (!signals.length) signals.push('quiet');
+
+      const firstTs = records[0].ts;
+      const lastTs = records[records.length - 1].ts;
+
+      return {
+        name: result.name,
+        coverage: `${formatTimestamp(firstTs)} -> ${formatTimestamp(lastTs)} (${formatDuration(new Date(lastTs) - new Date(firstTs))})`,
+        count: records.length,
+        signals: signals.join(', '),
+        peaks: `r ${formatNumber(maxValue(rValues))}, b ${formatNumber(maxValue(bValues))}, wa ${formatPercent(maxValue(waValues), 0)}, si ${formatCompactNumber(maxValue(siValues))}, so ${formatCompactNumber(maxValue(soValues))}`
+      };
+    }
+
+    function buildFindings(records, summary) {
+      const findings = [];
+
+      if (summary.p95CpuBusy >= 75 || summary.maxRunQ >= 6) {
+        const peak = getMaxRecord(records, record => (record.cpuBusy * 2) + (record.r * 8) + record.sy);
+        findings.push(createFinding(
+          summary.p95CpuBusy >= 90 || summary.maxRunQ >= 12 ? 'critical' : 'warning',
+          'CPU or scheduler pressure',
+          `P95 CPU busy reached ${formatPercent(summary.p95CpuBusy)} and the runnable queue peaked at ${formatNumber(summary.maxRunQ)}.`,
+          peak
+            ? `Peak interval ${formatTimestamp(peak.ts)}: r=${peak.r}, usr=${peak.us}%, sys=${peak.sy}%, wa=${peak.wa}%${peak.st > 0 ? `, st=${peak.st}%` : ''}.`
+            : 'No peak interval available.'
+        ));
+      }
+
+      if (summary.p95Wa >= 10 || summary.maxBlocked >= 1 || summary.maxWa >= 20) {
+        const peak = getMaxRecord(records, record => (record.wa * 4) + (record.b * 25) + ((record.bi + record.bo) / 100000));
+        findings.push(createFinding(
+          summary.maxBlocked >= 3 || summary.maxWa >= 30 || summary.p95Wa >= 20 ? 'critical' : 'warning',
+          'I/O wait and blocked tasks',
+          `I/O wait reached ${formatPercent(summary.maxWa, 0)} with blocked processes peaking at ${formatNumber(summary.maxBlocked)}.`,
+          peak
+            ? `Peak interval ${formatTimestamp(peak.ts)}: b=${peak.b}, wa=${peak.wa}%, bi=${formatCompactNumber(peak.bi)}, bo=${formatCompactNumber(peak.bo)}.`
+            : 'No peak interval available.'
+        ));
+      }
+
+      if (summary.maxSi > 0 || summary.maxSo > 0 || summary.maxSwpd > 0) {
+        const peak = getMaxRecord(records, record => (record.si + record.so) + Math.round(record.swpd / 1024));
+        const activeSwap = summary.maxSi > 0 || summary.maxSo > 0;
+        findings.push(createFinding(
+          activeSwap ? 'warning' : 'info',
+          activeSwap ? 'Memory pressure and swap activity' : 'Swap allocation detected',
+          activeSwap
+            ? `Swap activity was observed. Max si=${formatCompactNumber(summary.maxSi)}, max so=${formatCompactNumber(summary.maxSo)}, swpd max=${formatCompactNumber(summary.maxSwpd)} KB.`
+            : `Swap is allocated (swpd max ${formatCompactNumber(summary.maxSwpd)} KB), but no active si/so was observed in this interval.`,
+          peak
+            ? `Peak interval ${formatTimestamp(peak.ts)}: free=${formatCompactNumber(peak.free)} KB, cache=${formatCompactNumber(peak.cache)} KB, swpd=${formatCompactNumber(peak.swpd)} KB.`
+            : 'No peak interval available.'
+        ));
+      }
+
+      const csSpikeThreshold = Math.max(summary.medianCs * 2.5, 50000);
+      const intrSpikeThreshold = Math.max(summary.medianIntr * 2.5, 50000);
+      if (summary.maxCs >= csSpikeThreshold || summary.maxIntr >= intrSpikeThreshold) {
+        const peak = getMaxRecord(records, record => {
+          const csRatio = summary.medianCs > 0 ? record.cs / summary.medianCs : 0;
+          const intrRatio = summary.medianIntr > 0 ? record.intr / summary.medianIntr : 0;
+          return csRatio + intrRatio + (record.sy / 10);
+        });
+        findings.push(createFinding(
+          'info',
+          'Interrupt or context-switch spike',
+          `Interrupts peaked at ${formatCompactNumber(summary.maxIntr)} and context switches peaked at ${formatCompactNumber(summary.maxCs)}.`,
+          peak
+            ? `Peak interval ${formatTimestamp(peak.ts)}: in=${formatCompactNumber(peak.intr)}, cs=${formatCompactNumber(peak.cs)}, sys=${peak.sy}%.`
+            : 'No peak interval available.'
+        ));
+      }
+
+      if (summary.maxSt >= 2 || summary.p95St >= 1) {
+        const peak = getMaxRecord(records, record => record.st);
+        findings.push(createFinding(
+          summary.maxSt >= 10 ? 'critical' : 'warning',
+          'Steal time detected',
+          `Steal time reached ${formatPercent(summary.maxSt, 0)}. This usually points to hypervisor contention or oversubscription.`,
+          peak
+            ? `Peak interval ${formatTimestamp(peak.ts)}: st=${peak.st}%, usr=${peak.us}%, sys=${peak.sy}%, r=${peak.r}.`
+            : 'No peak interval available.'
+        ));
+      }
+
+      if (!findings.length) {
+        findings.push(createFinding(
+          'info',
+          'No strong OS distress signals',
+          'CPU, iowait, blocked-process, swap, and steal-time indicators stayed quiet across the parsed interval.',
+          `Peak run queue ${formatNumber(summary.maxRunQ)}, peak iowait ${formatPercent(summary.maxWa, 0)}, peak swap I/O ${formatCompactNumber(summary.maxSwapIo)}.`
+        ));
+      }
+
+      return findings;
+    }
+
+    function buildHotIntervals(records, summary) {
+      const csSpikeThreshold = Math.max(summary.medianCs * 2.5, 50000);
+      const intrSpikeThreshold = Math.max(summary.medianIntr * 2.5, 50000);
+
+      return records
+        .map(record => {
+          let score = 0;
+          const signals = [];
+
+          if (record.cpuBusy >= 70) {
+            score += (record.cpuBusy - 69) * 1.2;
+            signals.push(`cpu ${record.cpuBusy}%`);
+          }
+          if (record.r >= 4) {
+            score += record.r * 4;
+            signals.push(`r=${record.r}`);
+          }
+          if (record.b > 0) {
+            score += record.b * 18;
+            signals.push(`b=${record.b}`);
+          }
+          if (record.wa >= 10) {
+            score += record.wa * 1.8;
+            signals.push(`wa=${record.wa}%`);
+          }
+          if (record.si + record.so > 0) {
+            score += Math.min(40, ((record.si + record.so) / 2) + 10);
+            signals.push(`swap ${record.si}/${record.so}`);
+          }
+          if (record.st > 0) {
+            score += record.st * 3;
+            signals.push(`st=${record.st}%`);
+          }
+          if (record.cs >= csSpikeThreshold && csSpikeThreshold > 0) {
+            score += 12;
+            signals.push(`cs=${formatCompactNumber(record.cs)}`);
+          }
+          if (record.intr >= intrSpikeThreshold && intrSpikeThreshold > 0) {
+            score += 10;
+            signals.push(`in=${formatCompactNumber(record.intr)}`);
+          }
+
+          if (!signals.length) return null;
+          return {
+            record,
+            score: Math.round(score),
+            signals: signals.join(', ')
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return new Date(a.record.ts) - new Date(b.record.ts);
+        })
+        .slice(0, 12);
+    }
+
+    function analyzeRecords(records, results) {
+      const cpuBusyValues = records.map(r => r.cpuBusy);
+      const runQueueValues = records.map(r => r.r);
+      const blockedValues = records.map(r => r.b);
+      const waitValues = records.map(r => r.wa);
+      const swapIoValues = records.map(r => r.si + r.so);
+      const siValues = records.map(r => r.si);
+      const soValues = records.map(r => r.so);
+      const swpdValues = records.map(r => r.swpd);
+      const stealValues = records.map(r => r.st);
+      const csValues = records.map(r => r.cs);
+      const intrValues = records.map(r => r.intr);
+      const biValues = records.map(r => r.bi);
+      const boValues = records.map(r => r.bo);
+
+      const firstTs = records[0]?.ts || null;
+      const lastTs = records[records.length - 1]?.ts || null;
+
+      const summary = {
+        count: records.length,
+        firstTs,
+        lastTs,
+        spanMs: firstTs && lastTs ? new Date(lastTs) - new Date(firstTs) : 0,
+        p95CpuBusy: percentile(cpuBusyValues, 95),
+        p95Wa: percentile(waitValues, 95),
+        p95St: percentile(stealValues, 95),
+        maxRunQ: maxValue(runQueueValues),
+        maxBlocked: maxValue(blockedValues),
+        maxWa: maxValue(waitValues),
+        maxSwapIo: maxValue(swapIoValues),
+        maxSi: maxValue(siValues),
+        maxSo: maxValue(soValues),
+        maxSwpd: maxValue(swpdValues),
+        maxSt: maxValue(stealValues),
+        maxCs: maxValue(csValues),
+        maxIntr: maxValue(intrValues),
+        maxBi: maxValue(biValues),
+        maxBo: maxValue(boValues),
+        medianCs: percentile(csValues, 50),
+        medianIntr: percentile(intrValues, 50),
+        avgUsr: average(records.map(r => r.us)),
+        avgSys: average(records.map(r => r.sy)),
+        avgWa: average(waitValues)
+      };
+
+      return {
+        summary,
+        findings: buildFindings(records, summary),
+        hotIntervals: buildHotIntervals(records, summary),
+        fileSummaries: results.map(summarizeFile)
+      };
+    }
+
+    function showFindings(analysis) {
+      const container = document.getElementById('findingsBox');
+      container.innerHTML = analysis.findings.map(finding => `
+        <div class="finding-card ${escapeHtml(finding.severity)}">
+          <div class="finding-header">
+            <div class="finding-title">${escapeHtml(finding.title)}</div>
+            <div class="finding-badge ${escapeHtml(finding.severity)}">${escapeHtml(finding.severity)}</div>
+          </div>
+          <div class="finding-summary">${escapeHtml(finding.summary)}</div>
+          <div class="finding-detail">${escapeHtml(finding.detail)}</div>
+        </div>
+      `).join('');
+    }
+
+    function showHotIntervals(analysis) {
+      const table = document.getElementById('incidentTable');
+      table.innerHTML = '<tr><th>Timestamp</th><th>File</th><th>Score</th><th>Signals</th><th>r</th><th>b</th><th>CPU Busy</th><th>%wa</th><th>si/so</th><th>bi/bo</th></tr>';
+
+      if (!analysis.hotIntervals.length) {
+        const row = table.insertRow();
+        const cell = row.insertCell(0);
+        cell.colSpan = 10;
+        cell.textContent = 'No significant hot intervals were detected with the current heuristics.';
         return;
       }
 
-      showLoading('Reading files...');
+      analysis.hotIntervals.forEach(entry => {
+        const row = table.insertRow();
+        row.insertCell(0).textContent = formatTimestamp(entry.record.ts);
+        row.insertCell(1).textContent = entry.record.file;
+        row.insertCell(2).textContent = formatNumber(entry.score);
+        row.insertCell(3).textContent = entry.signals;
+        row.insertCell(4).textContent = formatNumber(entry.record.r);
+        row.insertCell(5).textContent = formatNumber(entry.record.b);
+        row.insertCell(6).textContent = formatPercent(entry.record.cpuBusy, 0);
+        row.insertCell(7).textContent = formatPercent(entry.record.wa, 0);
+        row.insertCell(8).textContent = `${formatCompactNumber(entry.record.si)}/${formatCompactNumber(entry.record.so)}`;
+        row.insertCell(9).textContent = `${formatCompactNumber(entry.record.bi)}/${formatCompactNumber(entry.record.bo)}`;
+      });
+    }
+
+    function showFileSummary(analysis) {
+      const table = document.getElementById('fileSummaryTable');
+      table.innerHTML = '<tr><th>File</th><th>Coverage</th><th>Records</th><th>Signals</th><th>Peaks</th></tr>';
+
+      analysis.fileSummaries.forEach(fileSummary => {
+        const row = table.insertRow();
+        row.insertCell(0).textContent = fileSummary.name;
+        row.insertCell(1).textContent = fileSummary.coverage;
+        row.insertCell(2).textContent = formatNumber(fileSummary.count);
+        row.insertCell(3).textContent = fileSummary.signals;
+        const peaksCell = row.insertCell(4);
+        peaksCell.textContent = fileSummary.peaks;
+        peaksCell.className = 'mono-cell';
+      });
+    }
+
+    function handleFiles() {
+      const files = document.getElementById('fileInput').files;
+      if (!files.length) {
+        alert('Please select at least one vmstat file.');
+        return;
+      }
+
+      showLoading('Reading vmstat files and building OS findings...');
       allRecords = [];
       fileResults = [];
+      currentAnalysis = null;
+      resetOutputViews();
+      setStatus('');
 
       const readers = [];
       for (let i = 0; i < files.length; i++) {
         readers.push(new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const records = parseVmstat(reader.result, files[i].name);
-            resolve({ name: files[i].name, records });
-          };
-          reader.onerror = () => reject(new Error(`Failed to read ${files[i].name}`));
-          reader.readAsText(files[i]);
+          readVmstatFile(files[i])
+            .then(text => {
+              const records = parseVmstat(text, files[i].name, files[i].lastModified ? new Date(files[i].lastModified) : null);
+              resolve({ name: files[i].name, records });
+            })
+            .catch(err => reject(new Error(`Failed to read ${files[i].name}: ${err.message}`)));
         }));
       }
 
@@ -301,166 +907,151 @@
         .then(results => {
           fileResults = results;
 
-          // Merge all records
-          results.forEach(r => {
-            allRecords = allRecords.concat(r.records);
+          results.forEach(result => {
+            allRecords = allRecords.concat(result.records);
           });
 
-          // Sort by timestamp
           allRecords.sort((a, b) => new Date(a.ts) - new Date(b.ts));
 
-          if (allRecords.length === 0) {
+          if (!allRecords.length) {
             setStatus('No valid vmstat data found in the selected files.');
             hideLoading();
             return;
           }
 
+          currentAnalysis = analyzeRecords(allRecords, fileResults);
           plotCharts();
-          showAlerts();
-          updateStats();
+          updateStats(currentAnalysis);
+          showFindings(currentAnalysis);
+          showHotIntervals(currentAnalysis);
+          showFileSummary(currentAnalysis);
 
           document.getElementById('exportBtn').disabled = false;
-          setStatus(`Loaded ${allRecords.length} records from ${files.length} file(s)`);
+          setStatus(`Loaded ${allRecords.length.toLocaleString()} records from ${files.length} file(s).`);
           hideLoading();
         })
         .catch(err => {
           console.error('Error:', err);
-          setStatus('Error reading files: ' + err.message);
+          setStatus(`Error reading files: ${err.message}`);
           hideLoading();
         });
     }
 
-    function updateStats() {
-      if (!allRecords.length) return;
+    function updateStats(analysis) {
+      if (!analysis) return;
 
-      const n = allRecords.length;
-      let sumUsr = 0, sumSys = 0, sumWa = 0, maxSi = 0, maxSo = 0;
-
-      for (const r of allRecords) {
-        sumUsr += r.us;
-        sumSys += r.sy;
-        sumWa += r.wa;
-        maxSi = Math.max(maxSi, r.si);
-        maxSo = Math.max(maxSo, r.so);
-      }
-
-      document.getElementById('statRecords').textContent = n.toLocaleString();
-      document.getElementById('statAvgUsr').textContent = (sumUsr / n).toFixed(1) + '%';
-      document.getElementById('statAvgSys').textContent = (sumSys / n).toFixed(1) + '%';
-      document.getElementById('statAvgWa').textContent = (sumWa / n).toFixed(1) + '%';
-      document.getElementById('statMaxSi').textContent = maxSi.toLocaleString();
-      document.getElementById('statMaxSo').textContent = maxSo.toLocaleString();
+      document.getElementById('statRecords').textContent = formatNumber(analysis.summary.count);
+      document.getElementById('statSpan').textContent = formatDuration(analysis.summary.spanMs);
+      document.getElementById('statP95Busy').textContent = formatPercent(analysis.summary.p95CpuBusy);
+      document.getElementById('statMaxRunQ').textContent = formatNumber(analysis.summary.maxRunQ);
+      document.getElementById('statMaxBlocked').textContent = formatNumber(analysis.summary.maxBlocked);
+      document.getElementById('statMaxWa').textContent = formatPercent(analysis.summary.maxWa, 0);
+      document.getElementById('statMaxSwapIo').textContent = formatCompactNumber(analysis.summary.maxSwapIo);
+      document.getElementById('statMaxSteal').textContent = formatPercent(analysis.summary.maxSt, 0);
       document.getElementById('statsBox').style.display = 'grid';
     }
 
-    function plotCharts() {
-      const times = allRecords.map(r => r.ts.toLocaleString());
-      const freeMem = allRecords.map(r => r.free);
-      const usrCpu = allRecords.map(r => r.us);
-      const sysCpu = allRecords.map(r => r.sy);
-      const idleCpu = allRecords.map(r => r.id);
-      const waCpu = allRecords.map(r => r.wa);
-      const siVals = allRecords.map(r => r.si);
-      const soVals = allRecords.map(r => r.so);
+    function buildTimeScale() {
+      return {
+        ticks: { color: '#aaa', maxRotation: 45, autoSkip: true, maxTicksLimit: 16 },
+        grid: { color: '#333' }
+      };
+    }
 
-      const ctx1 = document.getElementById('chart1').getContext('2d');
-      const ctx2 = document.getElementById('chart2').getContext('2d');
-      const ctx3 = document.getElementById('chart3').getContext('2d');
-
-      if (chart1) chart1.destroy();
-      if (chart2) chart2.destroy();
-      if (chart3) chart3.destroy();
-
-      // Memory + CPU chart
-      chart1 = new Chart(ctx1, {
+    function buildLineChart(context, labels, title, datasets, scales) {
+      return new Chart(context, {
         type: 'line',
-        data: {
-          labels: times,
-          datasets: [
-            { label: 'Free Mem (KB)', data: freeMem, borderColor: '#3b82f6', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
-            { label: 'User CPU %', data: usrCpu, borderColor: '#ef4444', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
-            { label: 'System CPU %', data: sysCpu, borderColor: '#f97316', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
-            { label: 'Idle CPU %', data: idleCpu, borderColor: '#22c55e', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
-            { label: 'Wait CPU %', data: waCpu, borderColor: '#a855f7', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
-          ]
-        },
+        data: { labels, datasets },
         options: {
           responsive: true,
+          animation: false,
           interaction: { mode: 'index', intersect: false },
+          elements: { line: { tension: 0.12 } },
           plugins: {
             legend: { labels: { color: '#fff' } },
-            title: { display: true, text: 'Memory + CPU Usage (Continuous)', color: '#fff' }
+            title: { display: true, text: title, color: '#fff' }
           },
-          scales: {
-            x: { ticks: { color: '#aaa', maxRotation: 45 }, grid: { color: '#333' } },
-            y: { type: 'linear', position: 'left', title: { display: true, text: 'Free Mem (KB)', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } },
-            y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: 'CPU %', color: '#fff' }, ticks: { color: '#aaa' }, grid: { display: false } }
-          }
-        }
-      });
-
-      // Swap In chart
-      chart2 = new Chart(ctx2, {
-        type: 'line',
-        data: {
-          labels: times,
-          datasets: [{ label: 'Swap In (si)', data: siVals, borderColor: '#06b6d4', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(6, 182, 212, 0.1)' }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: '#fff' } },
-            title: { display: true, text: 'Swap In Activity (Continuous)', color: '#fff' }
-          },
-          scales: {
-            x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
-            y: { type: 'linear', position: 'left', title: { display: true, text: 'Pages / sec', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } }
-          }
-        }
-      });
-
-      // Swap Out chart
-      chart3 = new Chart(ctx3, {
-        type: 'line',
-        data: {
-          labels: times,
-          datasets: [{ label: 'Swap Out (so)', data: soVals, borderColor: '#dc2626', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(220, 38, 38, 0.1)' }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: '#fff' } },
-            title: { display: true, text: 'Swap Out Activity (Continuous)', color: '#fff' }
-          },
-          scales: {
-            x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
-            y: { type: 'linear', position: 'left', title: { display: true, text: 'Pages / sec', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } }
-          }
+          scales
         }
       });
     }
 
-    function showAlerts() {
-      const table = document.getElementById('alertTable');
-      table.innerHTML = '<tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>';
+    function plotCharts() {
+      const times = allRecords.map(record => formatTimestamp(record.ts));
 
-      fileResults.forEach(r => {
-        const siMax = Math.max(...r.records.map(x => x.si), 0);
-        const soMax = Math.max(...r.records.map(x => x.so), 0);
-        const swapDetected = siMax > 0 || soMax > 0;
+      destroyCharts();
 
-        const row = table.insertRow();
-        row.insertCell(0).textContent = r.name;
+      chart1 = buildLineChart(
+        document.getElementById('chart1').getContext('2d'),
+        times,
+        'CPU, Run Queue, and Blocked Tasks',
+        [
+          { label: 'Run Queue (r)', data: allRecords.map(r => r.r), borderColor: '#38bdf8', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+          { label: 'Blocked (b)', data: allRecords.map(r => r.b), borderColor: '#f59e0b', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+          { label: 'User CPU %', data: allRecords.map(r => r.us), borderColor: '#ef4444', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
+          { label: 'System CPU %', data: allRecords.map(r => r.sy), borderColor: '#fb923c', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
+          { label: 'I/O Wait %', data: allRecords.map(r => r.wa), borderColor: '#a855f7', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
+          { label: 'Steal %', data: allRecords.map(r => r.st), borderColor: '#14b8a6', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
+          { label: 'Idle %', data: allRecords.map(r => r.id), borderColor: '#22c55e', yAxisID: 'y1', borderWidth: 2, pointRadius: 0, borderDash: [6, 4], hidden: true }
+        ],
+        {
+          x: buildTimeScale(),
+          y: { type: 'linear', position: 'left', title: { display: true, text: 'Processes', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } },
+          y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: 'CPU %', color: '#fff' }, ticks: { color: '#aaa' }, grid: { display: false } }
+        }
+      );
 
-        const statusCell = row.insertCell(1);
-        statusCell.innerHTML = swapDetected
-          ? '<span class="alert-yes">YES</span>'
-          : '<span class="alert-no">NO</span>';
+      chart2 = buildLineChart(
+        document.getElementById('chart2').getContext('2d'),
+        times,
+        'Memory and Swap Pressure',
+        [
+          { label: 'Free KB', data: allRecords.map(r => r.free), borderColor: '#3b82f6', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+          { label: 'Cache KB', data: allRecords.map(r => r.cache), borderColor: '#22c55e', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+          { label: 'Buff KB', data: allRecords.map(r => r.buff), borderColor: '#f59e0b', yAxisID: 'y', borderWidth: 2, pointRadius: 0, hidden: true },
+          { label: 'Swap Used KB', data: allRecords.map(r => r.swpd), borderColor: '#ef4444', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+          { label: 'Swap In (si)', data: allRecords.map(r => r.si), borderColor: '#06b6d4', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
+          { label: 'Swap Out (so)', data: allRecords.map(r => r.so), borderColor: '#dc2626', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
+        ],
+        {
+          x: buildTimeScale(),
+          y: { type: 'linear', position: 'left', title: { display: true, text: 'Memory (KB)', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } },
+          y1: { type: 'linear', position: 'right', title: { display: true, text: 'Pages / sec', color: '#fff' }, ticks: { color: '#aaa' }, grid: { display: false } }
+        }
+      );
 
-        row.insertCell(2).textContent = swapDetected
-          ? `Max si=${siMax}, Max so=${soMax}`
-          : 'No swap activity detected';
-      });
+      chart3 = buildLineChart(
+        document.getElementById('chart3').getContext('2d'),
+        times,
+        'I/O Throughput and Wait Signals',
+        [
+          { label: 'Blocks In (bi)', data: allRecords.map(r => r.bi), borderColor: '#06b6d4', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+          { label: 'Blocks Out (bo)', data: allRecords.map(r => r.bo), borderColor: '#ef4444', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+          { label: 'Blocked Tasks (b)', data: allRecords.map(r => r.b), borderColor: '#f59e0b', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
+          { label: 'I/O Wait %', data: allRecords.map(r => r.wa), borderColor: '#a855f7', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
+        ],
+        {
+          x: buildTimeScale(),
+          y: { type: 'linear', position: 'left', title: { display: true, text: 'Blocks / sec', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } },
+          y1: { type: 'linear', position: 'right', title: { display: true, text: 'Blocked / Wait %', color: '#fff' }, ticks: { color: '#aaa' }, grid: { display: false } }
+        }
+      );
+
+      chart4 = buildLineChart(
+        document.getElementById('chart4').getContext('2d'),
+        times,
+        'Interrupts, Context Switches, and Steal Time',
+        [
+          { label: 'Interrupts (in)', data: allRecords.map(r => r.intr), borderColor: '#38bdf8', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+          { label: 'Context Switches (cs)', data: allRecords.map(r => r.cs), borderColor: '#f97316', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
+          { label: 'Steal %', data: allRecords.map(r => r.st), borderColor: '#14b8a6', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
+        ],
+        {
+          x: buildTimeScale(),
+          y: { type: 'linear', position: 'left', title: { display: true, text: 'Events / sec', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } },
+          y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: 'Steal %', color: '#fff' }, ticks: { color: '#aaa' }, grid: { display: false } }
+        }
+      );
     }
 
     function exportToCsv() {
@@ -469,22 +1060,55 @@
         return;
       }
 
-      const headers = ['Timestamp', 'Free_KB', 'Swap_In', 'Swap_Out', 'User_CPU', 'Sys_CPU', 'Idle_CPU', 'Wait_CPU', 'Source_File'];
-      const rows = allRecords.map(r => [
-        r.ts.toISOString(),
-        r.free,
-        r.si,
-        r.so,
-        r.us,
-        r.sy,
-        r.id,
-        r.wa,
-        r.file
+      const headers = [
+        'Timestamp',
+        'RunQ',
+        'Blocked',
+        'Swapd_KB',
+        'Free_KB',
+        'Buff_KB',
+        'Cache_KB',
+        'Swap_In',
+        'Swap_Out',
+        'Blocks_In',
+        'Blocks_Out',
+        'Interrupts',
+        'Context_Switches',
+        'User_CPU',
+        'Sys_CPU',
+        'Idle_CPU',
+        'Wait_CPU',
+        'Steal_CPU',
+        'CPU_Busy',
+        'Source_File'
+      ];
+
+      const rows = allRecords.map(record => [
+        record.ts.toISOString(),
+        record.r,
+        record.b,
+        record.swpd,
+        record.free,
+        record.buff,
+        record.cache,
+        record.si,
+        record.so,
+        record.bi,
+        record.bo,
+        record.intr,
+        record.cs,
+        record.us,
+        record.sy,
+        record.id,
+        record.wa,
+        record.st,
+        record.cpuBusy,
+        record.file
       ]);
 
       const csv = [
         headers.join(','),
-        ...rows.map(r => r.map(v => typeof v === 'string' && v.includes(',') ? `"${v}"` : v).join(','))
+        ...rows.map(row => row.map(value => (typeof value === 'string' && value.includes(',')) ? `"${value}"` : value).join(','))
       ].join('\n');
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -501,14 +1125,9 @@
     function clearAll() {
       allRecords = [];
       fileResults = [];
+      currentAnalysis = null;
 
-      if (chart1) { chart1.destroy(); chart1 = null; }
-      if (chart2) { chart2.destroy(); chart2 = null; }
-      if (chart3) { chart3.destroy(); chart3 = null; }
-
-      document.getElementById('alertTable').innerHTML = '<tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>';
-      document.getElementById('statsBox').style.display = 'none';
-      document.getElementById('exportBtn').disabled = true;
+      resetOutputViews();
       document.getElementById('fileInput').value = '';
       setStatus('');
     }

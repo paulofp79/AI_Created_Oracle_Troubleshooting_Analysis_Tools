@@ -108,6 +108,33 @@
     .status-Normal { background: #00c853; color: #000; }
     .status-Warning { background: #ffc107; color: #000; }
     .status-Critical { background: #f44336; color: #fff; }
+    .recommendation-box {
+      border: 1px solid #333;
+      background: #202020;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .recommendation-box h4 {
+      margin: 0 0 10px;
+      color: #00e5ff;
+    }
+    .recommendation-box p {
+      margin: 0 0 10px;
+      color: #bbb;
+      font-size: 14px;
+    }
+    .recommendation-box ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #ddd;
+    }
+    .recommendation-box li {
+      margin: 6px 0;
+    }
+    .recommendation-box code {
+      color: #76ff03;
+    }
 
     footer {
       text-align: right;
@@ -193,30 +220,35 @@
       </div>
     </div>
     <canvas id="lineChart" height="300"></canvas>
-    <canvas id="barChart" height="250"></canvas>
+    <canvas id="cdBarChart" height="250"></canvas>
+    <canvas id="fdBarChart" height="250"></canvas>
   </div>
 
   <!-- Flash Cache Alerts Tab -->
   <div id="alerts" class="tabContent">
     <h3>Flash Cache Performance Alerts</h3>
+    <div id="alertsGuide"></div>
     <div id="alertsTable"></div>
   </div>
 
   <!-- Smart I/O Alerts Tab -->
   <div id="sioAlerts" class="tabContent">
     <h3>Smart I/O Performance Alerts</h3>
+    <div id="sioAlertsGuide"></div>
     <div id="sioAlertsTable"></div>
   </div>
 
   <!-- Cell Disk I/O Alerts Tab -->
   <div id="cdioAlerts" class="tabContent">
     <h3>Cell Disk I/O Performance Alerts</h3>
+    <div id="cdioAlertsGuide"></div>
     <div id="cdioAlertsTable"></div>
   </div>
 
   <!-- Summary Tab -->
   <div id="summary" class="tabContent">
     <h3>Overall Performance Summary</h3>
+    <div id="summaryGuide"></div>
     <div id="summaryTable"></div>
   </div>
 
@@ -225,9 +257,38 @@
   <script>
     // State
     let parsedData = [];
-    let lineChart, barChart;
+    let lineChart, cdBarChart, fdBarChart;
 
     const chartColors = ['#00e5ff', '#ff4081', '#76ff03', '#ffab40', '#ff1744', '#7c4dff', '#00bfa5', '#ff6e40'];
+    const flashCacheRules = [
+      { metric: 'FC_IO_RQ_R_MISS_SEC', warn: 100, crit: 500, desc: 'Flash cache misses per second. The guide calls out higher miss rates as a sign that the working set does not fit in flash cache.' },
+      { metric: 'FC_IO_RQ_W_POPULATE_SEC', warn: 100, crit: 500, desc: 'Population writes per second. The guide ties increased populate activity to cache misses and working-set pressure.' },
+      { metric: 'FC_IO_RQ_R_DISK_WRITER_SEC', warn: 50, crit: 200, desc: 'Disk-writer reads per second. Higher values indicate cacheline recycling and pressure on the flash cache working set.' },
+      { metric: 'FC_IO_RQ_W_DISK_WRITER_SEC', warn: 50, crit: 200, desc: 'Disk-writer writes per second. Use with disk-writer reads to spot dirty cacheline churn.' },
+      { metric: 'FC_IO_RQ_W_FIRST_SEC', warn: 100, crit: 300, desc: 'First writes into flash cache per second. Many first writes with few overwrites indicate new data entering cache.' },
+      { metric: 'FC_IO_RQ_W_OVERWRITE_SEC', warn: 100, crit: 300, desc: 'Overwrites into flash cache per second. Compare with first writes to understand reuse versus churn.' },
+      { metric: 'FC_IO_RQ_R_SKIP_SEC', warn: 50, crit: 200, desc: 'Read skip requests per second. The guide recommends checking skip behavior when data is not eligible for flash caching.' },
+      { metric: 'FC_IO_RQ_W_SKIP_SEC', warn: 50, crit: 200, desc: 'Write skip requests per second. Higher values can indicate large writes or disk-not-busy behavior bypassing flash cache.' }
+    ];
+    const smartIoRules = [
+      { metric: 'SIO_IO_RD_FC_SEC', warn: 50, crit: 20, desc: 'Smart I/O MB/sec served from flash cache. Lower values may indicate less effective Smart Scan flash servicing.', lowBad: true },
+      { metric: 'SIO_IO_RD_HD_SEC', warn: 20, crit: 50, desc: 'Smart I/O MB/sec served from hard disk. Rising values may indicate less flash benefit or more disk-driven Smart I/O.' },
+      { metric: 'SIO_IO_SI_SV_SEC', warn: 50, crit: 20, desc: 'Storage-index savings per second. The guide explicitly recommends monitoring storage-index savings for Smart I/O effectiveness.', lowBad: true },
+      { metric: 'SIO_IO_RV_OF_SEC', warn: 10, crit: 30, desc: 'Reverse offload per second. Higher values point to storage CPU pressure causing data to be returned to DB nodes.' },
+      { metric: 'SIO_IO_PA_TH_SEC', warn: 10, crit: 30, desc: 'Passthrough per second. Higher values indicate offload is not happening as expected.' },
+      { metric: 'SIO_IO_WR_FC_SEC', warn: 20, crit: 50, desc: 'Smart I/O cache population writes per second. Useful when Smart I/O is actively populating flash cache.' }
+    ];
+    const cellDiskRules = [
+      { metric: 'CD_IO_LOAD', warn: 5, crit: 10, desc: 'Average I/O load for the cell disk. The guide calls this a key starting point for queue pressure and imbalance.' },
+      { metric: 'CD_IO_UTIL', warn: 70, crit: 90, desc: 'Overall disk resource utilization for the cell disk.' },
+      { metric: 'CD_IO_UTIL_LG', warn: 70, crit: 90, desc: 'Disk resource utilization from large requests.' },
+      { metric: 'CD_IO_UTIL_SM', warn: 70, crit: 90, desc: 'Disk resource utilization from small requests.' },
+      { metric: 'CD_IO_ERRS', warn: 1, crit: 5, desc: 'Cell disk I/O errors.' },
+      { metric: 'CD_IO_TM_R_LG_RQ', warn: 500, crit: 1000, desc: 'Average latency per large read request in microseconds.' },
+      { metric: 'CD_IO_TM_R_SM_RQ', warn: 500, crit: 1000, desc: 'Average latency per small read request in microseconds.' },
+      { metric: 'CD_IO_TM_W_LG_RQ', warn: 500, crit: 1000, desc: 'Average latency per large write request in microseconds.' },
+      { metric: 'CD_IO_TM_W_SM_RQ', warn: 500, crit: 1000, desc: 'Average latency per small write request in microseconds.' }
+    ];
 
     // Utilities
     function escapeHtml(text) {
@@ -255,6 +316,19 @@
 
     function setStatus(message) {
       document.getElementById('statusText').textContent = message;
+    }
+
+    function renderRecommendationBox(containerId, title, intro, rules) {
+      const html = `
+        <div class="recommendation-box">
+          <h4>${escapeHtml(title)}</h4>
+          <p>${escapeHtml(intro)}</p>
+          <ul>
+            ${rules.map(rule => `<li><code>${escapeHtml(rule.metric)}</code> - ${escapeHtml(rule.desc)}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+      document.getElementById(containerId).innerHTML = html;
     }
 
     // Tab switching
@@ -386,94 +460,135 @@
         }
       });
 
-      // Bar chart - all targets for this metric
+      // Bar charts - split targets for this metric by device family
       const all = parsedData.filter(d => d.metric === metric);
       const grouped = all.reduce((acc, d) => {
         acc[d.target] = (acc[d.target] || []).concat(d.value);
         return acc;
       }, {});
 
-      const barLabels = Object.keys(grouped).sort();
-      const barValues = barLabels.map(t => {
-        const vals = grouped[t];
-        return vals.reduce((a, b) => a + b, 0) / vals.length;
+      const averageByTarget = Object.keys(grouped).sort().map(targetName => {
+        const vals = grouped[targetName];
+        return {
+          target: targetName,
+          avg: vals.reduce((a, b) => a + b, 0) / vals.length
+        };
       });
 
-      if (barChart) barChart.destroy();
-      barChart = new Chart(document.getElementById('barChart'), {
-        type: 'bar',
-        data: {
-          labels: barLabels,
-          datasets: [{
-            label: `${metric} (avg by target)`,
-            data: barValues,
-            backgroundColor: chartColors.slice(0, barLabels.length)
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: '#fff' } },
-            title: { display: true, text: 'Average by Target', color: '#fff' }
+      const cdTargets = averageByTarget.filter(item => item.target.startsWith('CD_'));
+      const fdTargets = averageByTarget.filter(item => item.target.startsWith('FD_'));
+
+      function buildBarChart(chartRef, canvasId, title, rows, paletteOffset) {
+        if (chartRef) chartRef.destroy();
+        const values = rows.map(item => item.avg);
+        const maxValue = values.length ? Math.max(...values) : 0;
+        const suggestedMax = maxValue > 0 ? maxValue * 1.05 : 1;
+
+        return new Chart(document.getElementById(canvasId), {
+          type: 'bar',
+          data: {
+            labels: rows.map(item => item.target),
+            datasets: [{
+              label: `${metric} (${title.toLowerCase()})`,
+              data: values,
+              backgroundColor: rows.map((_, idx) => chartColors[(idx + paletteOffset) % chartColors.length])
+            }]
           },
-          scales: {
-            x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
-            y: { ticks: { color: '#aaa' }, grid: { color: '#333' }, beginAtZero: true }
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { labels: { color: '#fff' } },
+              title: { display: true, text: title, color: '#fff' }
+            },
+            scales: {
+              x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+              y: {
+                ticks: { color: '#aaa' },
+                grid: { color: '#333' },
+                beginAtZero: true,
+                suggestedMax
+              }
+            }
           }
-        }
-      });
+        });
+      }
+
+      function buildEmptyStateChart(chartRef, canvasId, title, message) {
+        if (chartRef) chartRef.destroy();
+
+        return new Chart(document.getElementById(canvasId), {
+          type: 'bar',
+          data: {
+            labels: [message],
+            datasets: [{
+              label: title,
+              data: [0],
+              backgroundColor: ['#444']
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { labels: { color: '#fff' } },
+              title: { display: true, text: title, color: '#fff' },
+              tooltip: { enabled: false }
+            },
+            scales: {
+              x: { ticks: { color: '#888' }, grid: { color: '#333' } },
+              y: { ticks: { color: '#888' }, grid: { color: '#333' }, beginAtZero: true }
+            }
+          }
+        });
+      }
+
+      cdBarChart = cdTargets.length
+        ? buildBarChart(cdBarChart, 'cdBarChart', 'Average by Target: Hard Disks (CD_)', cdTargets, 0)
+        : buildEmptyStateChart(cdBarChart, 'cdBarChart', 'Average by Target: Hard Disks (CD_)', 'No CD_ targets');
+
+      fdBarChart = fdTargets.length
+        ? buildBarChart(fdBarChart, 'fdBarChart', 'Average by Target: Flash Disks (FD_)', fdTargets, 3)
+        : buildEmptyStateChart(fdBarChart, 'fdBarChart', 'Average by Target: Flash Disks (FD_)', 'No FD_ targets');
     }
 
     // Alert generation functions
     function generateAlerts() {
-      const rules = [
-        { metric: 'FC_IO_RQ_R_MISS_SEC', warn: 100, crit: 500, desc: 'Flash cache read misses/sec' },
-        { metric: 'FC_IO_BY_W_POPULATE_SEC', warn: 100, crit: 500, desc: 'Flash cache populate writes/sec' },
-        { metric: 'FC_IO_RQ_W_SKIP_SEC', warn: 50, crit: 200, desc: 'Skipped writes/sec' },
-        { metric: 'FC_IO_RQ_BY_DISK_WRITER_SEC', warn: 50, crit: 200, desc: 'Disk writer flushes/sec' }
-      ];
-      renderAlertTable('alertsTable', rules);
+      renderRecommendationBox(
+        'alertsGuide',
+        'Guide-Based Flash Cache Recommendations',
+        'Based on the Exadata System Software User\'s Guide sections on monitoring Smart Flash Cache and what to look for when misses, population writes, disk-writer activity, first writes, and skip behavior increase.',
+        flashCacheRules
+      );
+      renderAlertTable('alertsTable', flashCacheRules);
     }
 
     function generateSIOAlerts() {
-      const rules = [
-        { metric: 'SIO_IO_RD_FC_SEC', warn: 50, crit: 20, desc: 'MB/sec from flash cache (low=bad)', lowBad: true },
-        { metric: 'SIO_IO_RD_HD_SEC', warn: 20, crit: 50, desc: 'MB/sec from hard disk (high=bad)' },
-        { metric: 'SIO_IO_SI_SV_SEC', warn: 50, crit: 20, desc: 'MB/sec saved by storage index (low=bad)', lowBad: true },
-        { metric: 'SIO_IO_WR_FC_SEC', warn: 20, crit: 50, desc: 'MB/sec writes into flash cache' }
-      ];
-      renderAlertTable('sioAlertsTable', rules);
+      renderRecommendationBox(
+        'sioAlertsGuide',
+        'Guide-Based Smart I/O Recommendations',
+        'Based on the guide\'s Smart I/O monitoring sections, especially the advice to watch flash-served reads, hard-disk-served reads, storage-index savings, reverse offload, and passthrough when offload is not performing as expected.',
+        smartIoRules
+      );
+      renderAlertTable('sioAlertsTable', smartIoRules);
     }
 
     function generateCDIOAlerts() {
-      const rules = [
-        { metric: 'CD_IO_LOAD', warn: 5, crit: 10, desc: 'Average I/O load (queue length)' },
-        { metric: 'CD_IO_UTIL', warn: 70, crit: 90, desc: 'Disk utilization (%)' },
-        { metric: 'CD_IO_ERRS', warn: 1, crit: 5, desc: 'I/O errors' },
-        { metric: 'CD_IO_BY_R_LG_SEC', warn: 500, crit: 1000, desc: 'MB/sec read large blocks' },
-        { metric: 'CD_IO_BY_W_LG_SEC', warn: 100, crit: 130, desc: 'MB/sec write large blocks' },
-        { metric: 'CD_IO_TM_R_LG_RQ', warn: 100, crit: 130, desc: 'Avg read latency large blocks (us)' }
-      ];
-      renderAlertTable('cdioAlertsTable', rules);
+      renderRecommendationBox(
+        'cdioAlertsGuide',
+        'Guide-Based Cell Disk Recommendations',
+        'Based on the guide\'s Cell Disk I/O monitoring guidance, which highlights I/O load, utilization, latency, errors, and imbalance analysis across disks and cells.',
+        cellDiskRules
+      );
+      renderAlertTable('cdioAlertsTable', cellDiskRules);
     }
 
     function generateSummary() {
-      const allRules = [
-        { metric: 'FC_IO_RQ_R_MISS_SEC', warn: 100, crit: 500, desc: 'Flash cache read misses/sec' },
-        { metric: 'FC_IO_BY_W_POPULATE_SEC', warn: 100, crit: 500, desc: 'Flash cache populate writes/sec' },
-        { metric: 'FC_IO_RQ_W_SKIP_SEC', warn: 50, crit: 200, desc: 'Skipped writes/sec' },
-        { metric: 'FC_IO_RQ_BY_DISK_WRITER_SEC', warn: 50, crit: 200, desc: 'Disk writer flushes/sec' },
-        { metric: 'SIO_IO_RD_FC_SEC', warn: 50, crit: 20, desc: 'MB/sec from flash cache (low=bad)', lowBad: true },
-        { metric: 'SIO_IO_RD_HD_SEC', warn: 20, crit: 50, desc: 'MB/sec from hard disk (high=bad)' },
-        { metric: 'SIO_IO_SI_SV_SEC', warn: 50, crit: 20, desc: 'MB/sec saved by storage index (low=bad)', lowBad: true },
-        { metric: 'SIO_IO_WR_FC_SEC', warn: 20, crit: 50, desc: 'MB/sec writes into flash cache' },
-        { metric: 'CD_IO_LOAD', warn: 5, crit: 10, desc: 'Average I/O load (queue length)' },
-        { metric: 'CD_IO_UTIL', warn: 70, crit: 90, desc: 'Disk utilization (%)' },
-        { metric: 'CD_IO_ERRS', warn: 1, crit: 5, desc: 'I/O errors' },
-        { metric: 'CD_IO_BY_R_LG_SEC', warn: 100, crit: 130, desc: 'MB/sec read large blocks' },
-        { metric: 'CD_IO_BY_W_LG_SEC', warn: 100, crit: 130, desc: 'MB/sec write large blocks' },
-        { metric: 'CD_IO_TM_R_LG_RQ', warn: 500, crit: 1000, desc: 'Avg read latency large blocks (us)' }
-      ];
+      const allRules = [...flashCacheRules, ...smartIoRules, ...cellDiskRules];
+      renderRecommendationBox(
+        'summaryGuide',
+        'Summary of Recommended Metrics from the Exadata Guide',
+        'This summary rolls up the metrics recommended in the Flash Cache, Smart I/O, and Cell Disk tabs so you can keep one consolidated watch list for the dashboard.',
+        allRules
+      );
       renderAlertTable('summaryTable', allRules);
     }
 

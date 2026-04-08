@@ -77,6 +77,14 @@
     }
     .controls button:disabled { opacity: 0.5; cursor: not-allowed; }
     .controls input[type="file"] { display: none; }
+    .controls select {
+      border: 1px solid var(--border);
+      background: #0b1223;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
     .file-label { display: inline-flex; align-items: center; gap: 8px; }
 
     .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
@@ -185,6 +193,14 @@
           <button id="loadBtn" type="button" title="Load chosen files" disabled>Load Selected</button>
           <button id="clearBtn" type="button" title="Clear data">Clear All</button>
           <button id="downloadBtn" type="button" title="Download combined CSV" disabled>Download CSV</button>
+          <label for="tickIntervalSelect">X-axis interval</label>
+          <select id="tickIntervalSelect" title="Choose day spacing for X-axis labels">
+            <option value="auto" selected>Auto</option>
+            <option value="1">1 day</option>
+            <option value="5">5 days</option>
+            <option value="10">10 days</option>
+            <option value="30">30 days</option>
+          </select>
         </div>
         <div id="status" style="margin-top: 10px; font-size: 13px; color: var(--muted);"></div>
         <div id="files" class="chips"></div>
@@ -348,10 +364,31 @@
     let allRows = [];
     let pendingFiles = [];
     let chart;
+    let tickIntervalDays = 'auto';
+
+    function formatTimestampLabel(ts) {
+      return new Date(ts).toISOString().replace('T', ' ').slice(0, 19);
+    }
+
+    function shouldShowLabel(index) {
+      if (tickIntervalDays === 'auto') return true;
+      if (index <= 0) return true;
+
+      const current = allRows[index]?.timestamp;
+      if (!(current instanceof Date) || isNaN(current.getTime())) return true;
+
+      const intervalMs = Number(tickIntervalDays) * 24 * 60 * 60 * 1000;
+      for (let i = index - 1; i >= 0; i--) {
+        const previous = allRows[i]?.timestamp;
+        if (!(previous instanceof Date) || isNaN(previous.getTime())) continue;
+        if ((current - previous) >= intervalMs) return true;
+      }
+      return false;
+    }
 
     function renderChart() {
       const ctx = document.getElementById('chart');
-      const labels = allRows.map(r => r.timestamp);
+      const labels = allRows.map(r => formatTimestampLabel(r.timestamp));
 
       const makeDS = (label, field, color, hidden = false) => ({
         label,
@@ -361,6 +398,7 @@
         borderWidth: 1.8,
         pointRadius: 0,
         tension: 0.15,
+        fill: false,
         hidden
       });
 
@@ -385,26 +423,32 @@
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: { display: true, labels: { color: '#e5e7eb' } },
+            legend: { display: true, labels: { color: '#fff' } },
+            title: { display: true, text: 'Time Series', color: '#fff' },
             tooltip: {
               callbacks: {
+                title: (items) => items.length ? labels[items[0].dataIndex] : '',
                 label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)}%`
               }
             }
           },
           scales: {
             x: {
-              type: 'time',
-              time: { tooltipFormat: 'yyyy-MM-dd HH:mm:ss' },
-              ticks: { color: '#9ca3af' },
-              grid: { color: '#1f2937' }
+              ticks: {
+                color: '#aaa',
+                maxRotation: 45,
+                minRotation: 45,
+                autoSkip: true,
+                callback: (value, index) => shouldShowLabel(index) ? labels[index] : ''
+              },
+              grid: { color: '#333' }
             },
             y: {
               beginAtZero: true,
               max: 100,
-              title: { display: true, text: 'Percent', color: '#e5e7eb' },
-              ticks: { color: '#9ca3af' },
-              grid: { color: '#1f2937' }
+              title: { display: true, text: 'Percent', color: '#fff' },
+              ticks: { color: '#aaa' },
+              grid: { color: '#333' }
             }
           }
         }
@@ -514,6 +558,7 @@
     // ---- Event Listeners ----
     const fileInput = document.getElementById('fileInput');
     const loadBtn = document.getElementById('loadBtn');
+    const tickIntervalSelect = document.getElementById('tickIntervalSelect');
 
     fileInput.addEventListener('change', (e) => {
       pendingFiles = Array.from(e.target.files || []);
@@ -539,6 +584,11 @@
       fileInput.value = '';
     });
 
+    tickIntervalSelect.addEventListener('change', (e) => {
+      tickIntervalDays = e.target.value;
+      if (allRows.length) renderChart();
+    });
+
     document.getElementById('downloadBtn').addEventListener('click', () => {
       const csv = rowsToCsv(allRows);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -555,6 +605,8 @@
     document.getElementById('clearBtn').addEventListener('click', () => {
       allRows = [];
       pendingFiles = [];
+      tickIntervalDays = 'auto';
+      tickIntervalSelect.value = 'auto';
       document.getElementById('files').innerHTML = '';
       document.getElementById('status').textContent = '';
       document.getElementById('downloadBtn').disabled = true;
@@ -596,7 +648,7 @@
 
     // Click on dropzone opens file dialog
     dz.addEventListener('click', (e) => {
-      if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+      if (!e.target.closest('button, input, label, select, option')) {
         fileInput.click();
       }
     });

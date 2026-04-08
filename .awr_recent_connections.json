@@ -1,0 +1,10 @@
+[
+  {
+    "name": "system@nshqah07-scan1.us.oracle.com:1521/santandernew2.us.oracle.com [DEFAULT]",
+    "host": "nshqah07-scan1.us.oracle.com",
+    "port": 1521,
+    "service_name": "santandernew2.us.oracle.com",
+    "username": "system",
+    "mode": "DEFAULT"
+  }
+]

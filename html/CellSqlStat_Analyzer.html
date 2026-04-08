@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cell SQL Stat Analyzer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xz-decompress/dist/package/xz-decompress.js"></script>
+  <script src="../assets/common.js"></script>
+  <script src="../assets/cellsqlstat_parser.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 20px;
+      background: #181920;
+      color: #eee;
+      line-height: 1.45;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    h2,
+    h3 {
+      color: #48e1f9;
+      margin-bottom: 15px;
+    }
+
+    p {
+      color: #d3d9e3;
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    input[type="file"],
+    input[type="text"],
+    input[type="number"],
+    select {
+      background: #1f1f1f;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 5px;
+      padding: 8px 10px;
+      min-height: 40px;
+      font: inherit;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+    }
+
+    button,
+    .button-link {
+      background: #2a3a4a;
+      color: #fff;
+      border: 1px solid #3a5a6a;
+      border-radius: 5px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button:hover,
+    .button-link:hover {
+      background: #3a5a6a;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .export-btn {
+      background: #1a5a3a;
+      border-color: #2a7a4a;
+    }
+
+    .export-btn:hover {
+      background: #2a7a4a;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #141b24;
+      border: 1px solid #334155;
+      color: #7bc8f8;
+      font-size: 13px;
+      max-width: 100%;
+      word-break: break-word;
+    }
+
+    .notes-grid,
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin: 15px 0 20px;
+    }
+
+    .finding-card,
+    .legend-card {
+      background: #141b24;
+      border: 1px solid #334155;
+      border-left: 4px solid #38bdf8;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .finding-card.warning {
+      border-left-color: #f59e0b;
+    }
+
+    .finding-card.info,
+    .legend-card {
+      border-left-color: #22c55e;
+    }
+
+    .finding-title,
+    .legend-card h4 {
+      font-weight: 600;
+      color: #f8fafc;
+      margin: 0 0 8px;
+    }
+
+    .finding-summary,
+    .legend-card p {
+      color: #e2e8f0;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .finding-detail {
+      color: #94a3b8;
+      font-size: 13px;
+      line-height: 1.4;
+      margin-top: 8px;
+    }
+
+    .status-text {
+      color: #7bc8f8;
+      font-size: 14px;
+      margin: 10px 0;
+      line-height: 1.5;
+    }
+
+    .status-text.error {
+      color: #ff8080;
+    }
+
+    .status-text.info {
+      color: #7bc8f8;
+    }
+
+    .section-block {
+      margin: 22px 0;
+    }
+
+    .subtle-note,
+    .inline-note,
+    .chart-note,
+    .cell-muted {
+      color: #94a3b8;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .meta-grid,
+    .summary-grid {
+      background: #1a2a3a;
+      border: 1px solid #345;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 15px;
+    }
+
+    .meta-card,
+    .summary-card {
+      text-align: center;
+      background: #141b24;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 14px;
+      min-height: 100%;
+    }
+
+    .meta-card .label,
+    .summary-card .label {
+      display: block;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 4px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .meta-card .value {
+      display: block;
+      font-size: 12px;
+      font-weight: 400;
+      color: #e2e8f0;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .summary-card .value {
+      display: block;
+      font-size: 20px;
+      font-weight: bold;
+      color: #48e1f9;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .card-detail {
+      margin-top: 8px;
+      color: #94a3b8;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .command-box {
+      font-family: "Roboto Mono", monospace;
+      font-size: 1em;
+      color: #affcec;
+      background: #212c40;
+      border-radius: 10px;
+      padding: 17px 19px;
+      margin: 18px 0 12px;
+      word-break: break-all;
+      box-shadow: 0 1px 5px rgba(34, 51, 68, 0.5);
+      border-left: 4px solid #1adaa6;
+    }
+
+    .command-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #81e6f0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #bfcbe7;
+    }
+
+    .checkbox-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .checkbox {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      color: #d3d9e3;
+      font-size: 14px;
+    }
+
+    .checkbox input {
+      width: auto;
+      min-height: auto;
+      margin: 0;
+      accent-color: #48e1f9;
+    }
+
+    .filter-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    canvas {
+      margin-top: 20px;
+      max-width: 100%;
+    }
+
+    .chart-wrap {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(248, 244, 236, 0.86));
+      border: 1px solid #d8c9b0;
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 420px;
+    }
+
+    #trendChart {
+      margin-top: 0;
+      min-height: 380px;
+      max-height: 520px;
+      height: 100% !important;
+      background: transparent;
+      border-radius: 0;
+      padding: 0;
+      border: none;
+    }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table {
+      margin-top: 20px;
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1080px;
+    }
+
+    th,
+    td {
+      border: 1px solid #444;
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #2a2a2a;
+      color: #48e1f9;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody tr:hover {
+      background: #1f2734;
+    }
+
+    .mono {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
+
+    .rank-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .rank-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #1f2937;
+      border: 1px solid #475569;
+      font-size: 11px;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+
+    .is-hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 900px) {
+      .filter-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .button-group {
+        width: 100%;
+      }
+
+      .button-group button,
+      .button-group a {
+        flex: 1;
+      }
+    }
+
+    @media (max-width: 700px) {
+      body {
+        margin: 14px;
+      }
+
+      .controls,
+      .checkbox-row,
+      .button-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .controls > * {
+        width: 100%;
+      }
+
+      .meta-grid,
+      .summary-grid,
+      .notes-grid,
+      .legend-grid,
+      .filters-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>Cell SQL Stat Analyzer</h2>
+  <p>Analyze `cellsqlstat --detail --batch` output from an Exadata storage node, isolate top SQL by `Memory Bytes`, `%CPU`, `Requested Bytes/s`, `Returned Bytes/s`, and filter by `CDBID`, `DBID`, `SQLID`, and `DBNAME`.</p>
+
+  <div class="controls">
+    <input id="fileInput" type="file" multiple accept=".dat,.dast,.txt,.xz,.dat.xz,.dast.xz,.txt.xz,text/plain,application/x-xz">
+    <button id="loadExampleBtn" type="button">Load KB Example</button>
+    <a class="button-link" href="../index.html">Back To Dashboard</a>
+    <span id="sourceBadge" class="status-chip">No file loaded</span>
+  </div>
+
+  <div class="notes-grid">
+    <article class="finding-card info">
+      <h3 class="finding-title">Expected Input</h3>
+      <p class="finding-summary">The parser accepts one or more uncompressed `.dat`, `.dast`, `.txt` files and `.xz` compressed captures generated by `cellsqlstat --detail --batch` or `CellSqlStatExaWatcher`.</p>
+      <p class="finding-detail mono">KB/2026_04_01_10_44_24_CellSqlStatExaWatcher_gru126171exdcl02.oraclecloud.internal.dat</p>
+    </article>
+    <article class="finding-card">
+      <h3 class="finding-title">How Rows Are Merged</h3>
+      <p class="finding-summary">If the same SQL appears in multiple “Top SQL by ...” sections at one timestamp, the tool keeps a single merged SQL record for that source and snapshot. Different sources remain separate.</p>
+    </article>
+    <article class="finding-card warning">
+      <h3 class="finding-title">Scope Caveat</h3>
+      <p class="finding-summary">This file only contains statements that ranked into the top sections. It is useful for hotspot analysis, not full workload accounting.</p>
+    </article>
+  </div>
+
+  <div id="statusBox" class="status-text">Upload one or more compressed `.xz` or uncompressed `.dat` / `.dast` files, or use the bundled KB example.</div>
+
+  <section id="metaSection" class="section-block is-hidden">
+    <h3>Dataset Summary</h3>
+    <div id="metaGrid" class="meta-grid"></div>
+    <div id="commandBox" class="command-box is-hidden"></div>
+  </section>
+
+  <section id="filtersPanel" class="section-block is-hidden">
+    <h3>Filters</h3>
+    <p class="subtle-note">Refine the merged snapshot view by identity columns, ranking section, time window, and the metric used for charts and table ordering.</p>
+
+      <div class="filters-grid">
+        <div class="field">
+          <label for="metricSelect">Metric</label>
+          <select id="metricSelect"></select>
+        </div>
+
+        <div class="field">
+          <label for="sectionSelect">Top Section</label>
+          <select id="sectionSelect"></select>
+        </div>
+
+        <div class="field">
+          <label for="sourceSelect">Source / Cell</label>
+          <select id="sourceSelect"></select>
+        </div>
+
+        <div class="field">
+          <label for="cdbidSelect">CDBID</label>
+          <select id="cdbidSelect"></select>
+        </div>
+
+      <div class="field">
+        <label for="dbidSelect">DBID</label>
+        <select id="dbidSelect"></select>
+      </div>
+
+      <div class="field">
+        <label for="dbNameSelect">DBNAME</label>
+        <select id="dbNameSelect"></select>
+      </div>
+
+      <div class="field">
+        <label for="sqlIdInput">SQLID Contains</label>
+        <input id="sqlIdInput" type="text" placeholder="e.g. cw5h9332501fx">
+      </div>
+
+      <div class="field">
+        <label for="fromTimeSelect">From Snapshot</label>
+        <select id="fromTimeSelect"></select>
+      </div>
+
+      <div class="field">
+        <label for="toTimeSelect">To Snapshot</label>
+        <select id="toTimeSelect"></select>
+      </div>
+
+      <div class="field">
+        <label for="topNInput">Top Series In Chart</label>
+        <input id="topNInput" type="number" min="1" max="20" value="6">
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <div class="checkbox-row">
+        <label class="checkbox"><input id="includeOthersInput" type="checkbox"> Include `OTHERS` rows</label>
+        <label class="checkbox"><input id="includeTotalsInput" type="checkbox"> Include `TOTAL USAGE` rows</label>
+      </div>
+
+      <div class="button-group">
+        <button id="resetFiltersBtn" type="button">Reset Filters</button>
+        <button id="exportSummaryBtn" class="export-btn" type="button" disabled>Export Summary CSV</button>
+        <button id="exportLatestBtn" class="export-btn" type="button" disabled>Export Latest Snapshot CSV</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="summaryPanel" class="section-block is-hidden">
+    <h3>Current Scope Summary</h3>
+    <p id="summaryNote" class="subtle-note"></p>
+    <div id="summaryGrid" class="summary-grid"></div>
+  </section>
+
+  <section id="chartPanel" class="section-block is-hidden">
+    <h3>Timeline</h3>
+    <p class="subtle-note">Series are chosen from the highest peak values for the selected metric inside the current filter scope.</p>
+    <div class="chart-wrap">
+      <canvas id="trendChart"></canvas>
+    </div>
+    <p id="chartNote" class="chart-note"></p>
+  </section>
+
+  <section id="summaryTablePanel" class="section-block is-hidden">
+    <h3>Top SQL Summary</h3>
+    <p class="subtle-note">One row per SQL statement across the filtered time range. Peak columns keep the maximum value seen for that SQL.</p>
+    <div class="table-wrap">
+      <table>
+        <thead id="summaryTableHead"></thead>
+        <tbody id="summaryTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="latestTablePanel" class="section-block is-hidden">
+    <h3>Latest Matching Snapshot</h3>
+    <p id="latestCaption" class="subtle-note">Filtered rows for the latest timestamp in scope, sorted by the selected metric.</p>
+    <div class="table-wrap">
+      <table>
+        <thead id="latestTableHead"></thead>
+        <tbody id="latestTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section-block">
+    <h3>Column Legend</h3>
+    <p class="subtle-note">The field descriptions below come directly from the uploaded file when available.</p>
+    <div id="legendGrid" class="legend-grid"></div>
+  </section>
+
+  <script>
+    (function initCellSqlStatAnalyzer() {
+      const SAMPLE_PATH = '../KB/2026_04_01_10_44_24_CellSqlStatExaWatcher_gru126171exdcl02.oraclecloud.internal.dat';
+      const parser = window.CellSqlStatParser;
+
+      if (!parser) {
+        document.getElementById('statusBox').className = 'status-text error';
+        document.getElementById('statusBox').textContent = 'Cell SQL Stat parser failed to load.';
+        return;
+      }
+
+      const state = {
+        dataset: null,
+        chart: null,
+        sourceLabel: null,
+        latestRows: [],
+        summaryRows: []
+      };
+
+      const els = {
+        fileInput: document.getElementById('fileInput'),
+        loadExampleBtn: document.getElementById('loadExampleBtn'),
+        sourceBadge: document.getElementById('sourceBadge'),
+        statusBox: document.getElementById('statusBox'),
+        metaSection: document.getElementById('metaSection'),
+        metaGrid: document.getElementById('metaGrid'),
+        commandBox: document.getElementById('commandBox'),
+        filtersPanel: document.getElementById('filtersPanel'),
+        summaryPanel: document.getElementById('summaryPanel'),
+        summaryGrid: document.getElementById('summaryGrid'),
+        summaryNote: document.getElementById('summaryNote'),
+        chartPanel: document.getElementById('chartPanel'),
+        trendChart: document.getElementById('trendChart'),
+        chartNote: document.getElementById('chartNote'),
+        summaryTablePanel: document.getElementById('summaryTablePanel'),
+        summaryTableHead: document.getElementById('summaryTableHead'),
+        summaryTableBody: document.getElementById('summaryTableBody'),
+        latestTablePanel: document.getElementById('latestTablePanel'),
+        latestCaption: document.getElementById('latestCaption'),
+        latestTableHead: document.getElementById('latestTableHead'),
+        latestTableBody: document.getElementById('latestTableBody'),
+        legendGrid: document.getElementById('legendGrid'),
+        metricSelect: document.getElementById('metricSelect'),
+        sectionSelect: document.getElementById('sectionSelect'),
+        sourceSelect: document.getElementById('sourceSelect'),
+        cdbidSelect: document.getElementById('cdbidSelect'),
+        dbidSelect: document.getElementById('dbidSelect'),
+        dbNameSelect: document.getElementById('dbNameSelect'),
+        sqlIdInput: document.getElementById('sqlIdInput'),
+        fromTimeSelect: document.getElementById('fromTimeSelect'),
+        toTimeSelect: document.getElementById('toTimeSelect'),
+        topNInput: document.getElementById('topNInput'),
+        includeOthersInput: document.getElementById('includeOthersInput'),
+        includeTotalsInput: document.getElementById('includeTotalsInput'),
+        resetFiltersBtn: document.getElementById('resetFiltersBtn'),
+        exportSummaryBtn: document.getElementById('exportSummaryBtn'),
+        exportLatestBtn: document.getElementById('exportLatestBtn')
+      };
+
+      const summaryColumns = [
+        { key: 'sourceGroupDisplay', label: 'Source', type: 'text', mono: true },
+        { key: 'sqlId', label: 'SQLID', type: 'text', mono: true },
+        { key: 'dbName', label: 'DBNAME', type: 'text', mono: true },
+        { key: 'cdbid', label: 'CDBID', type: 'text', mono: true },
+        { key: 'dbid', label: 'DBID', type: 'text', mono: true },
+        { key: 'fileCount', label: 'Files', type: 'number' },
+        { key: 'snapshotsSeen', label: 'Snapshots', type: 'number' },
+        { key: 'peakSelectedMetric', label: 'Peak Metric', type: 'metric' },
+        { key: 'peakMemoryBytes', label: 'Peak Memory Bytes', type: 'metric', metricKey: 'memoryBytes' },
+        { key: 'peakCpuPercent', label: 'Peak %CPU', type: 'metric', metricKey: 'cpuPercent' },
+        { key: 'peakRequestedBytesPerSec', label: 'Peak Requested Bytes/s', type: 'metric', metricKey: 'requestedBytesPerSec' },
+        { key: 'peakReturnedBytesPerSec', label: 'Peak Returned Bytes/s', type: 'metric', metricKey: 'returnedBytesPerSec' },
+        { key: 'peakIosPerSec', label: 'Peak IOs/s', type: 'metric', metricKey: 'iosPerSec' },
+        { key: 'appearsIn', label: 'Appears In', type: 'text' },
+        { key: 'firstSeen', label: 'First Seen', type: 'text', mono: true },
+        { key: 'lastSeen', label: 'Last Seen', type: 'text', mono: true }
+      ];
+
+      const latestColumns = [
+        { key: 'sourceGroupDisplay', label: 'Source', type: 'text', mono: true },
+        { key: 'sourceFile', label: 'File', type: 'text', mono: true },
+        { key: 'rowCategory', label: 'Type', type: 'rowType' },
+        { key: 'sqlId', label: 'SQLID', type: 'text', mono: true },
+        { key: 'dbName', label: 'DBNAME', type: 'text', mono: true },
+        { key: 'cdbid', label: 'CDBID', type: 'text', mono: true },
+        { key: 'dbid', label: 'DBID', type: 'text', mono: true },
+        { key: 'durationSeconds', label: 'Duration', type: 'metric', metricKey: 'durationSeconds' },
+        { key: 'memoryBytes', label: 'Memory Bytes', type: 'metric', metricKey: 'memoryBytes' },
+        { key: 'cpuPercent', label: '%CPU', type: 'metric', metricKey: 'cpuPercent' },
+        { key: 'requestedBytes', label: 'Requested Bytes', type: 'metric', metricKey: 'requestedBytes' },
+        { key: 'requestedBytesPerSec', label: 'Requested Bytes/s', type: 'metric', metricKey: 'requestedBytesPerSec' },
+        { key: 'returnedBytes', label: 'Returned Bytes', type: 'metric', metricKey: 'returnedBytes' },
+        { key: 'returnedBytesPerSec', label: 'Returned Bytes/s', type: 'metric', metricKey: 'returnedBytesPerSec' },
+        { key: 'storageIndexPercent', label: '%Storage Index', type: 'metric', metricKey: 'storageIndexPercent' },
+        { key: 'xrmemColumnarPercent', label: '%XRMEM Columnar', type: 'metric', metricKey: 'xrmemColumnarPercent' },
+        { key: 'flashColumnarPercent', label: '%Flash Columnar', type: 'metric', metricKey: 'flashColumnarPercent' },
+        { key: 'flashRegularPercent', label: '%Flash Regular', type: 'metric', metricKey: 'flashRegularPercent' },
+        { key: 'diskPercent', label: '%Disk', type: 'metric', metricKey: 'diskPercent' },
+        { key: 'passthruPercent', label: '%Passthru', type: 'metric', metricKey: 'passthruPercent' },
+        { key: 'xrmemColumnarBytes', label: 'XRMEM Columnar Bytes', type: 'metric', metricKey: 'xrmemColumnarBytes' },
+        { key: 'flashColumnarBytes', label: 'Flash Columnar Bytes', type: 'metric', metricKey: 'flashColumnarBytes' },
+        { key: 'flashRegularBytes', label: 'Flash Regular Bytes', type: 'metric', metricKey: 'flashRegularBytes' },
+        { key: 'diskBytes', label: 'Disk Bytes', type: 'metric', metricKey: 'diskBytes' },
+        { key: 'columnarSavedBytes', label: 'Columnar Saved Bytes', type: 'metric', metricKey: 'columnarSavedBytes' },
+        { key: 'storageIndexSavedBytes', label: 'Storage Index Saved Bytes', type: 'metric', metricKey: 'storageIndexSavedBytes' },
+        { key: 'passthruBytes', label: 'Passthru Bytes', type: 'metric', metricKey: 'passthruBytes' },
+        { key: 'ios', label: 'IOs', type: 'metric', metricKey: 'ios' },
+        { key: 'iosPerSec', label: 'IOs/s', type: 'metric', metricKey: 'iosPerSec' },
+        { key: 'sectionRanks', label: 'Ranks', type: 'ranks' }
+      ];
+
+      const legendFallback = {
+        'CDBID': 'Container database ID running the SQL query',
+        'DBID': 'Database ID running the SQL query',
+        'SQLID': 'SQL ID of the SQL query',
+        'Duration': 'Aggregated run time across all runs',
+        'Memory Bytes': 'Amount of offload server memory used by the SQL statement',
+        '%CPU': 'Percentage of elapsed time spent on CPU',
+        'Requested Bytes': 'Bytes eligible for smart scan',
+        'Returned Bytes': 'Bytes returned to the database by smart scan',
+        '%Storage Index': 'Percentage of requested bytes saved by storage index',
+        '%XRMEM Columnar': 'Percentage of requested bytes read from XRMEM columnar cache',
+        '%Flash Columnar': 'Percentage of requested bytes read from flash columnar cache',
+        '%Flash Regular': 'Percentage of requested bytes read from flash cache',
+        '%Disk': 'Percentage of requested bytes read from disk',
+        '%Passthru': 'Percentage of requested bytes returned directly to the database',
+        'XRMEM Columnar Bytes': 'Physical bytes read from XRMEM columnar cache',
+        'Flash Columnar Bytes': 'Physical bytes read from flash columnar cache',
+        'Flash Regular Bytes': 'Physical bytes read from flash cache',
+        'Disk Bytes': 'Physical bytes read from disk',
+        'Columnar Saved Bytes': 'Physical bytes saved by columnar cache',
+        'Storage Index Saved Bytes': 'Requested Bytes saved by storage index',
+        'Passthru Bytes': 'Requested bytes returned without offloading',
+        'IOs': 'Smart I/Os completed since the start of the query',
+        'DBNAME': 'Database name running the SQL query'
+      };
+
+      bindEvents();
+      renderLegendCards(legendFallback);
+
+      function bindEvents() {
+        els.fileInput.addEventListener('change', async event => {
+          const files = Array.from(event.target.files || []);
+          if (!files.length) return;
+
+          const invalidFiles = files.filter(file => !validateFileType(file, ['.dat', '.dast', '.txt', '.xz']));
+          if (invalidFiles.length) {
+            setStatus(`Unsupported file type: ${invalidFiles.map(file => file.name).join(', ')}. Use \`.dat\`, \`.dast\`, \`.txt\`, or \`.xz\` cellsqlstat files.`, 'error');
+            return;
+          }
+
+          try {
+            showLoading(`Reading ${files.length} file${files.length === 1 ? '' : 's'}...`);
+
+            const parsedSources = [];
+            for (let index = 0; index < files.length; index += 1) {
+              const file = files[index];
+              updateLoadingMessage(`Reading ${index + 1}/${files.length}: ${file.name}...`);
+              const text = await readCellSqlStatFile(file);
+              parsedSources.push(parseSourceText(text, file.name));
+            }
+
+            loadParsedSources(parsedSources);
+          } catch (error) {
+            logError('cellsqlstat:file-read', error);
+            setStatus(`Failed to read selected files: ${error.message}`, 'error');
+          } finally {
+            hideLoading();
+          }
+        });
+
+        els.loadExampleBtn.addEventListener('click', async () => {
+          try {
+            showLoading('Loading bundled KB example...');
+            const response = await fetch(SAMPLE_PATH, { cache: 'no-store' });
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            const text = await response.text();
+            loadParsedSources([parseSourceText(text, SAMPLE_PATH.replace('../', ''))]);
+          } catch (error) {
+            logError('cellsqlstat:load-example', error);
+            setStatus('Could not auto-load the bundled example. Open the KB file manually if you are browsing from file://.', 'error');
+          } finally {
+            hideLoading();
+          }
+        });
+
+        [
+          els.metricSelect,
+          els.sectionSelect,
+          els.sourceSelect,
+          els.cdbidSelect,
+          els.dbidSelect,
+          els.dbNameSelect,
+          els.fromTimeSelect,
+          els.toTimeSelect,
+          els.topNInput,
+          els.includeOthersInput,
+          els.includeTotalsInput
+        ].forEach(control => control.addEventListener('change', refreshView));
+
+        els.sqlIdInput.addEventListener('input', refreshView);
+
+        els.resetFiltersBtn.addEventListener('click', () => {
+          if (!state.dataset) return;
+          resetFilters();
+          refreshView();
+        });
+
+        els.exportSummaryBtn.addEventListener('click', exportSummaryCsv);
+        els.exportLatestBtn.addEventListener('click', exportLatestCsv);
+      }
+
+      async function readCellSqlStatFile(file) {
+        const lowerName = (file.name || '').toLowerCase();
+        if (!lowerName.endsWith('.xz')) {
+          return await readFileAsText(file);
+        }
+
+        const xzLib = window['xz-decompress'];
+        if (!xzLib || !xzLib.XzReadableStream) {
+          throw new Error('XZ decompression library not available');
+        }
+
+        const decompressedStream = new xzLib.XzReadableStream(file.stream());
+        return await new Response(decompressedStream).text();
+      }
+
+      function parseSourceText(text, sourceName) {
+        return {
+          dataset: parser.parseCellSqlStat(text),
+          sourceFile: sourceName,
+          sourceGroup: deriveSourceGroup(sourceName)
+        };
+      }
+
+      function deriveSourceGroup(sourceName) {
+        const basename = String(sourceName || '').split('/').pop() || String(sourceName || '');
+        const withoutCompression = basename.replace(/\.xz$/i, '');
+        const withoutSuffix = withoutCompression.replace(/\.(dat|dast|txt)$/i, '');
+        const collectorMatch = withoutSuffix.match(/CellSqlStatExaWatcher_(.+)$/i);
+        if (collectorMatch && collectorMatch[1]) {
+          return collectorMatch[1];
+        }
+
+        return withoutSuffix.replace(/^\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}_/, '') || basename;
+      }
+
+      function uniqueSortedStrings(values) {
+        return Array.from(new Set(values.filter(Boolean))).sort((left, right) => String(left).localeCompare(String(right)));
+      }
+
+      function summarizeList(values, limit = 3) {
+        const compact = values.filter(Boolean);
+        if (!compact.length) return '-';
+        if (compact.length <= limit) return compact.join(', ');
+        return `${compact.slice(0, limit).join(', ')} +${compact.length - limit} more`;
+      }
+
+      function combineDatasets(parsedSources) {
+        if (!parsedSources.length) {
+          throw new Error('No parsed sources were provided.');
+        }
+
+        const firstDataset = parsedSources[0].dataset;
+        const records = [];
+        const sourceFiles = [];
+        const sourceGroups = [];
+        const modules = [];
+        const versions = [];
+        const intervals = [];
+        const archiveCounts = [];
+        const commands = [];
+        const startingTimes = [];
+        let sourceSnapshotCount = 0;
+        let legend = {};
+
+        parsedSources.forEach((entry, index) => {
+          const dataset = entry.dataset;
+          const sourceFile = entry.sourceFile;
+          const sourceGroup = entry.sourceGroup || sourceFile;
+
+          sourceFiles.push(sourceFile);
+          sourceGroups.push(sourceGroup);
+          sourceSnapshotCount += dataset.snapshotCount || 0;
+
+          if (Object.keys(dataset.legend || {}).length) {
+            legend = { ...legend, ...dataset.legend };
+          }
+
+          if (dataset.metadata['Collection Module']) modules.push(dataset.metadata['Collection Module']);
+          if (dataset.metadata['Version']) versions.push(dataset.metadata['Version']);
+          if (dataset.metadata['Sample Interval(s)']) intervals.push(dataset.metadata['Sample Interval(s)']);
+          if (dataset.metadata['Archive Count']) archiveCounts.push(dataset.metadata['Archive Count']);
+          if (dataset.metadata['Collection Command']) commands.push(dataset.metadata['Collection Command']);
+          if (dataset.metadata['Starting Time']) startingTimes.push(dataset.metadata['Starting Time']);
+
+          dataset.records.forEach(record => {
+            records.push({
+              ...record,
+              sourceFile,
+              sourceGroup,
+              sourceGroupDisplay: sourceGroup,
+              sourceIndex: index
+            });
+          });
+        });
+
+        const sqlRecords = records.filter(row => row.rowCategory === 'sql');
+        const timestamps = uniqueSortedStrings(records.map(row => row.timestampText));
+        const sections = uniqueSortedStrings(records.flatMap(row => row.sections || []));
+
+        return {
+          metadata: {
+            modules: uniqueSortedStrings(modules),
+            versions: uniqueSortedStrings(versions),
+            sampleIntervals: uniqueSortedStrings(intervals),
+            archiveCounts: uniqueSortedStrings(archiveCounts),
+            commands: uniqueSortedStrings(commands),
+            startingTimes: uniqueSortedStrings(startingTimes)
+          },
+          legend,
+          records,
+          sqlRecords,
+          totals: records.filter(row => row.rowCategory === 'total'),
+          others: records.filter(row => row.rowCategory === 'others'),
+          timestamps,
+          sections,
+          cdbids: uniqueSortedStrings(sqlRecords.map(row => row.cdbid)),
+          dbids: uniqueSortedStrings(sqlRecords.map(row => row.dbid)),
+          dbNames: uniqueSortedStrings(sqlRecords.map(row => row.dbName)),
+          sqlIds: uniqueSortedStrings(sqlRecords.map(row => row.sqlId)),
+          sourceFiles: uniqueSortedStrings(sourceFiles),
+          sourceGroups: uniqueSortedStrings(sourceGroups),
+          fileCount: parsedSources.length,
+          snapshotCount: timestamps.length,
+          sourceSnapshotCount,
+          metricDefinitions: firstDataset.metricDefinitions,
+          defaultMetricKeys: firstDataset.defaultMetricKeys
+        };
+      }
+
+      function loadParsedSources(parsedSources) {
+        try {
+          const dataset = combineDatasets(parsedSources);
+          state.dataset = dataset;
+          state.sourceLabel = formatSourceBadge(dataset);
+
+          populateFilters(dataset);
+          renderMetadata(dataset);
+          renderLegendCards(Object.keys(dataset.legend).length ? dataset.legend : legendFallback);
+
+          els.filtersPanel.classList.remove('is-hidden');
+          els.summaryPanel.classList.remove('is-hidden');
+          els.chartPanel.classList.remove('is-hidden');
+          els.summaryTablePanel.classList.remove('is-hidden');
+          els.latestTablePanel.classList.remove('is-hidden');
+
+          els.sourceBadge.textContent = state.sourceLabel;
+          refreshView();
+        } catch (error) {
+          logError('cellsqlstat:parse', error);
+          setStatus(`Parse failed: ${error.message}`, 'error');
+        }
+      }
+
+      function formatSourceBadge(dataset) {
+        if (!dataset || !dataset.fileCount) return 'No files loaded';
+        if (dataset.fileCount === 1) return dataset.sourceFiles[0];
+        return `${dataset.fileCount} files | ${dataset.sourceGroups.length} sources`;
+      }
+
+      function renderMetadata(dataset) {
+        const coverage = dataset.timestamps.length
+          ? `${dataset.timestamps[0]} -> ${dataset.timestamps[dataset.timestamps.length - 1]}`
+          : '-';
+
+        const metaEntries = [
+          ['Files Loaded', String(dataset.fileCount)],
+          ['Sources', summarizeList(dataset.sourceGroups, 2)],
+          ['Module', summarizeList(dataset.metadata.modules, 2)],
+          ['Version', summarizeList(dataset.metadata.versions, 2)],
+          ['Coverage', coverage],
+          ['Sample Interval(s)', summarizeList(dataset.metadata.sampleIntervals, 3)],
+          ['Archive Count', summarizeList(dataset.metadata.archiveCounts, 3)],
+          ['Unique Snapshots', String(dataset.snapshotCount)],
+          ['File Snapshots', String(dataset.sourceSnapshotCount)],
+          ['Distinct SQLIDs', String(dataset.sqlIds.length)],
+          ['Ranking Sections', dataset.sections.join(', ') || '-']
+        ];
+
+        els.metaGrid.innerHTML = metaEntries.map(([label, value]) => `
+          <div class="meta-card">
+            <span class="label">${escapeHtml(label)}</span>
+            <span class="value">${escapeHtml(value)}</span>
+          </div>
+        `).join('');
+
+        const commands = dataset.metadata.commands || [];
+        if (commands.length) {
+          els.commandBox.classList.remove('is-hidden');
+          els.commandBox.innerHTML = `<span class="command-label">${commands.length === 1 ? 'Collection Command' : 'Collection Commands'}</span><code>${escapeHtml(commands.join('\n'))}</code>`;
+        } else {
+          els.commandBox.classList.add('is-hidden');
+          els.commandBox.innerHTML = '';
+        }
+
+        els.metaSection.classList.remove('is-hidden');
+      }
+
+      function populateFilters(dataset) {
+        const metricDefs = dataset.metricDefinitions.slice().sort((left, right) => {
+          const leftIndex = dataset.defaultMetricKeys.indexOf(left.key);
+          const rightIndex = dataset.defaultMetricKeys.indexOf(right.key);
+          const leftRank = leftIndex === -1 ? 999 : leftIndex;
+          const rightRank = rightIndex === -1 ? 999 : rightIndex;
+          return leftRank - rightRank || left.label.localeCompare(right.label);
+        });
+
+        setSelectOptions(
+          els.metricSelect,
+          metricDefs.map(def => ({ value: def.key, label: def.label })),
+          'requestedBytesPerSec'
+        );
+
+        setSelectOptions(
+          els.sectionSelect,
+          [{ value: '', label: 'All ranking sections' }].concat(dataset.sections.map(section => ({
+            value: section,
+            label: section
+          }))),
+          ''
+        );
+
+        setSelectOptions(
+          els.sourceSelect,
+          [{ value: '', label: 'All sources / cells' }].concat(dataset.sourceGroups.map(value => ({
+            value,
+            label: value
+          }))),
+          ''
+        );
+
+        setSelectOptions(
+          els.cdbidSelect,
+          [{ value: '', label: 'All CDBIDs' }].concat(dataset.cdbids.map(value => ({ value, label: value }))),
+          ''
+        );
+
+        setSelectOptions(
+          els.dbidSelect,
+          [{ value: '', label: 'All DBIDs' }].concat(dataset.dbids.map(value => ({ value, label: value }))),
+          ''
+        );
+
+        setSelectOptions(
+          els.dbNameSelect,
+          [{ value: '', label: 'All DBNAME values' }].concat(dataset.dbNames.map(value => ({ value, label: value }))),
+          ''
+        );
+
+        setSelectOptions(
+          els.fromTimeSelect,
+          [{ value: '', label: 'Start of file' }].concat(dataset.timestamps.map(value => ({ value, label: value }))),
+          ''
+        );
+
+        setSelectOptions(
+          els.toTimeSelect,
+          [{ value: '', label: 'End of file' }].concat(dataset.timestamps.map(value => ({ value, label: value }))),
+          ''
+        );
+
+        resetFilters();
+      }
+
+      function resetFilters() {
+        els.metricSelect.value = 'requestedBytesPerSec';
+        els.sectionSelect.value = '';
+        els.sourceSelect.value = '';
+        els.cdbidSelect.value = '';
+        els.dbidSelect.value = '';
+        els.dbNameSelect.value = '';
+        els.sqlIdInput.value = '';
+        els.fromTimeSelect.value = '';
+        els.toTimeSelect.value = '';
+        els.topNInput.value = '6';
+        els.includeOthersInput.checked = false;
+        els.includeTotalsInput.checked = false;
+      }
+
+      function setSelectOptions(select, options, defaultValue) {
+        select.innerHTML = options.map(option => `
+          <option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>
+        `).join('');
+
+        if (options.some(option => option.value === defaultValue)) {
+          select.value = defaultValue;
+        } else if (options.length) {
+          select.value = options[0].value;
+        }
+      }
+
+      function getFilters() {
+        const fromSnapshot = els.fromTimeSelect.value || null;
+        const toSnapshot = els.toTimeSelect.value || null;
+        const normalizedSqlId = els.sqlIdInput.value.trim().toLowerCase();
+
+        return {
+          metricKey: els.metricSelect.value || 'requestedBytesPerSec',
+          section: els.sectionSelect.value || null,
+          sourceGroup: els.sourceSelect.value || null,
+          cdbid: els.cdbidSelect.value || null,
+          dbid: els.dbidSelect.value || null,
+          dbName: els.dbNameSelect.value || null,
+          sqlIdLike: normalizedSqlId || null,
+          fromSnapshot,
+          toSnapshot,
+          topN: Math.max(1, Math.min(20, Number(els.topNInput.value) || 6)),
+          includeOthers: els.includeOthersInput.checked,
+          includeTotals: els.includeTotalsInput.checked
+        };
+      }
+
+      function refreshView() {
+        if (!state.dataset) return;
+
+        const filters = getFilters();
+        const filteredRows = state.dataset.records.filter(row => matchesFilters(row, filters));
+        const filteredSqlRows = filteredRows.filter(row => row.rowCategory === 'sql');
+
+        const latestTimestamp = getLatestTimestamp(filteredRows);
+        const latestRows = latestTimestamp
+          ? filteredRows
+            .filter(row => row.timestampText === latestTimestamp)
+            .sort((left, right) => sortByMetricDesc(left, right, filters.metricKey))
+          : [];
+
+        const summaryRows = buildSummaryRows(filteredSqlRows, filters.metricKey);
+
+        state.latestRows = latestRows;
+        state.summaryRows = summaryRows;
+
+        renderSummaryCards(filteredSqlRows, filteredRows, latestTimestamp, filters.metricKey, summaryRows);
+        renderTrendChart(filteredRows, filters.metricKey, filters.topN);
+        renderSummaryTable(summaryRows, filters.metricKey);
+        renderLatestTable(latestRows, filters.metricKey, latestTimestamp);
+
+        els.exportSummaryBtn.disabled = !summaryRows.length;
+        els.exportLatestBtn.disabled = !latestRows.length;
+
+        const matchedSnapshots = new Set(filteredRows.map(row => row.timestampText)).size;
+        const matchedSources = new Set(filteredRows.map(row => row.sourceGroup)).size;
+        const matchedFiles = new Set(filteredRows.map(row => row.sourceFile)).size;
+        setStatus(
+          `Parsed ${state.dataset.records.length} merged records from ${state.dataset.fileCount} file(s) and ${state.dataset.sourceGroups.length} source(s). Current filters match ${filteredSqlRows.length} SQL rows across ${matchedSnapshots} snapshots, ${matchedSources} source(s), and ${matchedFiles} file(s).`,
+          'info'
+        );
+      }
+
+      function matchesFilters(row, filters) {
+        if (row.rowCategory === 'others' && !filters.includeOthers) return false;
+        if (row.rowCategory === 'total' && !filters.includeTotals) return false;
+
+        if (filters.section && (!row.sections || !row.sections.includes(filters.section))) return false;
+        if (filters.sourceGroup && row.sourceGroup !== filters.sourceGroup) return false;
+        if (filters.fromSnapshot && row.timestampText < filters.fromSnapshot) return false;
+        if (filters.toSnapshot && row.timestampText > filters.toSnapshot) return false;
+        if (filters.cdbid && row.cdbid !== filters.cdbid) return false;
+        if (filters.dbid && row.dbid !== filters.dbid) return false;
+        if (filters.dbName && row.dbName !== filters.dbName) return false;
+        if (filters.sqlIdLike && !(row.sqlId || '').toLowerCase().includes(filters.sqlIdLike)) return false;
+
+        return true;
+      }
+
+      function getLatestTimestamp(rows) {
+        if (!rows.length) return null;
+        return rows.reduce((latest, row) => {
+          if (!latest) return row.timestampText;
+          return row.timestampText > latest ? row.timestampText : latest;
+        }, null);
+      }
+
+      function buildSummaryRows(rows, metricKey) {
+        const grouped = new Map();
+
+        rows.forEach(row => {
+          const key = [row.sourceGroup || '', row.cdbid || '', row.dbid || '', row.sqlId || '', row.dbName || ''].join('|');
+          if (!grouped.has(key)) {
+            grouped.set(key, {
+              sourceGroupDisplay: row.sourceGroupDisplay || row.sourceGroup || '-',
+              cdbid: row.cdbid,
+              dbid: row.dbid,
+              sqlId: row.sqlId,
+              dbName: row.dbName,
+              firstSeen: row.timestampText,
+              lastSeen: row.timestampText,
+              sourceFiles: new Set(),
+              timestamps: new Set(),
+              sectionCounts: {},
+              peakSelectedMetric: parser.metricValue(row, metricKey),
+              peakMemoryBytes: row.memoryBytes,
+              peakCpuPercent: row.cpuPercent,
+              peakRequestedBytesPerSec: row.requestedBytesPerSec,
+              peakReturnedBytesPerSec: row.returnedBytesPerSec,
+              peakIosPerSec: row.iosPerSec
+            });
+          }
+
+          const current = grouped.get(key);
+          current.sourceFiles.add(row.sourceFile || row.sourceGroup || '-');
+          current.timestamps.add(row.timestampText);
+          current.firstSeen = current.firstSeen < row.timestampText ? current.firstSeen : row.timestampText;
+          current.lastSeen = current.lastSeen > row.timestampText ? current.lastSeen : row.timestampText;
+
+          current.peakSelectedMetric = maxOr(current.peakSelectedMetric, parser.metricValue(row, metricKey));
+          current.peakMemoryBytes = maxOr(current.peakMemoryBytes, row.memoryBytes);
+          current.peakCpuPercent = maxOr(current.peakCpuPercent, row.cpuPercent);
+          current.peakRequestedBytesPerSec = maxOr(current.peakRequestedBytesPerSec, row.requestedBytesPerSec);
+          current.peakReturnedBytesPerSec = maxOr(current.peakReturnedBytesPerSec, row.returnedBytesPerSec);
+          current.peakIosPerSec = maxOr(current.peakIosPerSec, row.iosPerSec);
+
+          (row.sections || []).forEach(section => {
+            current.sectionCounts[section] = (current.sectionCounts[section] || 0) + 1;
+          });
+        });
+
+        return Array.from(grouped.values())
+          .map(row => ({
+            ...row,
+            fileCount: row.sourceFiles.size,
+            sourceFilesList: Array.from(row.sourceFiles).sort((left, right) => left.localeCompare(right)).join(' | '),
+            snapshotsSeen: row.timestamps.size,
+            appearsIn: formatSectionCounts(row.sectionCounts)
+          }))
+          .sort((left, right) => {
+            const selectedDelta = (right.peakSelectedMetric || 0) - (left.peakSelectedMetric || 0);
+            if (selectedDelta !== 0) return selectedDelta;
+            const snapshotDelta = right.snapshotsSeen - left.snapshotsSeen;
+            if (snapshotDelta !== 0) return snapshotDelta;
+            const sourceDelta = (left.sourceGroupDisplay || '').localeCompare(right.sourceGroupDisplay || '');
+            if (sourceDelta !== 0) return sourceDelta;
+            return (left.sqlId || '').localeCompare(right.sqlId || '');
+          });
+      }
+
+      function renderSummaryCards(filteredSqlRows, filteredRows, latestTimestamp, metricKey, summaryRows) {
+        const sqlIdCount = new Set(filteredSqlRows.map(row => row.sqlId)).size;
+        const dbNameCount = new Set(filteredSqlRows.map(row => row.dbName)).size;
+        const snapshots = new Set(filteredRows.map(row => row.timestampText)).size;
+        const sources = new Set(filteredRows.map(row => row.sourceGroup)).size;
+        const files = new Set(filteredRows.map(row => row.sourceFile)).size;
+        const metricLabel = getMetricLabel(metricKey);
+
+        const peakMetricRow = findPeakRow(filteredSqlRows, metricKey);
+        const peakCpuRow = findPeakRow(filteredSqlRows, 'cpuPercent');
+        const peakRequestRow = findPeakRow(filteredSqlRows, 'requestedBytesPerSec');
+        const peakMemoryRow = findPeakRow(filteredSqlRows, 'memoryBytes');
+
+        const cards = [
+          {
+            label: 'Snapshots In Scope',
+            value: String(snapshots),
+            detail: `${state.dataset.snapshotCount} unique snapshots parsed across ${state.dataset.fileCount} file(s)`
+          },
+          {
+            label: 'SQL Groups In Scope',
+            value: String(summaryRows.length),
+            detail: `${sqlIdCount} SQLIDs | ${dbNameCount} DBNAME values | ${sources} source(s) | ${files} file(s)`
+          },
+          {
+            label: 'Latest Matching Snapshot',
+            value: latestTimestamp || '-',
+            detail: latestTimestamp ? 'Latest timestamp currently visible in tables' : 'No rows match the current filters'
+          },
+          {
+            label: `Peak ${metricLabel}`,
+            value: peakMetricRow ? parser.formatMetricValue(metricKey, parser.metricValue(peakMetricRow, metricKey)) : '-',
+            detail: peakMetricRow ? describeRow(peakMetricRow) : 'No matching SQL row'
+          },
+          {
+            label: 'Peak %CPU',
+            value: peakCpuRow ? parser.formatMetricValue('cpuPercent', peakCpuRow.cpuPercent) : '-',
+            detail: peakCpuRow ? describeRow(peakCpuRow) : 'No matching SQL row'
+          },
+          {
+            label: 'Peak Requested Bytes/s',
+            value: peakRequestRow ? parser.formatMetricValue('requestedBytesPerSec', peakRequestRow.requestedBytesPerSec) : '-',
+            detail: peakRequestRow ? describeRow(peakRequestRow) : 'No matching SQL row'
+          },
+          {
+            label: 'Peak Memory Bytes',
+            value: peakMemoryRow ? parser.formatMetricValue('memoryBytes', peakMemoryRow.memoryBytes) : '-',
+            detail: peakMemoryRow ? describeRow(peakMemoryRow) : 'No matching SQL row'
+          }
+        ];
+
+        els.summaryGrid.innerHTML = cards.map(card => `
+          <div class="summary-card">
+            <span class="label">${escapeHtml(card.label)}</span>
+            <span class="value ${card.value && card.value.includes('|') ? 'mono' : ''}">${escapeHtml(card.value)}</span>
+            <div class="cell-muted" style="margin-top: 8px; line-height: 1.55;">${escapeHtml(card.detail)}</div>
+          </div>
+        `).join('');
+
+        els.summaryNote.textContent = 'This view is based on merged per-timestamp SQL records. If a SQL shows up in multiple top sections at the same snapshot, it is counted once for the timeline and summary within that source.';
+      }
+
+      function renderTrendChart(rows, metricKey, topN) {
+        destroyChart(state.chart);
+
+        const metricLabel = getMetricLabel(metricKey);
+        const labels = Array.from(new Set(rows.map(row => row.timestampText))).sort();
+        const sqlRows = rows.filter(row => row.rowCategory === 'sql');
+        const includeSourceInLabel = state.dataset && state.dataset.sourceGroups.length > 1;
+
+        if (!sqlRows.length || !labels.length) {
+          els.chartNote.textContent = 'No chart data available for the current filter scope.';
+          state.chart = null;
+          return;
+        }
+
+        const grouped = new Map();
+        sqlRows.forEach(row => {
+          const key = [row.sourceGroup || '', row.sqlId || '', row.dbName || '', row.cdbid || '', row.dbid || ''].join('|');
+          if (!grouped.has(key)) {
+            grouped.set(key, {
+              label: formatSeriesLabel(row, includeSourceInLabel),
+              peak: parser.metricValue(row, metricKey) || 0,
+              values: new Map()
+            });
+          }
+          const current = grouped.get(key);
+          current.peak = Math.max(current.peak, parser.metricValue(row, metricKey) || 0);
+          current.values.set(row.timestampText, parser.metricValue(row, metricKey));
+        });
+
+        const selectedSeries = Array.from(grouped.values())
+          .sort((left, right) => right.peak - left.peak)
+          .slice(0, topN);
+
+        const colors = generateChartColors(selectedSeries.length);
+        const datasets = selectedSeries.map((series, index) => ({
+          label: series.label,
+          data: labels.map(label => series.values.has(label) ? series.values.get(label) : null),
+          borderColor: colors[index],
+          backgroundColor: colors[index],
+          pointBackgroundColor: colors[index],
+          pointBorderColor: colors[index],
+          borderWidth: 2,
+          tension: 0.22,
+          fill: false,
+          spanGaps: true,
+          pointRadius: 2.5,
+          pointHoverRadius: 4
+        }));
+
+        state.chart = new Chart(els.trendChart, {
+          type: 'line',
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: '#314442',
+                  boxWidth: 16
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.96)',
+                titleColor: '#1f2937',
+                bodyColor: '#1f2937',
+                borderColor: '#d8c9b0',
+                borderWidth: 1,
+                callbacks: {
+                  label(context) {
+                    return `${context.dataset.label}: ${parser.formatMetricValue(metricKey, context.parsed.y)}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  color: '#536766',
+                  maxRotation: 45,
+                  minRotation: 20,
+                  autoSkip: true,
+                  maxTicksLimit: 10
+                },
+                grid: {
+                  color: 'rgba(84, 103, 100, 0.08)'
+                }
+              },
+              y: {
+                ticks: {
+                  color: '#536766',
+                  callback(value) {
+                    return parser.formatMetricValue(metricKey, value);
+                  }
+                },
+                grid: {
+                  color: 'rgba(84, 103, 100, 0.12)'
+                }
+              }
+            }
+          }
+        });
+
+        els.chartNote.textContent = `${selectedSeries.length} series shown. Metric: ${metricLabel}. Rows included in the chart follow the current section, source, identity, time-range, and include/exclude filters.`;
+      }
+
+      function renderSummaryTable(rows, metricKey) {
+        renderTableHeader(els.summaryTableHead, summaryColumns.map(column => ({
+          ...column,
+          label: column.key === 'peakSelectedMetric' ? `Peak ${getMetricLabel(metricKey)}` : column.label
+        })));
+
+        if (!rows.length) {
+          els.summaryTableBody.innerHTML = `<tr><td colspan="${summaryColumns.length}" class="cell-muted">No SQL rows match the current filters.</td></tr>`;
+          return;
+        }
+
+        els.summaryTableBody.innerHTML = rows.map(row => `
+          <tr>
+            ${summaryColumns.map(column => renderCell(row, column, metricKey)).join('')}
+          </tr>
+        `).join('');
+      }
+
+      function renderLatestTable(rows, metricKey, latestTimestamp) {
+        renderTableHeader(els.latestTableHead, latestColumns);
+
+        if (!rows.length) {
+          els.latestTableBody.innerHTML = `<tr><td colspan="${latestColumns.length}" class="cell-muted">No rows are available for the latest snapshot in the current filter scope.</td></tr>`;
+          els.latestCaption.textContent = 'No latest snapshot is available for the current filter scope.';
+          return;
+        }
+
+        els.latestCaption.textContent = `Timestamp: ${latestTimestamp}. Rows are sorted by ${getMetricLabel(metricKey)}.`;
+        els.latestTableBody.innerHTML = rows.map(row => `
+          <tr>
+            ${latestColumns.map(column => renderCell(row, column, metricKey)).join('')}
+          </tr>
+        `).join('');
+      }
+
+      function renderTableHeader(thead, columns) {
+        thead.innerHTML = `<tr>${columns.map(column => `<th>${escapeHtml(column.label)}</th>`).join('')}</tr>`;
+      }
+
+      function renderCell(row, column, selectedMetricKey) {
+        if (column.type === 'metric') {
+          const metricKey = column.metricKey || selectedMetricKey;
+          const value = row[column.key];
+          return `<td class="mono">${escapeHtml(parser.formatMetricValue(metricKey, value))}</td>`;
+        }
+
+        if (column.type === 'number') {
+          return `<td class="mono">${escapeHtml(String(row[column.key] || 0))}</td>`;
+        }
+
+        if (column.type === 'rowType') {
+          return `<td>${escapeHtml(row.rowCategory)}</td>`;
+        }
+
+        if (column.type === 'ranks') {
+          const ranks = Object.entries(row.sectionRanks || {});
+          if (!ranks.length) {
+            return '<td class="cell-muted">-</td>';
+          }
+
+          return `<td><div class="rank-tags">${
+            ranks.map(([section, rank]) => `<span class="rank-tag">${escapeHtml(section)} #${escapeHtml(String(rank))}</span>`).join('')
+          }</div></td>`;
+        }
+
+        const cssClass = column.mono ? 'mono' : '';
+        const value = row[column.key] == null || row[column.key] === '' ? '-' : row[column.key];
+        return `<td class="${cssClass}">${escapeHtml(String(value))}</td>`;
+      }
+
+      function renderLegendCards(legend) {
+        const entries = Object.entries(legend);
+        els.legendGrid.innerHTML = entries.map(([key, description]) => `
+          <article class="legend-card">
+            <h4 class="mono">${escapeHtml(key)}</h4>
+            <p>${escapeHtml(description)}</p>
+          </article>
+        `).join('');
+      }
+
+      function findPeakRow(rows, metricKey) {
+        let winner = null;
+        let peakValue = -Infinity;
+
+        rows.forEach(row => {
+          const value = parser.metricValue(row, metricKey);
+          if (value == null) return;
+          if (value > peakValue) {
+            peakValue = value;
+            winner = row;
+          }
+        });
+
+        return winner;
+      }
+
+      function getMetricLabel(metricKey) {
+        const def = (state.dataset && state.dataset.metricDefinitions || []).find(item => item.key === metricKey);
+        return def ? def.label : metricKey;
+      }
+
+      function formatSeriesLabel(row, includeSource) {
+        const parts = [];
+        if (includeSource) {
+          parts.push(row.sourceGroupDisplay || row.sourceGroup || 'Unknown Source');
+        }
+        parts.push(row.sqlId || '-');
+        parts.push(row.dbName || '-');
+        return parts.join(' | ');
+      }
+
+      function describeRow(row) {
+        return formatSeriesLabel(row, Boolean(state.dataset && state.dataset.sourceGroups.length > 1));
+      }
+
+      function formatSectionCounts(sectionCounts) {
+        const entries = Object.entries(sectionCounts);
+        if (!entries.length) return '-';
+        return entries
+          .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+          .map(([section, count]) => `${section}: ${count}`)
+          .join(' | ');
+      }
+
+      function sortByMetricDesc(left, right, metricKey) {
+        const leftValue = parser.metricValue(left, metricKey) || 0;
+        const rightValue = parser.metricValue(right, metricKey) || 0;
+        if (leftValue !== rightValue) return rightValue - leftValue;
+        const sourceDelta = (left.sourceGroup || '').localeCompare(right.sourceGroup || '');
+        if (sourceDelta !== 0) return sourceDelta;
+        return (left.sqlId || '').localeCompare(right.sqlId || '');
+      }
+
+      function maxOr(current, next) {
+        if (next == null) return current;
+        if (current == null) return next;
+        return Math.max(current, next);
+      }
+
+      function setStatus(message, tone) {
+        els.statusBox.className = `status-text ${tone || ''}`.trim();
+        els.statusBox.textContent = message;
+      }
+
+      function exportSummaryCsv() {
+        if (!state.summaryRows.length) return;
+
+        const metricKey = getFilters().metricKey;
+        const columns = [
+          'Source',
+          'Files',
+          'File Names',
+          'SQLID',
+          'DBNAME',
+          'CDBID',
+          'DBID',
+          'Snapshots',
+          `Peak ${getMetricLabel(metricKey)}`,
+          'Peak Memory Bytes',
+          'Peak %CPU',
+          'Peak Requested Bytes/s',
+          'Peak Returned Bytes/s',
+          'Peak IOs/s',
+          'Appears In',
+          'First Seen',
+          'Last Seen'
+        ];
+
+        const data = state.summaryRows.map(row => ({
+          'Source': row.sourceGroupDisplay || '',
+          'Files': row.fileCount || 0,
+          'File Names': row.sourceFilesList || '',
+          'SQLID': row.sqlId || '',
+          'DBNAME': row.dbName || '',
+          'CDBID': row.cdbid || '',
+          'DBID': row.dbid || '',
+          'Snapshots': row.snapshotsSeen,
+          [`Peak ${getMetricLabel(metricKey)}`]: parser.formatMetricValue(metricKey, row.peakSelectedMetric),
+          'Peak Memory Bytes': parser.formatMetricValue('memoryBytes', row.peakMemoryBytes),
+          'Peak %CPU': parser.formatMetricValue('cpuPercent', row.peakCpuPercent),
+          'Peak Requested Bytes/s': parser.formatMetricValue('requestedBytesPerSec', row.peakRequestedBytesPerSec),
+          'Peak Returned Bytes/s': parser.formatMetricValue('returnedBytesPerSec', row.peakReturnedBytesPerSec),
+          'Peak IOs/s': parser.formatMetricValue('iosPerSec', row.peakIosPerSec),
+          'Appears In': row.appearsIn,
+          'First Seen': row.firstSeen,
+          'Last Seen': row.lastSeen
+        }));
+
+        downloadCsv(arrayToCsv(data, columns), 'cellsqlstat_summary.csv');
+      }
+
+      function exportLatestCsv() {
+        if (!state.latestRows.length) return;
+
+        const columns = [
+          'Timestamp',
+          'Source',
+          'File',
+          'Type',
+          'SQLID',
+          'DBNAME',
+          'CDBID',
+          'DBID',
+          'Duration',
+          'Memory Bytes',
+          '%CPU',
+          'Requested Bytes',
+          'Requested Bytes/s',
+          'Returned Bytes',
+          'Returned Bytes/s',
+          '%Storage Index',
+          '%XRMEM Columnar',
+          '%Flash Columnar',
+          '%Flash Regular',
+          '%Disk',
+          '%Passthru',
+          'XRMEM Columnar Bytes',
+          'Flash Columnar Bytes',
+          'Flash Regular Bytes',
+          'Disk Bytes',
+          'Columnar Saved Bytes',
+          'Storage Index Saved Bytes',
+          'Passthru Bytes',
+          'IOs',
+          'IOs/s',
+          'Ranks'
+        ];
+
+        const data = state.latestRows.map(row => ({
+          'Timestamp': row.timestampText,
+          'Source': row.sourceGroupDisplay || row.sourceGroup || '',
+          'File': row.sourceFile || '',
+          'Type': row.rowCategory,
+          'SQLID': row.sqlId || '',
+          'DBNAME': row.dbName || '',
+          'CDBID': row.cdbid || '',
+          'DBID': row.dbid || '',
+          'Duration': parser.formatMetricValue('durationSeconds', row.durationSeconds),
+          'Memory Bytes': parser.formatMetricValue('memoryBytes', row.memoryBytes),
+          '%CPU': parser.formatMetricValue('cpuPercent', row.cpuPercent),
+          'Requested Bytes': parser.formatMetricValue('requestedBytes', row.requestedBytes),
+          'Requested Bytes/s': parser.formatMetricValue('requestedBytesPerSec', row.requestedBytesPerSec),
+          'Returned Bytes': parser.formatMetricValue('returnedBytes', row.returnedBytes),
+          'Returned Bytes/s': parser.formatMetricValue('returnedBytesPerSec', row.returnedBytesPerSec),
+          '%Storage Index': parser.formatMetricValue('storageIndexPercent', row.storageIndexPercent),
+          '%XRMEM Columnar': parser.formatMetricValue('xrmemColumnarPercent', row.xrmemColumnarPercent),
+          '%Flash Columnar': parser.formatMetricValue('flashColumnarPercent', row.flashColumnarPercent),
+          '%Flash Regular': parser.formatMetricValue('flashRegularPercent', row.flashRegularPercent),
+          '%Disk': parser.formatMetricValue('diskPercent', row.diskPercent),
+          '%Passthru': parser.formatMetricValue('passthruPercent', row.passthruPercent),
+          'XRMEM Columnar Bytes': parser.formatMetricValue('xrmemColumnarBytes', row.xrmemColumnarBytes),
+          'Flash Columnar Bytes': parser.formatMetricValue('flashColumnarBytes', row.flashColumnarBytes),
+          'Flash Regular Bytes': parser.formatMetricValue('flashRegularBytes', row.flashRegularBytes),
+          'Disk Bytes': parser.formatMetricValue('diskBytes', row.diskBytes),
+          'Columnar Saved Bytes': parser.formatMetricValue('columnarSavedBytes', row.columnarSavedBytes),
+          'Storage Index Saved Bytes': parser.formatMetricValue('storageIndexSavedBytes', row.storageIndexSavedBytes),
+          'Passthru Bytes': parser.formatMetricValue('passthruBytes', row.passthruBytes),
+          'IOs': parser.formatMetricValue('ios', row.ios),
+          'IOs/s': parser.formatMetricValue('iosPerSec', row.iosPerSec),
+          'Ranks': Object.entries(row.sectionRanks || {}).map(([section, rank]) => `${section} #${rank}`).join(' | ')
+        }));
+
+        downloadCsv(arrayToCsv(data, columns), 'cellsqlstat_latest_snapshot.csv');
+      }
+    }());
+  </script>
+</body>
+</html>

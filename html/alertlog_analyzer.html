@@ -88,6 +88,15 @@
       line-height: 1.2;
     }
     .line:hover { background: #222; }
+    .line.context-line { opacity: 0.75; }
+    .line.issue-critical {
+      border-left: 3px solid #ff6b6b;
+      padding-left: 8px;
+    }
+    .line.issue-warning {
+      border-left: 3px solid #ffd966;
+      padding-left: 8px;
+    }
 
     /* Tab styles */
     .tabs {
@@ -182,6 +191,44 @@
     .export-btn:hover {
       background: #2a7a4a;
     }
+    .summary-box {
+      background: #121a24;
+      border: 1px solid #2f4358;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .summary-box h3 {
+      margin-top: 0;
+      color: #48e1f9;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .summary-card {
+      background: #0d1117;
+      border: 1px solid #2b3440;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .summary-card h4 {
+      margin: 0 0 8px;
+      color: #00bfff;
+      font-size: 14px;
+    }
+    .summary-card ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .summary-card li {
+      margin: 4px 0;
+      color: #ddd;
+    }
+    .severity-critical { color: #ff6b6b; font-weight: bold; }
+    .severity-warning { color: #ffd966; font-weight: bold; }
+    .severity-info { color: #8fd3ff; }
   </style>
 </head>
 <body>
@@ -195,6 +242,7 @@
   <!-- LOG VIEW TAB -->
   <div id="tabLogs" class="tab active">
     <div>
+      <input type="file" id="fileInput" multiple accept=".log,.trc,.txt,text/plain">
       <input type="file" id="folderInput" webkitdirectory directory multiple>
       <button id="listBtn">List Alert Logs</button>
     </div>
@@ -210,6 +258,42 @@
       <label>Start Time: <input type="datetime-local" id="startTime"></label>
       <label>End Time: <input type="datetime-local" id="endTime"></label>
       <input type="text" id="searchBox" placeholder="Search keyword (optional)" style="width: 200px;">
+      <label>Mode:
+        <select id="analysisMode">
+          <option value="issues" selected>Issues Only</option>
+          <option value="search">Search Hits + Context</option>
+          <option value="full">Full Log</option>
+        </select>
+      </label>
+      <label>Focus:
+        <select id="focusCategory">
+          <option value="all" selected>All Categories</option>
+          <option value="Background Processes">Background Processes</option>
+          <option value="Internal Errors">Internal Errors</option>
+          <option value="Archive / FRA">Archive / FRA</option>
+          <option value="Space / Tablespace">Space / Tablespace</option>
+          <option value="Memory">Memory</option>
+          <option value="Redo / Checkpoint">Redo / Checkpoint</option>
+          <option value="Recovery / Corruption">Recovery / Corruption</option>
+          <option value="Network / Listener">Network / Listener</option>
+          <option value="Undo">Undo</option>
+          <option value="Process Stability">Process Stability</option>
+          <option value="Instance Lifecycle">Instance Lifecycle</option>
+        </select>
+      </label>
+      <label>Severity:
+        <select id="severityFilter">
+          <option value="all" selected>All Severities</option>
+          <option value="warning_or_higher">Warning+</option>
+          <option value="critical">Critical Only</option>
+        </select>
+      </label>
+      <label>BG Process:
+        <input type="text" id="bgProcessFilter" placeholder="LGWR, DBW0, ARC1" style="width: 160px;">
+      </label>
+      <label>Context:
+        <input type="number" id="contextLines" min="0" max="10" value="2" style="width: 70px;">
+      </label>
       <button id="analyzeBtn">Analyze</button>
       <button id="exportBtn" class="export-btn" disabled>Export CSV</button>
     </div>
@@ -235,6 +319,7 @@
       </div>
     </div>
 
+    <div id="summaryBox" class="summary-box" style="display: none;"></div>
     <div id="output"></div>
   </div>
 
@@ -253,6 +338,7 @@ let alertFiles = [];
 let filteredFiles = [];
 let parsedEvents = [];
 let chartObj = null;
+let analysisSummary = null;
 
 // Statistics counters
 let stats = {
@@ -261,6 +347,11 @@ let stats = {
   oraErrors: 0,
   fatalEvents: 0
 };
+
+function isAlertLogFile(file) {
+  const name = (file.name || '').toLowerCase();
+  return name === 'alert.log' || name.startsWith('alert_') || name.includes('alert');
+}
 
 /**
  * Escape HTML to prevent XSS
@@ -277,7 +368,9 @@ function escapeHtml(text) {
  */
 function highlightSafe(text) {
   let safe = escapeHtml(text);
-  safe = safe.replace(/(ORA-\d+)/g, '<span class="ora">$1</span>');
+  safe = safe.replace(/\bORA-(\d{1,5})\b/g, (match, digits) => {
+    return /^0+$/.test(digits) ? match : `<span class="ora">${match}</span>`;
+  });
   safe = safe.replace(/(ERROR)/gi, '<span class="error">$1</span>');
   safe = safe.replace(/(FATAL)/gi, '<span class="fatal">$1</span>');
   safe = safe.replace(/(FAIL)/gi, '<span class="fail">$1</span>');
@@ -289,12 +382,12 @@ function highlightSafe(text) {
  * Parse timestamp from log line
  */
 function parseTimestamp(line) {
-  // ISO format: 2025-08-05T10:00:00
-  const isoMatch = line.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
+  // ISO format: 2025-08-05T10:00:00, with optional fractional seconds and timezone
+  const isoMatch = line.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)/);
   if (isoMatch) return new Date(isoMatch[0]);
 
-  // Oracle format: Mon Aug 05 10:00:00 2025
-  const oracleMatch = line.match(/(\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})/);
+  // Oracle format: Mon Aug 05 10:00:00 2025 or Thu Apr 11 17:32:24 2024
+  const oracleMatch = line.match(/((?:\w{3}\s+)?\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})/);
   if (oracleMatch) return new Date(oracleMatch[0]);
 
   return null;
@@ -379,6 +472,191 @@ function updateStats() {
   document.getElementById('statsBox').style.display = 'grid';
 }
 
+function detectOraCodes(line) {
+  const matches = [...line.matchAll(/\bORA-(\d{1,5})\b/g)];
+  const normalized = matches
+    .map((match) => {
+      const digits = match[1];
+      if (!digits || /^0+$/.test(digits)) return null;
+      return `ORA-${digits.padStart(5, '0')}`;
+    })
+    .filter(Boolean);
+  return [...new Set(normalized)];
+}
+
+function detectBackgroundProcesses(line) {
+  const matches = line.match(/\b(?:LGWR|DBWR|DBW\d|CKPT|SMON|PMON|MMON|MMNL|ARC\d+|CJQ0|QMNC|QMN\d+|VKTM|VKRM|LREG|RECO|RVWR|FBDA|ASMB|RBAL|ARB\d+|LMON|LMD\d+|LMS\d+|DIA\d+|GEN\d+|TT\d+)\b/gi) || [];
+  return [...new Set(matches.map(match => match.toUpperCase()))];
+}
+
+function classifyEvent(line) {
+  const text = line.toLowerCase();
+  const oraCodes = detectOraCodes(line);
+  const backgroundProcesses = detectBackgroundProcesses(line);
+  let category = 'General';
+  let severity = 'info';
+
+  if (oraCodes.length || /fatal|terminating|incident|errors in file|exception/i.test(line)) {
+    severity = 'critical';
+  } else if (/warning|checkpoint not complete|archiver|smon|pmon/i.test(line)) {
+    severity = 'warning';
+  }
+
+  if (/ora-00600|ora-07445|incident|errors in file|internal error/i.test(line)) {
+    category = 'Internal Errors';
+    severity = 'critical';
+  } else if (/ora-01555|ora-30036|undo/i.test(line)) {
+    category = 'Undo';
+  } else if (/ora-00257|archiver|archive log|fra|db_recovery_file_dest/i.test(line)) {
+    category = 'Archive / FRA';
+  } else if (/ora-01652|ora-01653|ora-01654|ora-01658|unable to extend|tablespace/i.test(line)) {
+    category = 'Space / Tablespace';
+  } else if (/tns-|listener|service_|dispatchers|shared server/i.test(line)) {
+    category = 'Network / Listener';
+  } else if (/checkpoint not complete|ckpt|redo|log file switch|thread .* advanced/i.test(line)) {
+    category = 'Redo / Checkpoint';
+  } else if (/ora-04031|ora-04030|out of memory|ksm|memory/i.test(line)) {
+    category = 'Memory';
+  } else if (/recovery|media recovery|block corruption|ora-1578|corrupt/i.test(line)) {
+    category = 'Recovery / Corruption';
+  } else if (/hang|stuck|terminate|killed|process .* died/i.test(line)) {
+    category = 'Process Stability';
+  } else if (/started|starting up|shutdown complete|instance terminated|alter database open/i.test(line)) {
+    category = 'Instance Lifecycle';
+  }
+
+  if (
+    backgroundProcesses.length &&
+    (severity !== 'info' || /background process|process .* died|process .* terminated|ospid|termination|killed|stuck|hang/i.test(line))
+  ) {
+    category = 'Background Processes';
+  }
+
+  return { oraCodes, backgroundProcesses, category, severity };
+}
+
+function isIssueLine(line, info) {
+  return info.oraCodes.length > 0 ||
+    info.severity !== 'info' ||
+    /error|fatal|fail|warning|incident|checkpoint not complete|archiver|corrupt|unable to extend/i.test(line);
+}
+
+function passesCategoryFilter(info, focusCategory) {
+  return focusCategory === 'all' || info.category === focusCategory;
+}
+
+function passesSeverityFilter(info, severityFilter) {
+  if (severityFilter === 'critical') return info.severity === 'critical';
+  if (severityFilter === 'warning_or_higher') return info.severity === 'warning' || info.severity === 'critical';
+  return true;
+}
+
+function passesBackgroundProcessFilter(info, bgProcessFilter) {
+  if (!bgProcessFilter) return true;
+  const tokens = bgProcessFilter
+    .toUpperCase()
+    .split(/[\s,;]+/)
+    .map(token => token.trim())
+    .filter(Boolean);
+  if (!tokens.length) return true;
+  return tokens.some(token =>
+    (info.backgroundProcesses || []).some(proc =>
+      proc === token || proc.startsWith(token) || token.startsWith(proc)
+    )
+  );
+}
+
+function buildIssueSignature(line, info) {
+  if (info.oraCodes && info.oraCodes.length) {
+    return `${info.oraCodes.join('|')}|${info.category}`;
+  }
+  return line
+    .toLowerCase()
+    .replace(/\d+/g, '#')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 140);
+}
+
+function summarizeEvents(events) {
+  const oraCounts = {};
+  const categoryCounts = {};
+  const backgroundProcessCounts = {};
+  const incidentLines = [];
+  const lifecycle = [];
+  const issueSignatures = {};
+
+  for (const event of events) {
+    for (const code of event.oraCodes || []) {
+      oraCounts[code] = (oraCounts[code] || 0) + 1;
+    }
+    categoryCounts[event.category] = (categoryCounts[event.category] || 0) + 1;
+    for (const proc of event.backgroundProcesses || []) {
+      backgroundProcessCounts[proc] = (backgroundProcessCounts[proc] || 0) + 1;
+    }
+    issueSignatures[event.signature] = issueSignatures[event.signature] || { count: 0, sample: event };
+    issueSignatures[event.signature].count += 1;
+
+    if (event.severity === 'critical' && incidentLines.length < 25) {
+      incidentLines.push(event);
+    }
+    if (event.category === 'Instance Lifecycle' && lifecycle.length < 15) {
+      lifecycle.push(event);
+    }
+  }
+
+  const topOra = Object.entries(oraCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const topCategories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const topBackgroundProcesses = Object.entries(backgroundProcessCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const repeatedIssues = Object.values(issueSignatures)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+  return { topOra, topCategories, topBackgroundProcesses, incidentLines, lifecycle, repeatedIssues };
+}
+
+function renderSummary(summary) {
+  const box = document.getElementById('summaryBox');
+  if (!summary) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  const renderList = (items, formatter, emptyText) =>
+    items.length ? `<ul>${items.map(formatter).join('')}</ul>` : `<p style="color:#888;">${emptyText}</p>`;
+
+  box.innerHTML = `
+    <h3>DBA Summary</h3>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h4>Top ORA Codes</h4>
+        ${renderList(summary.topOra, ([code, count]) => `<li><code>${escapeHtml(code)}</code> - ${count}</li>`, 'No ORA codes found.')}
+      </div>
+      <div class="summary-card">
+        <h4>Issue Categories</h4>
+        ${renderList(summary.topCategories, ([name, count]) => `<li>${escapeHtml(name)} - ${count}</li>`, 'No categorized issues found.')}
+      </div>
+      <div class="summary-card">
+        <h4>Background Processes</h4>
+        ${renderList(summary.topBackgroundProcesses, ([name, count]) => `<li>${escapeHtml(name)} - ${count}</li>`, 'No background process issues found.')}
+      </div>
+      <div class="summary-card">
+        <h4>Instance Lifecycle</h4>
+        ${renderList(summary.lifecycle, event => `<li>${event.ts ? escapeHtml(event.ts.toISOString()) : ''} ${escapeHtml(event.file)}: ${escapeHtml(event.line.slice(0, 140))}</li>`, 'No startup or shutdown events found.')}
+      </div>
+      <div class="summary-card">
+        <h4>Critical Incidents</h4>
+        ${renderList(summary.incidentLines, event => `<li><span class="severity-critical">${event.ts ? escapeHtml(event.ts.toISOString()) : ''}</span> ${escapeHtml(event.line.slice(0, 160))}</li>`, 'No critical incidents found.')}
+      </div>
+      <div class="summary-card">
+        <h4>Repeated Issues</h4>
+        ${renderList(summary.repeatedIssues, entry => `<li>${entry.count}x - ${escapeHtml(entry.sample.category)} - ${escapeHtml(entry.sample.line.slice(0, 140))}</li>`, 'No repeated issue patterns found.')}
+      </div>
+    </div>
+  `;
+  box.style.display = 'block';
+}
+
 /**
  * Show full file in new window
  */
@@ -402,7 +680,9 @@ async function streamAnalyze(files, startTime, endTime, searchTerm) {
   out.innerHTML = '';
   prog.textContent = '';
   parsedEvents = [];
+  analysisSummary = null;
   stats = { files: 0, lines: 0, oraErrors: 0, fatalEvents: 0 };
+  renderSummary(null);
 
   showLoading('Analyzing log files...');
 
@@ -447,6 +727,16 @@ async function streamAnalyze(files, startTime, endTime, searchTerm) {
         continue;
       }
 
+      const analysisMode = document.getElementById('analysisMode').value;
+      const focusCategory = document.getElementById('focusCategory').value;
+      const severityFilter = document.getElementById('severityFilter').value;
+      const bgProcessFilter = document.getElementById('bgProcessFilter').value.trim();
+      const contextLines = Math.max(0, Number(document.getElementById('contextLines').value || 0));
+      const lineInfos = lines.map(line => {
+        const info = classifyEvent(line);
+        return { ...info, issueLine: isIssueLine(line, info) };
+      });
+
       // Find matches
       let hits = [];
       if (searchTerm) {
@@ -456,22 +746,40 @@ async function streamAnalyze(files, startTime, endTime, searchTerm) {
         }
       }
 
-      // Build set of lines to show
-      let show = new Set();
-      if (searchTerm && hits.length) {
-        for (const h of hits) {
-          for (let j = Math.max(0, h - 3); j <= Math.min(lines.length - 1, h + 3); j++) {
-            show.add(j);
+      let anchorIndexes = [];
+      if (analysisMode === 'full') {
+        anchorIndexes = lines.map((_, idx) => idx);
+      } else if (analysisMode === 'search' && searchTerm) {
+        anchorIndexes = hits;
+      } else {
+        anchorIndexes = lineInfos
+          .map((info, idx) => ({ info, idx }))
+          .filter(({ info }) =>
+            info.issueLine &&
+            passesCategoryFilter(info, focusCategory) &&
+            passesSeverityFilter(info, severityFilter) &&
+            passesBackgroundProcessFilter(info, bgProcessFilter)
+          )
+          .map(({ idx }) => idx);
+      }
+
+      const anchorSet = new Set(anchorIndexes);
+      const candidateSet = new Set();
+      if (analysisMode === 'full') {
+        for (let j = 0; j < lines.length; j++) candidateSet.add(j);
+      } else {
+        for (const idx of anchorIndexes) {
+          for (let j = Math.max(0, idx - contextLines); j <= Math.min(lines.length - 1, idx + contextLines); j++) {
+            candidateSet.add(j);
           }
         }
-      } else if (!searchTerm) {
-        for (let j = 0; j < lines.length; j++) show.add(j);
       }
+      const candidateIndexes = Array.from(candidateSet).sort((a, b) => a - b);
 
       let cnt = 0;
       let lastTs = null;
 
-      for (const j of Array.from(show).sort((a, b) => a - b)) {
+      for (const j of candidateIndexes) {
         const line = lines[j];
         if (!line.trim()) continue;
 
@@ -483,17 +791,35 @@ async function streamAnalyze(files, startTime, endTime, searchTerm) {
         if (startTime && ts && ts < startTime) continue;
         if (endTime && ts && ts > endTime) continue;
 
-        // Count errors
-        if (/ORA-\d+/.test(line)) stats.oraErrors++;
-        if (/FATAL/i.test(line)) stats.fatalEvents++;
+        const info = lineInfos[j];
+        const issueLine = info.issueLine;
+        const isAnchor = anchorSet.has(j);
+
+        if (isAnchor && info.oraCodes.length) stats.oraErrors++;
+        if (isAnchor && info.severity === 'critical') stats.fatalEvents++;
 
         // Create safe output
         const timestamp = ts ? `<span class="timestamp">${ts.toISOString()}</span> ` : '';
+        const lineClasses = ['line'];
+        if (!isAnchor && analysisMode !== 'full') lineClasses.push('context-line');
+        if (isAnchor && info.severity === 'critical') lineClasses.push('issue-critical');
+        if (isAnchor && info.severity === 'warning') lineClasses.push('issue-warning');
         block.insertAdjacentHTML('beforeend',
-          `<span class="line" title="Double-click to open full file">${timestamp}${highlightSafe(line)}</span>`
+          `<span class="${lineClasses.join(' ')}" title="Double-click to open full file">${timestamp}${highlightSafe(line)}</span>`
         );
 
-        parsedEvents.push({ file: file.name, ts: ts || new Date(), line });
+        parsedEvents.push({
+          file: file.name,
+          ts: ts || new Date(),
+          line,
+          oraCodes: info.oraCodes,
+          backgroundProcesses: info.backgroundProcesses,
+          category: info.category,
+          severity: info.severity,
+          issueLine,
+          isAnchor,
+          signature: buildIssueSignature(line, info)
+        });
         cnt++;
         stats.lines++;
       }
@@ -507,11 +833,12 @@ async function streamAnalyze(files, startTime, endTime, searchTerm) {
       prog.textContent = `Processed ${file.name} (${cnt} lines)`;
     }
 
+    analysisSummary = summarizeEvents(parsedEvents.filter(event => event.issueLine));
+    renderSummary(analysisSummary);
     updateStats();
     document.getElementById('exportBtn').disabled = parsedEvents.length === 0;
-    prog.textContent = searchTerm
-      ? `Done. ${stats.lines} lines with ±3 context from ${stats.files} files.`
-      : `Done. Displayed all lines from ${stats.files} files.`;
+    const modeLabel = document.getElementById('analysisMode').value;
+    prog.textContent = `Done. Mode=${modeLabel}. ${stats.lines} lines shown from ${stats.files} files.`;
 
   } catch (err) {
     console.error('Analysis error:', err);
@@ -530,10 +857,14 @@ function exportToCsv() {
     return;
   }
 
-  const headers = ['Timestamp', 'File', 'Line'];
+  const headers = ['Timestamp', 'File', 'Severity', 'Category', 'Background_Processes', 'ORA_Codes', 'Line'];
   const rows = parsedEvents.map(e => [
     e.ts ? e.ts.toISOString() : '',
     e.file,
+    e.severity || '',
+    e.category || '',
+    '"' + (e.backgroundProcesses || []).join(';') + '"',
+    '"' + (e.oraCodes || []).join(';') + '"',
     '"' + e.line.replace(/"/g, '""') + '"'
   ]);
 
@@ -568,9 +899,19 @@ document.getElementById('tabBtnTimeline').addEventListener('click', () => {
 
 // List files button
 document.getElementById('listBtn').addEventListener('click', () => {
-  const files = document.getElementById('folderInput').files;
-  alertFiles = Array.from(files).filter(f => f.name.startsWith('alert_'));
+  const folderFiles = Array.from(document.getElementById('folderInput').files || []);
+  const directFiles = Array.from(document.getElementById('fileInput').files || []);
+  const combinedFiles = [...directFiles, ...folderFiles];
+  alertFiles = combinedFiles.filter(isAlertLogFile);
   renderFileList();
+});
+
+document.getElementById('fileInput').addEventListener('change', () => {
+  document.getElementById('listBtn').click();
+});
+
+document.getElementById('folderInput').addEventListener('change', () => {
+  document.getElementById('listBtn').click();
 });
 
 // Filter inputs
@@ -619,6 +960,7 @@ document.getElementById('buildTimeline').addEventListener('click', () => {
 
   const keyword = document.getElementById('timelineFilter').value.trim().toLowerCase();
   const data = parsedEvents
+    .filter(e => e.isAnchor || e.issueLine)
     .filter(e => !keyword || e.line.toLowerCase().includes(keyword))
     .sort((a, b) => a.ts - b.ts);
 

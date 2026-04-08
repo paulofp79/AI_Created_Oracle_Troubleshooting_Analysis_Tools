@@ -26,6 +26,7 @@ This toolkit provides interactive visualization and analysis capabilities for:
 - **CPU utilization** from ATP (Autonomous Transaction Processing) files
 - **Cell disk metrics** from ECStatJSONExaWatcher data
 - **RDS congestion counters** from ExaWatcher/AHF data
+- **Cell SQL statistics** from `cellsqlstat --detail --batch` output collected on Exadata storage cells
 - **AWR repository metrics** from `DBA_HIST_%` views with explicit DBID selection
 - **VMStat memory/swap analysis** with anomaly detection
 - **Oracle alert log parsing** with timeline visualization
@@ -65,7 +66,17 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Statistics calculation (total increase, per-interval increase)
 - Key congestion counter reference
 
-### 4. Exa_Cell_Metrics_Chart.html
+### 4. CellSqlStat_Analyzer.html
+**Purpose:** Analyze `cellsqlstat --detail --batch` output from Oracle Exadata storage cells
+
+**Features:**
+- Parses two-line fixed-width `CellSqlStatExaWatcher` reports
+- Filters by `CDBID`, `DBID`, `SQLID`, `DBNAME`, ranking section, and time range
+- Merges repeated "Top SQL by ..." sections into one SQL record per snapshot
+- Interactive chart for metrics such as `Memory Bytes`, `%CPU`, `Requested Bytes/s`, and `Returned Bytes/s`
+- CSV export for summary and latest-snapshot views
+
+### 5. Exa_Cell_Metrics_Chart.html
 **Purpose:** ExaCC (Exadata Cloud@Customer) metrics dashboard
 
 **Features:**
@@ -74,7 +85,7 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Color-coded severity levels (Normal/Warning/Critical)
 - Click-to-navigate from alerts to charts
 
-### 5. alertlog_analyzer.html
+### 6. alertlog_analyzer.html
 **Purpose:** Parse and analyze Oracle alert log files
 
 **Features:**
@@ -85,7 +96,7 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Syntax highlighting for ORA- errors, FATAL, FAIL
 - Timeline visualization with Chart.js
 
-### 6. vmstat_multi_plot_with_swap_alerts_highlight.html
+### 7. vmstat_multi_plot_with_swap_alerts_highlight.html
 **Purpose:** Analyze vmstat data for memory pressure issues
 
 **Features:**
@@ -94,7 +105,7 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Automatic swap utilization alerts
 - CSV export
 
-### 7. AWR_Repository_Explorer.py (Streamlit App)
+### 8. AWR_Repository_Explorer.py (Streamlit App)
 **Purpose:** Connect to an Oracle AWR dump repository and chart `DBA_HIST_%` metrics by DBID
 
 **Features:**
@@ -138,7 +149,7 @@ To stop all app processes:
 ./stopall.sh
 ```
 
-This stops anything listening on ports `8080`, `8501`, and `8502`.
+This stops anything listening on ports `8079`, `8501`, and `8502`.
 
 To start the dashboard and both Streamlit apps:
 
@@ -179,13 +190,13 @@ To serve the tools over a network or access them from other machines, start a si
 
 ```bash
 # Start HTTP server in background (Linux)
-nohup python3 -m http.server 8080 --directory /path/to/exadata-tools > /path/to/exadata-tools/server.log 2>&1 &
+nohup python3 -m http.server 8079 --directory /path/to/exadata-tools > /path/to/exadata-tools/server.log 2>&1 &
 
 # Example with specific paths:
-nohup python3 -m http.server 8080 --directory /home/paportug/exadata-tools > /home/paportug/exadata-tools/exaweb.log 2>&1 &
+nohup python3 -m http.server 8079 --directory /home/paportug/exadata-tools > /home/paportug/exadata-tools/exaweb.log 2>&1 &
 ```
 
-Then access the dashboard at: `http://your-server:8080`
+Then access the dashboard at: `http://your-server:8079`
 
 To stop the server:
 ```bash
@@ -247,6 +258,10 @@ send_lock_contention 12345
 cong_update_queued 67890
 ```
 
+### CellSqlStat_Analyzer.html
+- **Format:** Plain-text `.dat` or `.txt` files from `cellsqlstat --detail --batch`
+- **Structure:** Repeated `Current Time:` snapshots containing `Top SQL by ...` sections with two-line fixed-width SQL rows
+
 ### Exa_Cell_Metrics_Chart.html
 - **Format:** `.lst` or `.txt` tab-separated files
 - **Structure:** `index  metric  target  value  timestamp`
@@ -275,14 +290,17 @@ cong_update_queued 67890
 │
 ├── html/                     # HTML-based tools
 │   ├── alertlog_analyzer.html
+│   ├── CellSqlStat_Analyzer.html
 │   ├── CPU_Charts_From_ATP_Files.html
 │   ├── Exa_Cell_Metrics_Chart.html
 │   ├── RDS_Info_Analysis.html
 │   └── vmstat_multi_plot_with_swap_alerts_highlight.html
 │
 ├── assets/                   # Shared resources
+│   ├── cellsqlstat_parser.js # Cell SQL Stat parser and formatters
 │   └── common.js             # Common utilities
 │
+├── KB/                       # Reference captures and troubleshooting notes
 └── samples/                  # Example input files
     └── README.md             # Sample file descriptions
 ```

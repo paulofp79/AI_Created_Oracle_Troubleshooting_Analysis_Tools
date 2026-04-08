@@ -280,6 +280,15 @@
           <a href="html/RDS_Info_Analysis.html" class="tool-link">Open Tool</a>
         </div>
 
+        <!-- Cell SQL Stat -->
+        <div class="tool-card">
+          <span class="tool-type">HTML/JavaScript</span>
+          <div class="tool-icon">SQL</div>
+          <h3 class="tool-title">Cell SQL Stat Analyzer</h3>
+          <p class="tool-desc">Parse `cellsqlstat --detail --batch` output from an Exadata storage cell, filter by SQLID/DBID/DBNAME, and chart smart-scan activity over time.</p>
+          <a href="html/CellSqlStat_Analyzer.html" class="tool-link">Open Tool</a>
+        </div>
+
         <!-- ExaCC Metrics -->
         <div class="tool-card">
           <span class="tool-type">HTML/JavaScript</span>
@@ -317,8 +326,8 @@
           <div class="tool-icon">ECS</div>
           <h3 class="tool-title">ECS Analysis</h3>
           <p class="tool-desc">Interactive Streamlit app for ECStatJSONExaWatcher cell disk metrics. Visualizes SD vs MD metrics with IOPS/MB conversion.</p>
-          <a href="http://100.70.110.80:8501" class="tool-link" target="_blank">Open Tool</a>
-          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">ECS Tool: <a href="http://100.70.110.80:8501" target="_blank" style="color: var(--accent);">http://100.70.110.80:8501</a></p>
+          <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8501" class="tool-link" target="_blank">Open Tool</a>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">ECS Tool: <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8501" target="_blank" style="color: var(--accent);">http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8501</a></p>
         </div>
 
         <div class="tool-card python-card">
@@ -372,6 +381,7 @@
           <li><strong>ECS Analysis:</strong> .dat files from ECStatJSONExaWatcher</li>
           <li><strong>CPU Charts:</strong> .zip files containing CPUManager_*.json</li>
           <li><strong>RDS Analysis:</strong> .dat, .txt, or .xz compressed files</li>
+          <li><strong>Cell SQL Stat Analyzer:</strong> plain-text `.dat` or `.txt` files from `cellsqlstat --detail --batch` / `CellSqlStatExaWatcher`</li>
           <li><strong>ExaCC Metrics:</strong> Tab-separated .lst or .txt files</li>
           <li><strong>Alert Log:</strong> Oracle alert_*.log files</li>
           <li><strong>VMStat:</strong> vmstat output files</li>
@@ -379,7 +389,7 @@
 
         <h4 style="margin-top: 20px; margin-bottom: 10px;">Sample Files</h4>
         <p style="color: var(--text-secondary);">
-          Check the <code>samples/</code> directory for example input file formats.
+          Check the <code>samples/</code> directory for example input file formats, and the <code>KB/</code> directory for bundled reference captures such as the Cell SQL Stat example.
         </p>
       </div>
     </div>
