@@ -1,132 +1,32 @@
 # Oracle Exadata Troubleshooting Analysis Tools
 
-A collection of browser-based and Python tools for analyzing and visualizing Oracle Exadata performance metrics, designed to help DBAs and SREs troubleshoot issues efficiently.
+Browser-based and Streamlit-based tools for Oracle Exadata troubleshooting, ExaWatcher exploration, Oracle alert-log review, AWR mining, and host-level OS analysis.
 
-**Author:** Paulo Portugal - Oracle XTeam
-**Created:** August 2025
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Tools Included](#tools-included)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Input File Formats](#input-file-formats)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-
----
+Author: Paulo Portugal - Oracle XTeam
 
 ## Overview
 
-This toolkit provides interactive visualization and analysis capabilities for:
+This repository currently contains:
 
-- **CPU utilization** from ATP (Autonomous Transaction Processing) files
-- **Cell disk metrics** from ECStatJSONExaWatcher data
-- **RDS congestion counters** from ExaWatcher/AHF data
-- **Cell SQL statistics** from `cellsqlstat --detail --batch` output collected on Exadata storage cells
-- **AWR repository metrics** from `DBA_HIST_%` views with explicit DBID selection
-- **VMStat memory/swap analysis** with anomaly detection
-- **Oracle alert log parsing** with timeline visualization
-- **ExaCC metrics dashboards** with performance alerts
+- A static dashboard served on port `8079`
+- Browser-only HTML tools for Exadata and Oracle troubleshooting
+- Streamlit apps for ECStat and AWR repository analysis
+- Extra standalone utilities that are not part of the main dashboard cards
+- Helper scripts to start and stop the local services
+- Reference PDFs and sample data under `KB/`
 
-All HTML-based tools run entirely in the browser with no server required. The Python tool uses Streamlit for an interactive web interface.
+Most HTML tools run entirely in the browser. The Streamlit apps are the only parts that require Python and a running local service.
 
----
-
-## Tools Included
-
-### 1. ECS_Analysis.py (Streamlit App)
-**Purpose:** Interactive analysis of ECStatJSONExaWatcher cell disk metrics
-
-**Features:**
-- Parses `.dat` files with JSON blocks marked by `zzz <...>` delimiters
-- Visualizes SD (Storage Disk) vs MD (Flash Memory Disk) metrics
-- Supports IOPS/s and MB/s unit conversion
-- Delta calculation for cumulative counters
-- Interactive metric selection and filtering
-
-### 2. CPU_Charts_From_ATP_Files.html
-**Purpose:** Visualize CPU utilization from zipped CPUManager JSON exports
-
-**Features:**
-- Drag-and-drop file upload
-- Multi-file batch processing
-- CSV export capability
-- Interactive chart with series toggles
-
-### 3. RDS_Info_Analysis.html
-**Purpose:** Analyze RDS (Relational Database Service) congestion counters
-
-**Features:**
-- Multi-file upload (supports `.xz` compression)
-- Counter trend visualization
-- Statistics calculation (total increase, per-interval increase)
-- Key congestion counter reference
-
-### 4. CellSqlStat_Analyzer.html
-**Purpose:** Analyze `cellsqlstat --detail --batch` output from Oracle Exadata storage cells
-
-**Features:**
-- Parses two-line fixed-width `CellSqlStatExaWatcher` reports
-- Filters by `CDBID`, `DBID`, `SQLID`, `DBNAME`, ranking section, and time range
-- Merges repeated "Top SQL by ..." sections into one SQL record per snapshot
-- Interactive chart for metrics such as `Memory Bytes`, `%CPU`, `Requested Bytes/s`, and `Returned Bytes/s`
-- CSV export for summary and latest-snapshot views
-
-### 5. Exa_Cell_Metrics_Chart.html
-**Purpose:** ExaCC (Exadata Cloud@Customer) metrics dashboard
-
-**Features:**
-- Line and bar chart visualizations
-- Alert tabs for Flash Cache, Smart I/O, and Cell Disk I/O
-- Color-coded severity levels (Normal/Warning/Critical)
-- Click-to-navigate from alerts to charts
-
-### 6. alertlog_analyzer.html
-**Purpose:** Parse and analyze Oracle alert log files
-
-**Features:**
-- Directory-based file selection
-- Instance name and exclude pattern filters
-- Date/time range filtering
-- Keyword search with context lines
-- Syntax highlighting for ORA- errors, FATAL, FAIL
-- Timeline visualization with Chart.js
-
-### 7. vmstat_multi_plot_with_swap_alerts_highlight.html
-**Purpose:** Analyze vmstat data for memory pressure issues
-
-**Features:**
-- Multi-file continuous timeline stitching
-- Separate plots for Memory+CPU, Swap In, Swap Out
-- Automatic swap utilization alerts
-- CSV export
-
-### 8. AWR_Repository_Explorer.py (Streamlit App)
-**Purpose:** Connect to an Oracle AWR dump repository and chart `DBA_HIST_%` metrics by DBID
-
-**Features:**
-- Oracle login from the Streamlit UI
-- DBID discovery from `DBA_HIST_DATABASE_INSTANCE`
-- Built-in chart for events such as `gc current block congested`
-- Custom read-only `DBA_HIST_%` SQL with enforced `:dbid` bind
-- Interactive chart builder for query results
-
----
-
-## Installation
+## Quick Start
 
 ### Prerequisites
 
-- Modern web browser (Chrome, Firefox, Edge, Safari)
-- Python 3.8+ (for Streamlit-based tools)
+- Python `3.12` recommended
+- `lsof` installed
+- A modern browser
+- `python3` available on `PATH` for the built-in static web server
 
-### Recommended Python Environment
-
-This repository now uses a local Python 3.12 virtual environment at `.venv`.
+### Create the virtual environment
 
 ```bash
 python3.12 -m venv .venv
@@ -134,217 +34,310 @@ source .venv/bin/activate
 python -m pip install --index-url https://pypi.org/simple -r requirements.txt
 ```
 
-Use the virtualenv Python for all project commands:
-
-```bash
-source .venv/bin/activate
-python --version
-```
-
-### Start/Stop Helpers
-
-To stop all app processes:
-
-```bash
-./stopall.sh
-```
-
-This stops anything listening on ports `8079`, `8501`, and `8502`.
-
-To start the dashboard and both Streamlit apps:
+### Start the main services
 
 ```bash
 ./startall.sh
 ```
 
-### Python Dependencies
+This starts:
+
+- Static dashboard and HTML tools on `http://localhost:8079/`
+- `ECS_Analysis.py` on `http://localhost:8501/`
+- `AWR_Repository_Explorer.py` on `http://localhost:8502/`
+
+### Stop the main services
 
 ```bash
+./stopall.sh
+```
+
+## What `startall.sh` and `stopall.sh` do
+
+### `startall.sh`
+
+`startall.sh` is the recommended local startup path. It:
+
+- Verifies that `.venv/bin/python` exists
+- Calls `./stopall.sh` first to clear old listeners
+- Starts a static web server with:
+
+```bash
+python3 -m http.server 8079 --bind 0.0.0.0
+```
+
+- Starts Streamlit for `python/ECS_Analysis.py` on port `8501`
+- Starts Streamlit for `python/AWR_Repository_Explorer.py` on port `8502`
+- Writes logs to:
+  - `exaweb.log`
+  - `streamlit_ecs.log`
+  - `streamlit_awr.log`
+
+### `stopall.sh`
+
+`stopall.sh` kills listeners on these ports:
+
+- `8079`
+- `8501`
+- `8502`
+
+It does this with `lsof -tiTCP:<port> -sTCP:LISTEN`, then `kill`.
+
+## Ports and Logs
+
+| Port | Service | Started By | Notes |
+| --- | --- | --- | --- |
+| `8079` | Static dashboard and all HTML tools | `startall.sh` | Serves `index.html`, `html/*`, and root HTML files |
+| `8501` | `python/ECS_Analysis.py` | `startall.sh` | ECStat / cell-disk Streamlit UI |
+| `8502` | `python/AWR_Repository_Explorer.py` | `startall.sh` | Oracle AWR repository Streamlit UI |
+
+Generated logs:
+
+- `exaweb.log`
+- `streamlit_ecs.log`
+- `streamlit_awr.log`
+- `streamlit.log` may also exist from manual Streamlit runs
+
+## Main Tool Catalog
+
+### Dashboard
+
+- `index.html`
+  - Main landing page for the primary toolset
+  - Intended entry point when the static server is running on `8079`
+
+### Browser Tools Served From `html/`
+
+- `html/CPU_Charts_From_ATP_Files.html`
+  - Loads zipped `CPUManager_*.json` data
+  - Supports drag-and-drop and batch upload
+  - Supports long-range charting with adjustable X-axis interval
+  - Keeps already loaded files in memory while changing the chart interval
+  - Shows summary statistics and chart-based CPU trend analysis
+
+- `html/RDS_Info_Analysis.html`
+  - Analyzes RDS congestion counters from ExaWatcher and AHF-style data
+  - Supports multi-file loading
+  - Supports `.xz` compressed input
+  - Includes trend views and summary statistics for counter growth
+
+- `html/CellSqlStat_Analyzer.html`
+  - Parses `cellsqlstat --detail --batch` output from Exadata storage cells
+  - Supports filtering by `CDBID`, `DBID`, `SQLID`, `DBNAME`, ranking section, and time range
+  - Merges repeated ranking sections into unified SQL records per snapshot
+  - Includes dataset summary, current-scope summary, top SQL summary, and charting
+  - Supports CSV export
+  - Uses `assets/cellsqlstat_parser.js`
+
+- `html/Exa_Cell_Metrics_Chart.html`
+  - ExaCC Metrics Dashboard
+  - Interactive charting for Exadata Cloud@Customer cell metrics
+  - Separate hard-disk (`CD_`) and flash-disk (`FD_`) target-average charts
+  - Guide-based tabs for:
+    - Flash Cache Performance Alerts
+    - Smart I/O Performance Alerts
+    - Cell Disk I/O Performance Alerts
+    - Summary
+  - Summary tab consolidates recommended metrics derived from Exadata documentation in `KB/`
+
+- `html/alertlog_analyzer.html`
+  - Oracle Alert Log Analyzer
+  - Directory-based upload using `webkitdirectory`
+  - Large alert-log friendly browser parsing
+  - Filters by instance pattern, exclude pattern, and time range
+  - Valid ORA-code extraction without reporting invalid `ORA-0`
+  - DBA summary cards and top issue lists
+  - Background process issue detection and filtering
+  - Event timeline chart and CSV export
+
+- `html/vmstat_multi_plot_with_swap_alerts_highlight.html`
+  - VMStat Continuous Plotter
+  - Supports plain-text vmstat files and `.xz` compressed ExaWatcher-style vmstat files
+  - Handles ExaWatcher headers such as `# Starting Time:` and `# Sample Interval(s):`
+  - Parses CPU, run queue, blocked processes, swap, I/O, interrupts, context switches, and steal time
+  - Adds OS findings, hot-interval scoring, per-file health summary, and richer charting
+  - Useful for OS-level triage, not just swap detection
+
+- `html/Metric_Explorer.html`
+  - Generic Exadata TSV visualizer
+  - Upload one or more tab-separated metric files
+  - Explore headers, filter rows, build charts, and inspect summary cards
+  - Standalone browser utility not currently exposed in the main dashboard cards
+
+### Root-Level Browser Tool
+
+- `listener_log_analyzer.html`
+  - Listener log analyzer for connection trends
+  - Aggregates by hour, minute, or total
+  - Can group by service name
+  - Uses `listener_worker.js` for background parsing
+  - Supports charting and CSV download
+
+## Streamlit Apps
+
+- `python/ECS_Analysis.py`
+  - Streamlit UI for `ECStatJSONExaWatcher` disk metrics
+  - Supports `.dat`, `.json`, `.txt`, `.log`, and `.xz`
+  - Supports SD versus MD analysis
+  - Converts cumulative counters into rates
+  - Offers interactive metric selection and charting
+  - Enforces a `200 MB` upload limit inside the app
+  - Started automatically by `startall.sh` on port `8501`
+
+- `python/AWR_Repository_Explorer.py`
+  - Streamlit UI for connecting to an Oracle database that contains imported AWR data
+  - Discovers available `DBID` values from `DBA_HIST_DATABASE_INSTANCE`
+  - Includes built-in analysis tabs such as:
+    - `GC Event Preset`
+    - `Daily Load & GC`
+    - Top SQL and drill-down workflows
+    - Segment analysis
+    - Custom `DBA_HIST_%` query runner
+  - Saves recent connection strings in `.awr_recent_connections.json`
+  - Keeps latest tab results until rerun instead of clearing them when switching tabs
+  - Started automatically by `startall.sh` on port `8502`
+
+- `python/ExaWatcher_Streamlit.py`
+  - Streamlit frontend for exploring raw ExaWatcher collector directories
+  - Uses `python/exawatcher_framework.py`
+  - Can browse collectors such as:
+    - `vmstat`
+    - `iostat`
+    - `toppid`
+    - `mpstat`
+    - `top`
+    - `ps`
+    - `meminfo`
+  - Not started by `startall.sh`
+
+## Additional Python Utilities
+
+- `ecstat_viewer.py`
+  - Older optimized Streamlit ECStat viewer
+  - Chunked parsing and caching for large ECStat files
+  - Useful as an alternative ECStat workflow
+  - Not started by `startall.sh`
+
+- `python/exawatcher_framework.py`
+  - Reusable parsing framework used by `python/ExaWatcher_Streamlit.py`
+  - Library module, not a standalone UI
+
+## Manual Run Commands
+
+### Static dashboard only
+
+```bash
+python3 -m http.server 8079 --bind 0.0.0.0
+```
+
+Then open:
+
+- `http://localhost:8079/`
+- `http://localhost:8079/html/CPU_Charts_From_ATP_Files.html`
+- `http://localhost:8079/html/RDS_Info_Analysis.html`
+- `http://localhost:8079/html/CellSqlStat_Analyzer.html`
+- `http://localhost:8079/html/Exa_Cell_Metrics_Chart.html`
+- `http://localhost:8079/html/alertlog_analyzer.html`
+- `http://localhost:8079/html/vmstat_multi_plot_with_swap_alerts_highlight.html`
+- `http://localhost:8079/html/Metric_Explorer.html`
+- `http://localhost:8079/listener_log_analyzer.html`
+
+### Streamlit tools started by `startall.sh`
+
+```bash
+source .venv/bin/activate
+python -m streamlit run python/ECS_Analysis.py --server.port 8501 --server.address 0.0.0.0
+python -m streamlit run python/AWR_Repository_Explorer.py --server.port 8502 --server.address 0.0.0.0
+```
+
+### Additional Streamlit tools not started by `startall.sh`
+
+Example ports:
+
+```bash
+source .venv/bin/activate
+python -m streamlit run python/ExaWatcher_Streamlit.py --server.port 8503 --server.address 0.0.0.0
+python -m streamlit run ecstat_viewer.py --server.port 8504 --server.address 0.0.0.0
+```
+
+## Common Input Sources
+
+- CPU charts: zipped `CPUManager_*.json` exports
+- RDS analysis: ExaWatcher or AHF RDS collector output, including `.xz`
+- Cell SQL analyzer: `cellsqlstat --detail --batch` output from storage cells
+- ExaCC dashboard: metric extracts for ExaCC / cell metrics
+- Alert-log analyzer: Oracle alert logs and `alert_*.log` directories
+- VMStat plotter: vmstat outputs from ExaWatcher or raw vmstat captures, including `.xz`
+- ECS analysis: `ECStatJSONExaWatcher` `.dat` or similar JSON collector output
+- AWR explorer: Oracle database with populated `DBA_HIST_%` views
+- ExaWatcher dataset explorer: raw collector directories under an ExaWatcher capture root
+- Listener analyzer: `listener.log` files
+
+## Supporting Files and Data
+
+- `assets/common.js`
+  - Shared browser helper code
+
+- `assets/cellsqlstat_parser.js`
+  - Parser logic used by the Cell SQL Stat Analyzer
+
+- `listener_worker.js`
+  - Web Worker for listener log parsing
+
+- `samples/`
+  - Small sample inputs for several tools
+
+- `KB/`
+  - Reference material and working data
+  - Currently includes:
+    - `system-overview-exadata-database-machine-dbmso.pdf`
+    - `system-software-users-guide-exadata-database-machine-sagug.pdf`
+    - `2026_04_01_10_44_24_CellSqlStatExaWatcher_gru126171exdcl02.oraclecloud.internal.dat`
+
+- `.awr_recent_connections.json`
+  - Saved recent connection profiles for `python/AWR_Repository_Explorer.py`
+
+## Optional Developer Dependencies
+
+The repository also includes `package.json` with optional development-time dependencies:
+
+- `jsdom`
+- `playwright`
+
+These are useful for DOM-level and browser validation, but they are not required to run the end-user tools.
+
+## Python Dependencies
+
+`requirements.txt` currently includes:
+
+- `streamlit`
+- `pandas`
+- `plotly`
+- `oracledb`
+
+Install them with:
+
+```bash
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Or install manually:
-```bash
-pip install streamlit pandas plotly oracledb
-```
+## Repository Layout
 
----
+| Path | Purpose |
+| --- | --- |
+| `index.html` | Main dashboard |
+| `html/` | Primary browser tools |
+| `python/` | Streamlit apps and shared Python modules |
+| `assets/` | Shared JavaScript helpers |
+| `KB/` | Reference PDFs and working sample data |
+| `samples/` | Small example files |
+| `startall.sh` | Start dashboard plus main Streamlit apps |
+| `stopall.sh` | Stop listeners on `8079`, `8501`, and `8502` |
 
-## Usage
+## Notes
 
-### HTML Tools
-
-1. Open the main dashboard:
-   ```bash
-   # Simply open in your browser
-   open index.html
-   # or
-   xdg-open index.html  # Linux
-   ```
-
-2. Or open individual tool HTML files directly in your browser.
-
-### Running a Local Web Server (Optional)
-
-To serve the tools over a network or access them from other machines, start a simple HTTP server:
-
-```bash
-# Start HTTP server in background (Linux)
-nohup python3 -m http.server 8079 --directory /path/to/exadata-tools > /path/to/exadata-tools/server.log 2>&1 &
-
-# Example with specific paths:
-nohup python3 -m http.server 8079 --directory /home/paportug/exadata-tools > /home/paportug/exadata-tools/exaweb.log 2>&1 &
-```
-
-Then access the dashboard at: `http://your-server:8079`
-
-To stop the server:
-```bash
-# Find the process
-ps aux | grep "http.server"
-
-# Kill it
-kill <PID>
-```
-
-### Python Tool (ECS_Analysis.py)
-
-```bash
-# Run with Streamlit
-source .venv/bin/activate
-python -m streamlit run python/ECS_Analysis.py --server.port 8501
-
-# Or simply
-streamlit run python/ECS_Analysis.py
-```
-
-Then open http://localhost:8501 in your browser.
-
-### Python Tool (AWR_Repository_Explorer.py)
-
-```bash
-source .venv/bin/activate
-python -m streamlit run python/AWR_Repository_Explorer.py --server.port 8502
-```
-
-Then open http://localhost:8502 in your browser.
-
----
-
-## Input File Formats
-
-### ECS_Analysis.py
-- **Format:** `.dat` files from ECStatJSONExaWatcher
-- **Structure:** Header with sample interval, followed by JSON blocks delimited by `zzz <timestamp>` markers
-
-```
-# Sample Interval(s): 5
-zzz <2025-08-05T10:00:00>
-{"celldisk stats": [...]}
-zzz <2025-08-05T10:00:05>
-{"celldisk stats": [...]}
-```
-
-### CPU_Charts_From_ATP_Files.html
-- **Format:** `.zip` files containing `CPUManager_*.json`
-- **Structure:** JSON with `statNames` array and `values` array
-
-### RDS_Info_Analysis.html
-- **Format:** `.dat`, `.txt`, or `.xz` compressed files
-- **Structure:** Lines with `counter_name value` pairs
-
-```
-send_lock_contention 12345
-cong_update_queued 67890
-```
-
-### CellSqlStat_Analyzer.html
-- **Format:** Plain-text `.dat` or `.txt` files from `cellsqlstat --detail --batch`
-- **Structure:** Repeated `Current Time:` snapshots containing `Top SQL by ...` sections with two-line fixed-width SQL rows
-
-### Exa_Cell_Metrics_Chart.html
-- **Format:** `.lst` or `.txt` tab-separated files
-- **Structure:** `index  metric  target  value  timestamp`
-
-### alertlog_analyzer.html
-- **Format:** Oracle alert log files (`alert_*.log`)
-- **Structure:** Standard Oracle alert log format with timestamps
-
-### vmstat_multi_plot_with_swap_alerts_highlight.html
-- **Format:** vmstat output files
-- **Structure:** vmstat output with optional `# Starting Time:` header
-
----
-
-## Project Structure
-
-```
-/
-├── README.md                 # This documentation
-├── requirements.txt          # Python dependencies
-├── index.html                # Main dashboard
-│
-├── python/                   # Python scripts
-│   ├── ECS_Analysis.py       # Streamlit ECstat analyzer
-│   └── AWR_Repository_Explorer.py  # Streamlit AWR repository chart explorer
-│
-├── html/                     # HTML-based tools
-│   ├── alertlog_analyzer.html
-│   ├── CellSqlStat_Analyzer.html
-│   ├── CPU_Charts_From_ATP_Files.html
-│   ├── Exa_Cell_Metrics_Chart.html
-│   ├── RDS_Info_Analysis.html
-│   └── vmstat_multi_plot_with_swap_alerts_highlight.html
-│
-├── assets/                   # Shared resources
-│   ├── cellsqlstat_parser.js # Cell SQL Stat parser and formatters
-│   └── common.js             # Common utilities
-│
-├── KB/                       # Reference captures and troubleshooting notes
-└── samples/                  # Example input files
-    └── README.md             # Sample file descriptions
-```
-
----
-
-## Key RDS Congestion Counters
-
-When troubleshooting RDS congestion, focus on these counters:
-
-| Counter | Description |
-|---------|-------------|
-| `send_lock_contention` | Lock contention on send operations |
-| `send_lock_queue_raced` | Queue race conditions |
-| `cong_update_queued` | Congestion updates queued |
-| `cong_update_received` | Congestion updates received |
-| `cong_send_error` | Send errors due to congestion |
-| `ib_tx_ring_full` | InfiniBand transmit ring full |
-| `ib_tx_stalled` | InfiniBand transmit stalled |
-
----
-
-## Browser Compatibility
-
-All HTML tools are tested with:
-- Google Chrome 90+
-- Mozilla Firefox 88+
-- Microsoft Edge 90+
-- Safari 14+
-
-**Note:** Some features (like `webkitdirectory` for folder selection) may have limited support in non-Chromium browsers.
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly with sample data
-5. Submit a pull request
-
----
-
-## License
-
-Internal Oracle XTeam tool. Contact Paulo Portugal for usage permissions.
+- The recommended local port for the dashboard is `8079`.
+- `startall.sh` only launches the dashboard, `ECS_Analysis.py`, and `AWR_Repository_Explorer.py`.
+- `Metric_Explorer.html`, `listener_log_analyzer.html`, `python/ExaWatcher_Streamlit.py`, and `ecstat_viewer.py` are present in the repository but require direct access or manual startup.
+- If you run locally, use the `localhost` URLs documented above.
