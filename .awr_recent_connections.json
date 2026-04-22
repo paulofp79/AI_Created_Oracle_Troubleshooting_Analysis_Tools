@@ -1,5 +1,21 @@
 [
   {
+    "name": "system@scaqar02dvclu02-scan1.us.oracle.com:1521/pdbawr.us.oracle.com [DEFAULT]",
+    "host": "scaqar02dvclu02-scan1.us.oracle.com",
+    "port": 1521,
+    "service_name": "pdbawr.us.oracle.com",
+    "username": "system",
+    "mode": "DEFAULT"
+  },
+  {
+    "name": "system@celvpvm06678.us.oracle.com:1521/pdborcl.us.oracle.com [DEFAULT]",
+    "host": "celvpvm06678.us.oracle.com",
+    "port": 1521,
+    "service_name": "pdborcl.us.oracle.com",
+    "username": "system",
+    "mode": "DEFAULT"
+  },
+  {
     "name": "system@nshqah07-scan1.us.oracle.com:1521/santandernew2.us.oracle.com [DEFAULT]",
     "host": "nshqah07-scan1.us.oracle.com",
     "port": 1521,

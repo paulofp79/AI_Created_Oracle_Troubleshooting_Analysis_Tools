@@ -170,37 +170,63 @@
       border-left: 4px solid #1adaa6;
     }
     .rds-congestion-list {
-      background: #23243a;
-      border-radius: 14px;
-      box-shadow: 0 2px 10px rgba(17, 68, 51, 0.2);
-      padding: 29px 24px;
+      background: linear-gradient(180deg, rgba(32, 38, 59, 0.96), rgba(22, 28, 46, 0.96));
+      border: 1px solid #31415f;
+      border-radius: 16px;
+      box-shadow: 0 8px 26px rgba(8, 14, 29, 0.32);
+      padding: 28px 24px;
       margin: 24px auto;
-      max-width: 500px;
-      color: #ffe066;
+      max-width: 640px;
+      color: #d9e7fb;
     }
     .rds-congestion-list h4 {
       margin-top: 0;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
       color: #81e6f0;
       font-weight: 700;
-      font-size: 1.22em;
-      letter-spacing: 0.7px;
+      font-size: 1.14em;
+      letter-spacing: 0.3px;
+    }
+    .rds-congestion-list .rds-congestion-note {
+      margin: 0 0 18px 0;
+      color: #a8badf;
+      font-size: 0.98em;
+      line-height: 1.55;
     }
     .rds-congestion-list ul {
       list-style: none;
       padding-left: 0;
+      margin: 0;
+      display: grid;
+      gap: 12px;
     }
     .rds-congestion-list li {
-      background: #212c40;
-      margin-bottom: 13px;
-      border-radius: 6px;
-      padding: 11px 16px;
-      font-family: "Roboto Mono", monospace;
-      font-size: 1.1em;
-      color: #ffe066;
-      border-left: 3px solid #1adaa6;
+      background: rgba(24, 34, 52, 0.92);
+      border: 1px solid #2f405f;
+      border-left: 4px solid #1adaa6;
+      border-radius: 10px;
+      padding: 14px 16px 13px 16px;
       box-shadow: 0 1px 8px rgba(9, 60, 76, 0.07);
-      letter-spacing: 0.1px;
+    }
+    .rds-congestion-list code {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(9, 18, 31, 0.85);
+      border: 1px solid #36547b;
+      color: #9cecff;
+      font-family: "Roboto Mono", monospace;
+      font-size: 0.95em;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .rds-counter-desc {
+      display: block;
+      color: #d9e7fb;
+      font-size: 0.98em;
+      line-height: 1.5;
+      font-family: inherit;
     }
 
     /* Loading overlay */
@@ -383,14 +409,38 @@
       <h3>Key RDS Congestion Counters</h3>
       <div class="rds-congestion-list">
         <h4>Important counters for RDS Congestion analysis:</h4>
+        <p class="rds-congestion-note">
+          Focus on counters that point to queue pressure, lock contention, congestion update churn, and InfiniBand transmit backpressure.
+        </p>
         <ul>
-          <li><code>send_lock_contention</code> - Lock contention on send</li>
-          <li><code>send_lock_queue_raced</code> - Queue race conditions</li>
-          <li><code>cong_update_queued</code> - Congestion updates queued</li>
-          <li><code>cong_update_received</code> - Congestion updates received</li>
-          <li><code>cong_send_error</code> - Send errors from congestion</li>
-          <li><code>ib_tx_ring_full</code> - IB transmit ring full</li>
-          <li><code>ib_tx_stalled</code> - IB transmit stalled</li>
+          <li>
+            <code>send_lock_contention</code>
+            <span class="rds-counter-desc">Lock contention on send operations.</span>
+          </li>
+          <li>
+            <code>send_lock_queue_raced</code>
+            <span class="rds-counter-desc">Queue race conditions detected while sending.</span>
+          </li>
+          <li>
+            <code>cong_update_queued</code>
+            <span class="rds-counter-desc">Congestion updates queued for later processing.</span>
+          </li>
+          <li>
+            <code>cong_update_received</code>
+            <span class="rds-counter-desc">Congestion updates received from peers.</span>
+          </li>
+          <li>
+            <code>cong_send_error</code>
+            <span class="rds-counter-desc">Send errors related to congestion handling.</span>
+          </li>
+          <li>
+            <code>ib_tx_ring_full</code>
+            <span class="rds-counter-desc">InfiniBand transmit ring reached capacity.</span>
+          </li>
+          <li>
+            <code>ib_tx_stalled</code>
+            <span class="rds-counter-desc">InfiniBand transmit path stalled.</span>
+          </li>
         </ul>
       </div>
     </div>
