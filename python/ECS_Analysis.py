@@ -301,6 +301,230 @@ def rate_from_cumulative(df_series: pd.Series, interval_sec: int) -> pd.Series:
     return delta / max(1, interval_sec)
 
 
+def build_metric_rate_frame(df: pd.DataFrame, interval_sec: int) -> pd.DataFrame:
+    """
+    Build per-metric rates across timestamp, device type, category, and metric.
+
+    ECStat counters are cumulative, so this function converts them into rates
+    using the ExaWatcher sample interval.
+    """
+    if df.empty:
+        return pd.DataFrame()
+
+    grouped = (
+        df.groupby(["timestamp", "dtype_label", "category", "metric"], as_index=False)[
+            ["iops_raw", "bytes_raw"]
+        ]
+        .sum()
+        .sort_values(["dtype_label", "category", "metric", "timestamp"])
+    )
+
+    group_keys = ["dtype_label", "category", "metric"]
+    grouped["iops_rate"] = (
+        grouped.groupby(group_keys)["iops_raw"]
+        .diff()
+        .fillna(0)
+        .clip(lower=0)
+        / max(1, interval_sec)
+    )
+    grouped["mb_rate"] = (
+        grouped.groupby(group_keys)["bytes_raw"]
+        .diff()
+        .fillna(0)
+        .clip(lower=0)
+        / max(1, interval_sec)
+        / (1024 * 1024)
+    )
+    return grouped.reset_index(drop=True)
+
+
+def _classify_metric(metric: str, category: str) -> Dict[str, str]:
+    """
+    Classify ECStat metrics into diagnostic buckets.
+
+    The goal is not to declare root cause from one counter. It highlights
+    counters that deserve attention and explains why.
+    """
+    text = f"{category} {metric}".lower()
+
+    if any(token in text for token in ["error", "fail", "timeout", "corrupt"]):
+        return {
+            "severity": "Critical",
+            "status": "Potential problem",
+            "reason": "Error/failure-related counter is active.",
+            "recommendation": "Correlate the timestamp with cell alert logs, disk state, and database wait events.",
+        }
+
+    if "rejected" in text or "reject" in text:
+        return {
+            "severity": "Warning",
+            "status": "Watch",
+            "reason": "Rejected cacheline/cell activity can indicate pressure or inefficient caching.",
+            "recommendation": "Check whether rejected activity lines up with workload bursts, flash pressure, or memory pressure.",
+        }
+
+    if "limit dirty buffer writes" in text:
+        return {
+            "severity": "Warning",
+            "status": "Watch",
+            "reason": "Dirty buffer write limiting can indicate write pressure or checkpoint pressure.",
+            "recommendation": "Compare with redo/write-heavy DB activity and flash/disk write latency.",
+        }
+
+    if "miss" in text or "misses" in text:
+        return {
+            "severity": "Info",
+            "status": "Review",
+            "reason": "Miss counters are workload-dependent but high sustained miss rates may reduce cache benefit.",
+            "recommendation": "Compare miss activity with hit counters and SQL/workload windows before treating it as a fault.",
+        }
+
+    if "smart scan" in text or "backup" in text or "rebalance" in text:
+        return {
+            "severity": "Info",
+            "status": "Workload signal",
+            "reason": "High activity is usually workload-driven, not automatically a problem.",
+            "recommendation": "Use as context for IO load attribution and correlate with DB jobs or ASM operations.",
+        }
+
+    return {
+        "severity": "OK",
+        "status": "No obvious issue",
+        "reason": "No problem keyword detected; activity may be normal workload.",
+        "recommendation": "Review trend only if it coincides with DB symptoms or storage latency.",
+    }
+
+
+@st.cache_data(show_spinner=False)
+def analyze_ecstat_health(df: pd.DataFrame, interval_sec: int) -> Dict[str, pd.DataFrame]:
+    """
+    Produce health findings and a per-metric summary from parsed ECStat data.
+    """
+    rate_df = build_metric_rate_frame(df, interval_sec)
+    if rate_df.empty:
+        return {
+            "rate_df": rate_df,
+            "metric_summary": pd.DataFrame(),
+            "findings": pd.DataFrame(),
+        }
+
+    summary = (
+        rate_df.groupby(["dtype_label", "category", "metric"], as_index=False)
+        .agg(
+            max_iops=("iops_rate", "max"),
+            avg_iops=("iops_rate", "mean"),
+            max_mb_s=("mb_rate", "max"),
+            avg_mb_s=("mb_rate", "mean"),
+            active_samples=("iops_rate", lambda s: int((s > 0).sum())),
+        )
+        .sort_values(["max_iops", "max_mb_s"], ascending=False)
+        .reset_index(drop=True)
+    )
+
+    classified_rows = []
+    for row in summary.itertuples(index=False):
+        cls = _classify_metric(str(row.metric), str(row.category))
+        classified_rows.append(
+            {
+                "severity": cls["severity"],
+                "status": cls["status"],
+                "dtype": row.dtype_label,
+                "category": row.category,
+                "metric": row.metric,
+                "max_iops_s": row.max_iops,
+                "avg_iops_s": row.avg_iops,
+                "max_mb_s": row.max_mb_s,
+                "avg_mb_s": row.avg_mb_s,
+                "active_samples": row.active_samples,
+                "reason": cls["reason"],
+                "recommendation": cls["recommendation"],
+            }
+        )
+
+    metric_summary = pd.DataFrame(classified_rows)
+
+    active_summary = metric_summary[
+        (metric_summary["active_samples"] > 0)
+        & (
+            (metric_summary["max_iops_s"] > 0)
+            | (metric_summary["max_mb_s"] > 0)
+        )
+    ].copy()
+
+    severity_rank = {"Critical": 0, "Warning": 1, "Info": 2, "OK": 3}
+    active_summary["severity_rank"] = active_summary["severity"].map(severity_rank).fillna(9)
+
+    findings = active_summary[
+        active_summary["severity"].isin(["Critical", "Warning", "Info"])
+    ].copy()
+
+    # Add an imbalance signal where one disk class dominates a metric.
+    pivot = summary.pivot_table(
+        index=["category", "metric"],
+        columns="dtype_label",
+        values="max_iops",
+        aggfunc="max",
+        fill_value=0,
+    ).reset_index()
+    if {"MD", "SD"}.issubset(pivot.columns):
+        for row in pivot.itertuples(index=False):
+            md_val = float(getattr(row, "MD"))
+            sd_val = float(getattr(row, "SD"))
+            bigger = max(md_val, sd_val)
+            smaller = max(min(md_val, sd_val), 1.0)
+            if bigger >= 100 and bigger / smaller >= 20:
+                dominant = "MD" if md_val >= sd_val else "SD"
+                findings = pd.concat(
+                    [
+                        findings,
+                        pd.DataFrame(
+                            [
+                                {
+                                    "severity": "Info",
+                                    "status": "Skewed activity",
+                                    "dtype": dominant,
+                                    "category": row.category,
+                                    "metric": row.metric,
+                                    "max_iops_s": bigger,
+                                    "avg_iops_s": 0.0,
+                                    "max_mb_s": 0.0,
+                                    "avg_mb_s": 0.0,
+                                    "active_samples": 0,
+                                    "reason": "One disk class dominates this metric.",
+                                    "recommendation": "Confirm whether this aligns with expected flash/hard-disk placement and workload.",
+                                    "severity_rank": severity_rank["Info"],
+                                }
+                            ]
+                        ),
+                    ],
+                    ignore_index=True,
+                )
+
+    findings = (
+        findings.sort_values(
+            ["severity_rank", "max_iops_s", "max_mb_s"],
+            ascending=[True, False, False],
+        )
+        .drop(columns=["severity_rank"], errors="ignore")
+        .reset_index(drop=True)
+    )
+    metric_summary["severity_rank"] = metric_summary["severity"].map(severity_rank).fillna(9)
+    metric_summary = (
+        metric_summary.sort_values(
+            ["severity_rank", "max_iops_s", "max_mb_s"],
+            ascending=[True, False, False],
+        )
+        .drop(columns=["severity_rank"], errors="ignore")
+        .reset_index(drop=True)
+    )
+
+    return {
+        "rate_df": rate_df,
+        "metric_summary": metric_summary,
+        "findings": findings,
+    }
+
+
 def validate_file(uploaded_file) -> bool:
     """
     Validate uploaded file for type and size.
@@ -451,6 +675,41 @@ st.success(f"Found {len(blocks)} JSON blocks")
 if df.empty:
     st.error("File parsed but no metrics found in 'stats' or 'IOReasons' sections.")
     st.stop()
+
+# Automatic health summary
+health = analyze_ecstat_health(df, interval_sec)
+findings_df = health["findings"]
+metric_summary_df = health["metric_summary"]
+
+st.subheader("Automatic ECStat Health Summary")
+
+summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+summary_col1.metric("Metrics Checked", metric_summary_df["metric"].nunique() if not metric_summary_df.empty else 0)
+summary_col2.metric("Critical", int((findings_df["severity"] == "Critical").sum()) if not findings_df.empty else 0)
+summary_col3.metric("Warnings", int((findings_df["severity"] == "Warning").sum()) if not findings_df.empty else 0)
+summary_col4.metric("Review Items", int((findings_df["severity"] == "Info").sum()) if not findings_df.empty else 0)
+
+if findings_df.empty:
+    st.success("No active ECStat counters matched the current automatic problem rules.")
+else:
+    st.caption(
+        "These are signals, not final root cause. Use them to decide which counters "
+        "and time windows deserve closer review."
+    )
+    st.dataframe(
+        findings_df.head(100),
+        use_container_width=True,
+    )
+
+with st.expander("Metric Health Summary - all counters", expanded=False):
+    st.write(
+        "Each parsed counter is classified by name and activity. "
+        "Counters marked OK can still matter if they line up with database symptoms."
+    )
+    st.dataframe(
+        metric_summary_df,
+        use_container_width=True,
+    )
 
 # Metric selection UI
 categories = ["stats", "readsIOReasons", "writesIOReasons", "ALL"]

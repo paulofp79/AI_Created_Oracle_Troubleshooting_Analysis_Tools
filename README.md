@@ -186,6 +186,8 @@ Generated logs:
   - Supports `.dat`, `.json`, `.txt`, `.log`, and `.xz`
   - Supports SD versus MD analysis
   - Converts cumulative counters into rates
+  - Adds automatic ECStat health findings for error counters, rejected cachelines, dirty-buffer write limiting, miss counters, and SD/MD activity skew
+  - Includes a full metric health summary so every parsed counter can be reviewed with max and average rates
   - Offers interactive metric selection and charting
   - Enforces a `200 MB` upload limit inside the app
   - Started automatically by `startall.sh` on port `8501`
