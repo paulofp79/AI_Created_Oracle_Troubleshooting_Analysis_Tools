@@ -338,6 +338,15 @@
           <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8502" class="tool-link" target="_blank" rel="noopener noreferrer">Open Tool</a>
           <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">AWR Tool: <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8502" target="_blank" rel="noopener noreferrer" style="color: var(--accent);">http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8502</a></p>
         </div>
+
+        <div class="tool-card python-card">
+          <span class="tool-type">Python/Streamlit</span>
+          <div class="tool-icon">IO</div>
+          <h3 class="tool-title">ExaWatcher Iostat Analyzer</h3>
+          <p class="tool-desc">Upload one or many ExaWatcher iostat outputs, chart latency/utilization/throughput/CPU iowait, and review automatic storage findings.</p>
+          <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8503" class="tool-link" target="_blank" rel="noopener noreferrer">Open Tool</a>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">Iostat Tool: <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8503" target="_blank" rel="noopener noreferrer" style="color: var(--accent);">http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8503</a></p>
+        </div>
       </div>
 
       <div style="margin-top: 30px; padding: 20px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border);">
@@ -353,6 +362,10 @@
         </div>
         <div class="command-box" style="margin-top: 10px;">
           <code>streamlit run python/AWR_Repository_Explorer.py --server.port 8502</code>
+          <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+        </div>
+        <div class="command-box" style="margin-top: 10px;">
+          <code>streamlit run python/Iostat_Analyzer.py --server.port 8503</code>
           <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
         </div>
       </div>
@@ -374,6 +387,7 @@
           Python tools require Streamlit. Install dependencies with <code>pip install -r requirements.txt</code>
           then run <code>streamlit run python/ECS_Analysis.py</code> or
           <code>streamlit run python/AWR_Repository_Explorer.py --server.port 8502</code>.
+          For iostat analysis, run <code>streamlit run python/Iostat_Analyzer.py --server.port 8503</code>.
         </p>
 
         <h4 style="margin-top: 20px; margin-bottom: 10px;">File Formats</h4>
@@ -385,6 +399,7 @@
           <li><strong>ExaCC Metrics:</strong> Tab-separated .lst or .txt files</li>
           <li><strong>Alert Log:</strong> Oracle alert_*.log files</li>
           <li><strong>VMStat:</strong> vmstat output files</li>
+          <li><strong>Iostat:</strong> ExaWatcher iostat output files, including multi-file uploads and compressed .xz/.bz2 captures</li>
         </ul>
 
         <h4 style="margin-top: 20px; margin-bottom: 10px;">Sample Files</h4>

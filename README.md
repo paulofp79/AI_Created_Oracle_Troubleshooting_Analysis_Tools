@@ -45,6 +45,7 @@ This starts:
 - Static dashboard and HTML tools on `http://localhost:8079/`
 - `ECS_Analysis.py` on `http://localhost:8501/`
 - `AWR_Repository_Explorer.py` on `http://localhost:8502/`
+- `Iostat_Analyzer.py` on `http://localhost:8503/`
 
 ### Stop the main services
 
@@ -68,10 +69,12 @@ python3 -m http.server 8079 --bind 0.0.0.0
 
 - Starts Streamlit for `python/ECS_Analysis.py` on port `8501`
 - Starts Streamlit for `python/AWR_Repository_Explorer.py` on port `8502`
+- Starts Streamlit for `python/Iostat_Analyzer.py` on port `8503`
 - Writes logs to:
   - `exaweb.log`
   - `streamlit_ecs.log`
   - `streamlit_awr.log`
+  - `streamlit_iostat.log`
 
 ### `stopall.sh`
 
@@ -80,6 +83,7 @@ python3 -m http.server 8079 --bind 0.0.0.0
 - `8079`
 - `8501`
 - `8502`
+- `8503`
 
 It does this with `lsof -tiTCP:<port> -sTCP:LISTEN`, then `kill`.
 
@@ -90,12 +94,14 @@ It does this with `lsof -tiTCP:<port> -sTCP:LISTEN`, then `kill`.
 | `8079` | Static dashboard and all HTML tools | `startall.sh` | Serves `index.html`, `html/*`, and root HTML files |
 | `8501` | `python/ECS_Analysis.py` | `startall.sh` | ECStat / cell-disk Streamlit UI |
 | `8502` | `python/AWR_Repository_Explorer.py` | `startall.sh` | Oracle AWR repository Streamlit UI |
+| `8503` | `python/Iostat_Analyzer.py` | `startall.sh` | ExaWatcher iostat upload, charts, and findings |
 
 Generated logs:
 
 - `exaweb.log`
 - `streamlit_ecs.log`
 - `streamlit_awr.log`
+- `streamlit_iostat.log`
 - `streamlit.log` may also exist from manual Streamlit runs
 
 ## Main Tool Catalog
@@ -197,6 +203,17 @@ Generated logs:
   - Keeps latest tab results until rerun instead of clearing them when switching tabs
   - Started automatically by `startall.sh` on port `8502`
 
+- `python/Iostat_Analyzer.py`
+  - Streamlit UI for ExaWatcher iostat command outputs
+  - Supports multi-file upload for `.dat`, `.txt`, `.log`, `.out`, `.xz`, and `.bz2`
+  - Supports server-side file paths when files already exist on the app host
+  - Parses ExaWatcher metadata, `avg-cpu`, and per-device extended iostat rows from `iostat -t -x -p -N -m`
+  - Classifies Exadata hard disks, Exadata flash disks, ASM md volumes, partitions, and other devices
+  - Charts device await, read/write await, utilization, queue depth, MB/s throughput, IOPS, and CPU iowait
+  - Generates class-aware automatic findings for high read/write latency, high utilization, queue buildup, and host iowait while suppressing inactive partition noise
+  - Includes CSV export for parsed device rows
+  - Started automatically by `startall.sh` on port `8503`
+
 - `python/ExaWatcher_Streamlit.py`
   - Streamlit frontend for exploring raw ExaWatcher collector directories
   - Uses `python/exawatcher_framework.py`
@@ -248,6 +265,7 @@ Then open:
 source .venv/bin/activate
 python -m streamlit run python/ECS_Analysis.py --server.port 8501 --server.address 0.0.0.0
 python -m streamlit run python/AWR_Repository_Explorer.py --server.port 8502 --server.address 0.0.0.0
+python -m streamlit run python/Iostat_Analyzer.py --server.port 8503 --server.address 0.0.0.0
 ```
 
 ### Additional Streamlit tools not started by `startall.sh`
@@ -268,6 +286,7 @@ python -m streamlit run ecstat_viewer.py --server.port 8504 --server.address 0.0
 - ExaCC dashboard: metric extracts for ExaCC / cell metrics
 - Alert-log analyzer: Oracle alert logs and `alert_*.log` directories
 - VMStat plotter: vmstat outputs from ExaWatcher or raw vmstat captures, including `.xz`
+- Iostat analyzer: ExaWatcher iostat output files, including multi-file `.dat`, `.txt`, `.log`, `.out`, `.xz`, and `.bz2`
 - ECS analysis: `ECStatJSONExaWatcher` `.dat` or similar JSON collector output
 - AWR explorer: Oracle database with populated `DBA_HIST_%` views
 - ExaWatcher dataset explorer: raw collector directories under an ExaWatcher capture root

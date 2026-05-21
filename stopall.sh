@@ -16,5 +16,6 @@ kill_port() {
 kill_port 8079
 kill_port 8501
 kill_port 8502
+kill_port 8503
 
 echo "Stopped app processes for ${ROOT_DIR}"
