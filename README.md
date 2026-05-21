@@ -274,8 +274,8 @@ Example ports:
 
 ```bash
 source .venv/bin/activate
-python -m streamlit run python/ExaWatcher_Streamlit.py --server.port 8503 --server.address 0.0.0.0
-python -m streamlit run ecstat_viewer.py --server.port 8504 --server.address 0.0.0.0
+python -m streamlit run python/ExaWatcher_Streamlit.py --server.port 8504 --server.address 0.0.0.0
+python -m streamlit run ecstat_viewer.py --server.port 8505 --server.address 0.0.0.0
 ```
 
 ## Common Input Sources
@@ -352,7 +352,7 @@ pip install -r requirements.txt
 | `KB/` | Reference PDFs and working sample data |
 | `samples/` | Small example files |
 | `startall.sh` | Start dashboard plus main Streamlit apps |
-| `stopall.sh` | Stop listeners on `8079`, `8501`, and `8502` |
+| `stopall.sh` | Stop listeners on `8079`, `8501`, `8502`, and `8503` |
 
 ## Notes
 

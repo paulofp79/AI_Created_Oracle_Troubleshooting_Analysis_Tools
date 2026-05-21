@@ -326,8 +326,8 @@
           <div class="tool-icon">ECS</div>
           <h3 class="tool-title">ECS Analysis</h3>
           <p class="tool-desc">Interactive Streamlit app for ECStatJSONExaWatcher cell disk metrics. Visualizes SD vs MD metrics with IOPS/MB conversion.</p>
-          <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8501" class="tool-link" target="_blank" rel="noopener noreferrer">Open Tool</a>
-          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">ECS Tool: <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8501" target="_blank" rel="noopener noreferrer" style="color: var(--accent);">http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8501</a></p>
+          <a href="#" class="tool-link streamlit-link" data-streamlit-port="8501" target="_blank" rel="noopener noreferrer">Open Tool</a>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">ECS Tool: <a href="#" class="streamlit-link" data-streamlit-port="8501" target="_blank" rel="noopener noreferrer" style="color: var(--accent);"></a></p>
         </div>
 
         <div class="tool-card python-card">
@@ -335,8 +335,8 @@
           <div class="tool-icon">AWR</div>
           <h3 class="tool-title">AWR Repository Explorer</h3>
           <p class="tool-desc">Connect to an Oracle database with imported AWR data, choose a DBID, run built-in GC wait analysis, or chart your own DBA_HIST query results.</p>
-          <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8502" class="tool-link" target="_blank" rel="noopener noreferrer">Open Tool</a>
-          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">AWR Tool: <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8502" target="_blank" rel="noopener noreferrer" style="color: var(--accent);">http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8502</a></p>
+          <a href="#" class="tool-link streamlit-link" data-streamlit-port="8502" target="_blank" rel="noopener noreferrer">Open Tool</a>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">AWR Tool: <a href="#" class="streamlit-link" data-streamlit-port="8502" target="_blank" rel="noopener noreferrer" style="color: var(--accent);"></a></p>
         </div>
 
         <div class="tool-card python-card">
@@ -344,8 +344,8 @@
           <div class="tool-icon">IO</div>
           <h3 class="tool-title">ExaWatcher Iostat Analyzer</h3>
           <p class="tool-desc">Upload one or many ExaWatcher iostat outputs, chart latency/utilization/throughput/CPU iowait, and review automatic storage findings.</p>
-          <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8503" class="tool-link" target="_blank" rel="noopener noreferrer">Open Tool</a>
-          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">Iostat Tool: <a href="http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8503" target="_blank" rel="noopener noreferrer" style="color: var(--accent);">http://phoenix93718.dev3sub2phx.databasede3phx.oraclevcn.com:8503</a></p>
+          <a href="#" class="tool-link streamlit-link" data-streamlit-port="8503" target="_blank" rel="noopener noreferrer">Open Tool</a>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">Iostat Tool: <a href="#" class="streamlit-link" data-streamlit-port="8503" target="_blank" rel="noopener noreferrer" style="color: var(--accent);"></a></p>
         </div>
       </div>
 
@@ -443,6 +443,17 @@
         }, 2000);
       });
     }
+
+    // Streamlit tools run on the same host as this dashboard, each on its own port.
+    document.querySelectorAll('.streamlit-link').forEach(link => {
+      const port = link.dataset.streamlitPort;
+      const hostname = window.location.hostname || 'localhost';
+      const url = `http://${hostname}:${port}`;
+      link.href = url;
+      if (!link.classList.contains('tool-link')) {
+        link.textContent = url;
+      }
+    });
   </script>
 </body>
 </html>
