@@ -11,8 +11,8 @@ Date: 05-Aug-2025
 import re
 import json
 import lzma
+import time
 from datetime import datetime
-from collections import defaultdict
 from typing import List, Dict, Any, Optional
 
 import pandas as pd
@@ -36,6 +36,7 @@ st.caption("Robust parser for ECStatJSONExaWatcher .dat files → metric selecti
 
 HEADER_INTERVAL_RE = re.compile(r"#\s*Sample\s+Interval\(s\):\s*(\d+)")
 MARKER_RE = re.compile(r"^zzz\s*<")
+MARKER_TIMESTAMP_RE = re.compile(r"^zzz\s*<([^>]+)>")
 
 
 # ----------------------------
@@ -92,26 +93,38 @@ def normalize_devices_from_block(block: Any) -> List[Dict]:
         return []
 
 
-def json_blocks_from_dat(text: str) -> List[Dict]:
+def _parse_marker_timestamp(line: str) -> tuple:
+    match = MARKER_TIMESTAMP_RE.match(line)
+    if not match:
+        return None, None
+
+    ts_str = match.group(1).strip()
+    try:
+        return pd.to_datetime(ts_str), ts_str
+    except (ValueError, pd.errors.ParserError):
+        return None, ts_str
+
+
+def iter_json_blocks_from_dat(text: str, include_marker_timestamp: bool = False):
     """
-    Extract JSON blocks from .dat file content.
+    Yield JSON blocks from .dat file content.
 
     Parses content between 'zzz <...>' markers using brace/bracket
     counting to determine block boundaries.
-
-    Args:
-        text: Raw file content
-
-    Returns:
-        List of parsed JSON objects
     """
     lines = text.splitlines()
     started = False
     brace_depth = 0
     bracket_depth = 0
     collecting = False
+    current_marker_ts = None
+    current_marker_ts_str = None
     buf: List[str] = []
-    blocks: List[Dict] = []
+
+    def emit_block(block: Dict):
+        if include_marker_timestamp:
+            return block, current_marker_ts, current_marker_ts_str
+        return block
 
     def flush_buffer() -> Optional[Dict]:
         """Attempt to parse accumulated buffer as JSON."""
@@ -156,6 +169,7 @@ def json_blocks_from_dat(text: str) -> List[Dict]:
         if not started:
             if MARKER_RE.match(line):
                 started = True
+                current_marker_ts, current_marker_ts_str = _parse_marker_timestamp(line)
             continue
 
         if MARKER_RE.match(line):
@@ -163,10 +177,11 @@ def json_blocks_from_dat(text: str) -> List[Dict]:
             if collecting and brace_depth == 0 and bracket_depth == 0:
                 blk = flush_buffer()
                 if blk is not None:
-                    blocks.append(blk)
+                    yield emit_block(blk)
             collecting = False
             brace_depth = 0
             bracket_depth = 0
+            current_marker_ts, current_marker_ts_str = _parse_marker_timestamp(line)
             continue
 
         # Detect start of JSON
@@ -185,14 +200,137 @@ def json_blocks_from_dat(text: str) -> List[Dict]:
                 # Complete block
                 blk = flush_buffer()
                 if blk is not None:
-                    blocks.append(blk)
+                    yield emit_block(blk)
                 collecting = False
 
     # Handle EOF with incomplete block
     if collecting and brace_depth == 0 and bracket_depth == 0:
         blk = flush_buffer()
         if blk is not None:
-            blocks.append(blk)
+            yield emit_block(blk)
+
+
+def json_blocks_from_dat(text: str) -> List[Dict]:
+    """
+    Extract JSON blocks from .dat file content.
+
+    Kept for validation and compatibility. The app hot path uses
+    `to_aggregate_rows_from_dat()` to avoid storing full JSON blocks.
+    """
+    return list(iter_json_blocks_from_dat(text))
+
+
+def _timestamp_from_device(dev: Dict) -> Optional[tuple]:
+    ts_str = dev.get("timestampFormatted")
+
+    if not ts_str:
+        ts_ms = dev.get("timestamp")
+        if ts_ms:
+            try:
+                ts_str = datetime.utcfromtimestamp(int(ts_ms) / 1000).strftime("%Y-%m-%d %H:%M:%S")
+            except (ValueError, OSError):
+                return None
+        else:
+            return None
+
+    try:
+        ts = pd.to_datetime(ts_str)
+    except (ValueError, pd.errors.ParserError):
+        ts = ts_str
+
+    return ts, ts_str
+
+
+def _dtype_label_from_device(dev: Dict) -> str:
+    dtype = dev.get("intendedDeviceType", "").upper()
+    return "MD" if dtype == "FD" else ("SD" if dtype == "HD" else dtype or "UNK")
+
+
+def _add_metric_to_aggregate(
+    accumulator: Dict[tuple, List[int]],
+    ts,
+    ts_str: str,
+    dtype_label: str,
+    category: str,
+    metric: str,
+    obj: Any,
+) -> None:
+    if not isinstance(obj, dict):
+        return
+
+    key = (ts, ts_str, dtype_label, category, metric)
+    values = accumulator.setdefault(key, [0, 0])
+    values[0] += int(obj.get("iops", 0) or 0)
+    values[1] += int(obj.get("bytes", 0) or 0)
+
+
+def aggregate_block_rows(
+    block: Dict,
+    block_ts=None,
+    block_ts_str: Optional[str] = None,
+) -> List[list]:
+    """
+    Aggregate one ECStat JSON block directly to SD/MD metric rows.
+
+    This avoids building per-cell-disk rows that the UI immediately groups back
+    into SD/MD totals.
+    """
+    accumulator: Dict[tuple, List[int]] = {}
+
+    for dev in normalize_devices_from_block(block):
+        if block_ts is not None:
+            ts, ts_str = block_ts, block_ts_str or str(block_ts)
+        else:
+            parsed_ts = _timestamp_from_device(dev)
+            if parsed_ts is None:
+                continue
+            ts, ts_str = parsed_ts
+        dtype_label = _dtype_label_from_device(dev)
+
+        for metric, obj in dev.get("stats", {}).items():
+            _add_metric_to_aggregate(
+                accumulator, ts, ts_str, dtype_label, "stats", metric, obj
+            )
+
+        io = dev.get("IOReasons", {})
+        for metric, obj in io.get("readsIOReasons", {}).items():
+            _add_metric_to_aggregate(
+                accumulator, ts, ts_str, dtype_label, "readsIOReasons", metric, obj
+            )
+        for metric, obj in io.get("writesIOReasons", {}).items():
+            _add_metric_to_aggregate(
+                accumulator, ts, ts_str, dtype_label, "writesIOReasons", metric, obj
+            )
+
+    return [
+        [ts, ts_str, dtype_label, category, metric, values[0], values[1]]
+        for (ts, ts_str, dtype_label, category, metric), values in accumulator.items()
+    ]
+
+
+def to_aggregate_rows_from_dat(text: str) -> tuple[pd.DataFrame, int]:
+    """
+    Parse ECStat .dat text and return SD/MD aggregate metric rows.
+    """
+    rows = []
+    block_count = 0
+
+    for block, block_ts, block_ts_str in iter_json_blocks_from_dat(
+        text, include_marker_timestamp=True
+    ):
+        block_count += 1
+        rows.extend(aggregate_block_rows(block, block_ts, block_ts_str))
+
+    df = pd.DataFrame(
+        rows,
+        columns=["timestamp", "ts_str", "dtype_label", "category", "metric", "iops_raw", "bytes_raw"]
+    )
+
+    if df.empty:
+        return df, block_count
+
+    df = df.sort_values("timestamp").reset_index(drop=True)
+    return df, block_count
 
     return blocks
 
@@ -411,6 +549,8 @@ def analyze_ecstat_health(df: pd.DataFrame, interval_sec: int) -> Dict[str, pd.D
     summary = (
         rate_df.groupby(["dtype_label", "category", "metric"], as_index=False)
         .agg(
+            max_iops_raw=("iops_raw", "max"),
+            max_bytes_raw=("bytes_raw", "max"),
             max_iops=("iops_rate", "max"),
             avg_iops=("iops_rate", "mean"),
             max_mb_s=("mb_rate", "max"),
@@ -431,6 +571,8 @@ def analyze_ecstat_health(df: pd.DataFrame, interval_sec: int) -> Dict[str, pd.D
                 "dtype": row.dtype_label,
                 "category": row.category,
                 "metric": row.metric,
+                "max_iops_raw": row.max_iops_raw,
+                "max_bytes_raw": row.max_bytes_raw,
                 "max_iops_s": row.max_iops,
                 "avg_iops_s": row.avg_iops,
                 "max_mb_s": row.max_mb_s,
@@ -442,6 +584,7 @@ def analyze_ecstat_health(df: pd.DataFrame, interval_sec: int) -> Dict[str, pd.D
         )
 
     metric_summary = pd.DataFrame(classified_rows)
+    severity_rank = {"Critical": 0, "Warning": 1, "Info": 2, "OK": 3}
 
     active_summary = metric_summary[
         (metric_summary["active_samples"] > 0)
@@ -450,13 +593,29 @@ def analyze_ecstat_health(df: pd.DataFrame, interval_sec: int) -> Dict[str, pd.D
             | (metric_summary["max_mb_s"] > 0)
         )
     ].copy()
+    raw_problem_summary = metric_summary[
+        metric_summary["severity"].isin(["Critical", "Warning"])
+        & (
+            (metric_summary["max_iops_raw"] > 0)
+            | (metric_summary["max_bytes_raw"] > 0)
+        )
+    ].copy()
+    raw_problem_summary["severity_rank"] = raw_problem_summary["severity"].map(severity_rank).fillna(9)
 
-    severity_rank = {"Critical": 0, "Warning": 1, "Info": 2, "OK": 3}
     active_summary["severity_rank"] = active_summary["severity"].map(severity_rank).fillna(9)
 
-    findings = active_summary[
-        active_summary["severity"].isin(["Critical", "Warning", "Info"])
-    ].copy()
+    findings = pd.concat(
+        [
+            active_summary[
+                active_summary["severity"].isin(["Critical", "Warning", "Info"])
+            ],
+            raw_problem_summary,
+        ],
+        ignore_index=True,
+    ).drop_duplicates(
+        subset=["severity", "dtype", "category", "metric"],
+        keep="first",
+    )
 
     # Add an imbalance signal where one disk class dominates a metric.
     pivot = summary.pivot_table(
@@ -485,6 +644,8 @@ def analyze_ecstat_health(df: pd.DataFrame, interval_sec: int) -> Dict[str, pd.D
                                     "dtype": dominant,
                                     "category": row.category,
                                     "metric": row.metric,
+                                    "max_iops_raw": 0,
+                                    "max_bytes_raw": 0,
                                     "max_iops_s": bigger,
                                     "avg_iops_s": 0.0,
                                     "max_mb_s": 0.0,
@@ -599,29 +760,57 @@ def parse_uploaded_payloads(file_payloads: List[tuple]):
     """
     Parse uploaded file payloads once and cache the result across Streamlit reruns.
     """
-    raw_texts = []
     intervals = []
     file_details = []
+    frames = []
+    block_count = 0
+    timings = []
 
     for file_name, raw_bytes in file_payloads:
+        file_start = time.perf_counter()
+
+        read_start = time.perf_counter()
         raw_text = read_uploaded_text_from_payload(file_name, raw_bytes)
-        raw_texts.append(raw_text)
-        intervals.append(parse_sample_interval(raw_text, default_sec=5))
+        read_seconds = time.perf_counter() - read_start
+
+        interval_start = time.perf_counter()
+        interval = parse_sample_interval(raw_text, default_sec=5)
+        intervals.append(interval)
+        interval_seconds = time.perf_counter() - interval_start
+
+        parse_start = time.perf_counter()
+        frame, file_block_count = to_aggregate_rows_from_dat(raw_text)
+        parse_seconds = time.perf_counter() - parse_start
+
+        frames.append(frame)
+        block_count += file_block_count
         file_details.append({
             "name": file_name,
             "size_kb": len(raw_bytes) / 1024,
+            "blocks": file_block_count,
+            "rows": len(frame),
         })
+        timings.append(
+            {
+                "name": file_name,
+                "read_seconds": read_seconds,
+                "interval_seconds": interval_seconds,
+                "parse_seconds": parse_seconds,
+                "total_seconds": time.perf_counter() - file_start,
+            }
+        )
 
     interval_sec = intervals[0] if intervals else 5
-    combined_text = "\n".join(raw_texts)
-    blocks = json_blocks_from_dat(combined_text)
-    df = to_long_rows(blocks)
+    df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    if not df.empty:
+        df = df.sort_values("timestamp").reset_index(drop=True)
 
     return {
         "interval_sec": interval_sec,
         "intervals": intervals,
         "file_details": file_details,
-        "blocks": blocks,
+        "block_count": block_count,
+        "timings": timings,
         "df": df,
     }
 
@@ -656,7 +845,8 @@ except ValueError as e:
 interval_sec = parsed_payload["interval_sec"]
 intervals = parsed_payload["intervals"]
 file_details = parsed_payload["file_details"]
-blocks = parsed_payload["blocks"]
+block_count = parsed_payload["block_count"]
+timings = parsed_payload["timings"]
 df = parsed_payload["df"]
 
 with st.expander("Header Details", expanded=False):
@@ -666,11 +856,17 @@ with st.expander("Header Details", expanded=False):
     if len(set(intervals)) > 1:
         st.warning(f"Detected mixed sample intervals across files: {sorted(set(intervals))}. Using {interval_sec}s for rate calculations.")
 
-if not blocks:
+with st.expander("Parsing Performance", expanded=False):
+    st.write(f"JSON blocks parsed: **{block_count}**")
+    st.write(f"Aggregate rows emitted: **{len(df)}**")
+    st.write(f"Sample Interval (s): **{interval_sec}**")
+    st.dataframe(pd.DataFrame(timings), use_container_width=True)
+
+if not block_count:
     st.error("No JSON blocks found after 'zzz <...>' markers. Please check the file format.")
     st.stop()
 
-st.success(f"Found {len(blocks)} JSON blocks")
+st.success(f"Found {block_count} JSON blocks")
 
 if df.empty:
     st.error("File parsed but no metrics found in 'stats' or 'IOReasons' sections.")

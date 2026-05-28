@@ -185,6 +185,7 @@ Generated logs:
   - Streamlit UI for `ECStatJSONExaWatcher` disk metrics
   - Supports `.dat`, `.json`, `.txt`, `.log`, and `.xz`
   - Supports SD versus MD analysis
+  - Uses aggregate parsing to avoid expanding every cell disk row before charting
   - Converts cumulative counters into rates
   - Adds automatic ECStat health findings for error counters, rejected cachelines, dirty-buffer write limiting, miss counters, and SD/MD activity skew
   - Includes a full metric health summary so every parsed counter can be reviewed with max and average rates
