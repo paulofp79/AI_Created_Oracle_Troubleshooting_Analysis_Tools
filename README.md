@@ -29,6 +29,7 @@ This toolkit provides interactive visualization and analysis capabilities for:
 - **VMStat memory/swap analysis** with anomaly detection
 - **Oracle alert log parsing** with timeline visualization
 - **ExaCC metrics dashboards** with performance alerts
+- **Smart Flash Cache content** by database, object, object type, hit ratio, and storage cell
 
 All HTML-based tools run entirely in the browser with no server required. The Python tool uses Streamlit for an interactive web interface.
 
@@ -92,6 +93,22 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Separate plots for Memory+CPU, Swap In, Swap Out
 - Automatic swap utilization alerts
 - CSV export
+
+### 7. FlashcacheContent Analysis Tool
+**Purpose:** Collect and explore Exadata Smart Flash Cache contents to identify cache consumers, cold-cache candidates, and cell skew.
+
+**Workflow:**
+
+1. On an Exadata database node as `root`, run `scripts/extract_flashcache.sh`. It uses `dcli` and the cell group file to collect `flashcachecontent` from every cell into a timestamped CSV.
+2. Optionally run `sql/flashcache_views.sql` in the database to create the external table and rollup views, including `fc_by_object` and `fc_cold_cache_candidates`.
+3. Open `html/flashcache_dashboard.html` from the main dashboard and upload either the raw collector CSV or a CSV export of `fc_by_object`.
+
+**Features:**
+- Browser-only CSV analysis; uploaded data remains local to the browser
+- Per-object cache footprint, hit ratio, and cold-cache filtering
+- Database and object-type cache distribution
+- Storage-cell cache-skew visualization when raw collector CSV is used
+- `CELL_FLASH_CACHE` tuning candidate visibility through the optional SQL views
 
 ---
 
@@ -205,6 +222,11 @@ cong_update_queued 67890
 - **Format:** vmstat output files
 - **Structure:** vmstat output with optional `# Starting Time:` header
 
+### FlashcacheContent Analysis Tool
+- **Raw format:** Timestamped `flashcache_*.csv` output from `scripts/extract_flashcache.sh`
+- **Rollup format:** CSV export of `SELECT * FROM fc_by_object ORDER BY cached_mb DESC`
+- **Collection prerequisite:** Run the extractor as `root` from an Exadata database node with `dcli` and root SSH equivalence to the storage cells.
+
 ---
 
 ## Project Structure
@@ -222,8 +244,15 @@ cong_update_queued 67890
 │   ├── alertlog_analyzer.html
 │   ├── CPU_Charts_From_ATP_Files.html
 │   ├── Exa_Cell_Metrics_Chart.html
+│   ├── flashcache_dashboard.html
 │   ├── RDS_Info_Analysis.html
 │   └── vmstat_multi_plot_with_swap_alerts_highlight.html
+│
+├── scripts/                  # Data collection scripts
+│   └── extract_flashcache.sh # Collects flashcachecontent from storage cells
+│
+├── sql/                      # Optional database setup and rollup views
+│   └── flashcache_views.sql
 │
 ├── assets/                   # Shared resources
 │   └── common.js             # Common utilities
