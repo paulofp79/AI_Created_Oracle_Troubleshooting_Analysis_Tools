@@ -21,10 +21,12 @@
       background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1a2e 100%);
       color: var(--text-primary);
     }
-    main { max-width: 1100px; margin: 0 auto; padding: 36px 20px; }
+    main { max-width: 1600px; margin: 0 auto; padding: 36px 20px; }
     h1 { margin: 0 0 8px; color: var(--accent); }
     .subtitle { margin: 0 0 28px; color: var(--text-secondary); }
+    .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
     .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .panel h2 { margin: 0 0 16px; color: var(--accent); font-size: 1.25rem; }
     .upload { border: 1px dashed var(--border); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 18px; }
     .upload-note, label, #emptyMsg { color: var(--text-secondary); font-size: 13px; }
     .upload-note { margin-top: 6px; }
@@ -34,102 +36,104 @@
     label { display: block; margin-bottom: 4px; }
     select, input[type="file"] { color: var(--text-primary); }
     select { width: 100%; background: #0f172a; border: 1px solid var(--border); border-radius: 5px; padding: 7px; }
-    #chartWrap { position: relative; width: 100%; height: 440px; }
-    #emptyMsg { text-align: center; padding: 18px 0 4px; }
+    .chart-wrap { position: relative; width: 100%; height: 400px; }
+    .empty-msg { text-align: center; padding: 18px 0 4px; }
     .back { display: inline-block; margin-top: 20px; color: var(--accent); text-decoration: none; }
     .back:hover { text-decoration: underline; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-    @media (max-width: 600px) { main { padding: 24px 14px; } .panel { padding: 16px; } #chartWrap { height: 340px; } }
+    @media (max-width: 900px) { .comparison-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { main { padding: 24px 14px; } .panel { padding: 16px; } .chart-wrap { height: 340px; } }
   </style>
 </head>
 <body>
   <main>
     <h1>Oracle Query CSV Charter</h1>
-    <p class="subtitle">Chart SQL*Plus or SQLcl CSV query results directly in your browser.</p>
-    <section class="panel">
-      <h2 class="sr-only">Upload a CSV of query results, select columns, and chart them</h2>
-      <div class="upload">
-        <input type="file" id="fileInput" accept=".csv,text/csv">
-        <div class="upload-note">Upload the CSV spooled from SQL*Plus or SQLcl.</div>
-      </div>
-      <div id="controls" hidden>
-        <div class="controls-row">
-          <div class="field"><label for="xCol">X axis</label><select id="xCol"></select></div>
-          <div class="field y-columns"><label for="yCols">Y columns (multi-select)</label><select id="yCols" multiple size="4"></select></div>
-          <div class="field"><label for="chartType">Chart type</label><select id="chartType"><option value="line">Line</option><option value="bar">Bar</option></select></div>
+    <p class="subtitle">Upload up to two SQL*Plus or SQLcl CSV query results and compare their charts side by side.</p>
+    <div class="comparison-grid">
+      <section class="panel" data-file-panel>
+        <h2>File 1</h2>
+        <div class="upload">
+          <input type="file" class="file-input" accept=".csv,text/csv">
+          <div class="upload-note">Upload the first CSV spooled from SQL*Plus or SQLcl.</div>
         </div>
-      </div>
-      <div id="chartWrap" hidden><canvas id="chart" role="img" aria-label="Chart of selected columns">Chart of selected columns over the chosen X axis.</canvas></div>
-      <div id="emptyMsg">No data loaded yet.</div>
-    </section>
+        <div class="controls" hidden>
+          <div class="controls-row">
+            <div class="field"><label>X axis <select class="x-col"></select></label></div>
+            <div class="field y-columns"><label>Y columns (multi-select) <select class="y-cols" multiple size="4"></select></label></div>
+            <div class="field"><label>Chart type <select class="chart-type"><option value="line">Line</option><option value="bar">Bar</option></select></label></div>
+          </div>
+        </div>
+        <div class="chart-wrap" hidden><canvas class="chart" role="img" aria-label="Chart of selected columns">Chart of selected columns over the chosen X axis.</canvas></div>
+        <div class="empty-msg">No data loaded yet.</div>
+      </section>
+      <section class="panel" data-file-panel>
+        <h2>File 2</h2>
+        <div class="upload">
+          <input type="file" class="file-input" accept=".csv,text/csv">
+          <div class="upload-note">Upload the second CSV to compare it alongside File 1.</div>
+        </div>
+        <div class="controls" hidden>
+          <div class="controls-row">
+            <div class="field"><label>X axis <select class="x-col"></select></label></div>
+            <div class="field y-columns"><label>Y columns (multi-select) <select class="y-cols" multiple size="4"></select></label></div>
+            <div class="field"><label>Chart type <select class="chart-type"><option value="line">Line</option><option value="bar">Bar</option></select></label></div>
+          </div>
+        </div>
+        <div class="chart-wrap" hidden><canvas class="chart" role="img" aria-label="Chart of selected columns">Chart of selected columns over the chosen X axis.</canvas></div>
+        <div class="empty-msg">No data loaded yet.</div>
+      </section>
+    </div>
     <a class="back" href="../index.html">← Back to dashboard</a>
   </main>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <script>
-    let rows = [], cols = [], chartObj = null;
     const palette = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
-    const fileInput = document.getElementById('fileInput');
-    const controls = document.getElementById('controls');
-    const xSelect = document.getElementById('xCol');
-    const ySelect = document.getElementById('yCols');
-    const chartWrap = document.getElementById('chartWrap');
-    const emptyMsg = document.getElementById('emptyMsg');
-
-    fileInput.addEventListener('change', event => {
-      const file = event.target.files[0];
-      if (!file) return;
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        dynamicTyping: true,
-        complete: result => {
-          rows = result.data;
-          cols = result.meta.fields || [];
-          populateSelects();
-          controls.hidden = false;
-          emptyMsg.hidden = true;
-          render();
-        }
-      });
-    });
-
-    function populateSelects() {
-      const options = cols.map(column => `<option value="${escapeHtml(column)}">${escapeHtml(column)}</option>`).join('');
-      xSelect.innerHTML = options;
-      ySelect.innerHTML = options;
-      const numericColumns = cols.filter(column => rows.some(row => typeof row[column] === 'number' && Number.isFinite(row[column])));
-      Array.from(ySelect.options).forEach(option => { option.selected = numericColumns.includes(option.value); });
-    }
 
     function escapeHtml(value) {
       return String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
     }
 
-    [xSelect, ySelect, document.getElementById('chartType')].forEach(element => element.addEventListener('change', render));
+    document.querySelectorAll('[data-file-panel]').forEach(initializePanel);
 
-    function render() {
-      const xColumn = xSelect.value;
-      const yColumns = Array.from(ySelect.selectedOptions).map(option => option.value);
-      const type = document.getElementById('chartType').value;
-      if (!xColumn || !yColumns.length || !rows.length) { chartWrap.hidden = true; return; }
-      chartWrap.hidden = false;
-      const datasets = yColumns.map((column, index) => ({
-        label: column,
-        data: rows.map(row => row[column]),
-        borderColor: palette[index % palette.length],
-        backgroundColor: type === 'bar' ? palette[index % palette.length] : palette[index % palette.length] + '1a',
-        borderWidth: 2,
-        fill: false,
-        tension: 0.2,
-        pointRadius: type === 'line' ? 3 : 0
-      }));
-      if (chartObj) chartObj.destroy();
-      chartObj = new Chart(document.getElementById('chart'), {
-        type,
-        data: { labels: rows.map(row => row[xColumn]), datasets },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#cbd5e1' }, grid: { color: '#334155' } }, x: { ticks: { color: '#cbd5e1' }, grid: { color: '#334155' } } }, plugins: { legend: { labels: { color: '#f1f5f9' } } } }
+    function initializePanel(panel) {
+      const state = { rows: [], cols: [], chart: null };
+      const fileInput = panel.querySelector('.file-input');
+      const controls = panel.querySelector('.controls');
+      const xSelect = panel.querySelector('.x-col');
+      const ySelect = panel.querySelector('.y-cols');
+      const chartType = panel.querySelector('.chart-type');
+      const chartWrap = panel.querySelector('.chart-wrap');
+      const emptyMsg = panel.querySelector('.empty-msg');
+
+      fileInput.addEventListener('change', event => {
+        const file = event.target.files[0];
+        if (!file) return;
+        Papa.parse(file, { header: true, skipEmptyLines: true, dynamicTyping: true, complete: result => {
+          state.rows = result.data;
+          state.cols = result.meta.fields || [];
+          const options = state.cols.map(column => `<option value="${escapeHtml(column)}">${escapeHtml(column)}</option>`).join('');
+          xSelect.innerHTML = options;
+          ySelect.innerHTML = options;
+          const numericColumns = state.cols.filter(column => state.rows.some(row => typeof row[column] === 'number' && Number.isFinite(row[column])));
+          Array.from(ySelect.options).forEach(option => { option.selected = numericColumns.includes(option.value); });
+          controls.hidden = false;
+          emptyMsg.hidden = true;
+          render();
+        }});
       });
+
+      [xSelect, ySelect, chartType].forEach(element => element.addEventListener('change', render));
+      function render() {
+        const xColumn = xSelect.value;
+        const yColumns = Array.from(ySelect.selectedOptions).map(option => option.value);
+        if (!xColumn || !yColumns.length || !state.rows.length) { chartWrap.hidden = true; return; }
+        chartWrap.hidden = false;
+        const type = chartType.value;
+        const datasets = yColumns.map((column, index) => ({ label: column, data: state.rows.map(row => row[column]), borderColor: palette[index % palette.length], backgroundColor: type === 'bar' ? palette[index % palette.length] : palette[index % palette.length] + '1a', borderWidth: 2, fill: false, tension: 0.2, pointRadius: type === 'line' ? 3 : 0 }));
+        if (state.chart) state.chart.destroy();
+        state.chart = new Chart(panel.querySelector('.chart'), { type, data: { labels: state.rows.map(row => row[xColumn]), datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#cbd5e1' }, grid: { color: '#334155' } }, x: { ticks: { color: '#cbd5e1' }, grid: { color: '#334155' } } }, plugins: { legend: { labels: { color: '#f1f5f9' } } } } });
+      }
     }
   </script>
 </body>
