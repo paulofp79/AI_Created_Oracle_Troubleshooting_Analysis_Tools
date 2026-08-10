@@ -121,7 +121,7 @@
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
       resize: vertical;
     }
-    #updateBtn {
+    #updateBtn, #updatePingBtn {
       background: linear-gradient(90deg, #047cfb, #1adaa6);
       color: #fff;
       border: none;
@@ -139,12 +139,12 @@
       width: 100%;
       letter-spacing: 0.5px;
     }
-    #updateBtn:hover, #updateBtn:focus {
+    #updateBtn:hover, #updateBtn:focus, #updatePingBtn:hover, #updatePingBtn:focus {
       background: linear-gradient(90deg, #1adaa6, #047cfb);
       color: #f6fcff;
       outline: none;
     }
-    #updateBtn:disabled {
+    #updateBtn:disabled, #updatePingBtn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
@@ -270,6 +270,16 @@
       color: #7bc8f8;
       margin-top: 10px;
     }
+    .control-grid, .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 18px 0; }
+    .control-grid input, .control-grid select { min-height: auto; margin-bottom: 0; width: 100%; }
+    .summary-card { background: #1a2130; border: 1px solid #2e3750; border-radius: 10px; padding: 14px 16px; }
+    .summary-card .label { color: #94a8d6; font-size: .88em; margin-bottom: 5px; }
+    .summary-card .value { color: #f7fbff; font-size: 1.35em; font-weight: 700; }
+    .data-table-wrapper { margin-top: 18px; overflow-x: auto; border: 1px solid #2e3750; border-radius: 10px; background: #13121b; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: .95em; }
+    .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #23243a; white-space: nowrap; }
+    .data-table th { color: #7bc8f8; background: #1b2232; }
+    .data-table td, .hint-text { color: #d9e7fb; }
 
     @media (max-width: 890px) {
       .container { padding: 24px 8px; }
@@ -283,7 +293,8 @@
     <div class="tab-nav">
       <button class="active" data-tab="0">Counter Analytics</button>
       <button data-tab="1">Automatic Findings</button>
-      <button data-tab="2">Key RDS Congestion Counters</button>
+      <button data-tab="2">RDS Ping Latency</button>
+      <button data-tab="3">Key RDS Congestion Counters</button>
     </div>
 
     <div class="tab-content active" id="tab-0">
@@ -307,6 +318,21 @@
     </div>
 
     <div class="tab-content" id="tab-2">
+      <h3>RDS Ping Latency</h3>
+      <p class="hint-text">Parses <code>rds-ping</code> latency lines and highlights the highest latency samples.</p>
+      <div class="control-grid">
+        <div><label for="pingEndpointSelect">Endpoint filter:</label><select id="pingEndpointSelect"><option value="">All endpoints</option></select></div>
+        <div><label for="pingQueueSelect">Queue filter:</label><select id="pingQueueSelect"><option value="">All queues</option></select></div>
+        <div><label for="pingThresholdInput">Minimum latency (usec):</label><input type="number" id="pingThresholdInput" min="0" step="100" value="0"></div>
+        <div><label for="pingTopNInput">Top rows:</label><input type="number" id="pingTopNInput" min="1" max="200" step="1" value="30"></div>
+      </div>
+      <button id="updatePingBtn" disabled>Update Latency View</button>
+      <canvas id="pingChart" width="600" height="300"></canvas>
+      <div id="pingSummary"></div>
+      <div id="pingResult"></div>
+    </div>
+
+    <div class="tab-content" id="tab-3">
       <h3>Key RDS Congestion Counters</h3>
       <div class="rds-congestion-list">
         <h4>Important counters for RDS Congestion analysis:</h4>
@@ -331,8 +357,10 @@
 
     // State
     let chart = null;
+    let pingChart = null;
     let allCounters = [];
     let samples = [];
+    let pingSamples = [];
     const COUNTER_KNOWLEDGE_BASE = {
       cong_send_blocked: { severity: 'warning', explanation: 'A blocking local socket could not send until a peer congestion update indicated space was available.', implication: 'This corresponds with delays and points to congestion on a peer socket. Identify the congested peer and determine whether traffic is excessive or peer consumers lack resources.' },
       cong_send_error: { severity: 'warning', explanation: 'A non-blocking local socket could not send because the peer socket was full (ENOBUFS).', implication: 'This corresponds with delays and is the non-blocking form of cong_send_blocked. Investigate the congested peer, traffic volume, and peer resource availability.' },
@@ -438,6 +466,7 @@
         }));
 
         extractCountersAndTimestamps(contents.join('\n'));
+        extractPingSamples(contents, files);
         populateCounterDropdown();
 
         if (allCounters.length > 0) {
@@ -450,6 +479,9 @@
           document.getElementById('updateBtn').disabled = true;
         }
         renderFindings();
+        populatePingFilters();
+        document.getElementById('updatePingBtn').disabled = !pingSamples.length;
+        if (pingSamples.length) plotPingSamples(); else clearPingView();
 
       } catch (err) {
         console.error('Error loading files:', err);
@@ -504,6 +536,43 @@
     }
 
     document.getElementById('updateBtn').addEventListener('click', plotCounters);
+    document.getElementById('updatePingBtn').addEventListener('click', plotPingSamples);
+    ['pingEndpointSelect', 'pingQueueSelect', 'pingThresholdInput', 'pingTopNInput'].forEach(id => {
+      document.getElementById(id).addEventListener(id.includes('Input') ? 'input' : 'change', plotPingSamples);
+    });
+
+    function extractPingSamples(contents, files) {
+      pingSamples = [];
+      contents.forEach((text, fileIndex) => {
+        let markerTimestamp = '';
+        text.split(/\r?\n/).forEach((line, lineIndex) => {
+          const marker = /zzz\s*<([^>]+)>/i.exec(line);
+          if (marker) markerTimestamp = formatTimestamp(marker[1]);
+          if (!/\brds-ping\b/i.test(line)) return;
+          const logTimestamp = /\[INFO:(\d{4}-\d{2}-\d{2})-(\d{2}:\d{2}:\d{2})\]/.exec(line);
+          const queue = /\s-Q\s+(\d+)/.exec(line);
+          const source = /\s-I\s+(\d+\.\d+\.\d+\.\d+)/.exec(line);
+          const targetAndLatency = /(\d+\.\d+\.\d+\.\d+):\s+\d+:\s+(\d+)\s+usec/i.exec(line);
+          const fallbackLatency = /rds-ping.*?\b(\d+):\s+(\d+)\s+usec/i.exec(line);
+          const usec = targetAndLatency ? Number(targetAndLatency[2]) : (fallbackLatency ? Number(fallbackLatency[2]) : NaN);
+          if (!Number.isFinite(usec)) return;
+          const timestamp = logTimestamp ? `${logTimestamp[1]} ${logTimestamp[2]}` : (markerTimestamp || `Line ${lineIndex + 1}`);
+          const sourceIp = source ? source[1] : 'unknown';
+          const targetIp = targetAndLatency ? targetAndLatency[1] : 'unknown';
+          pingSamples.push({ timestamp, queue: queue ? queue[1] : 'unknown', sourceIp, targetIp, endpoint: `${sourceIp} → ${targetIp}`, usec, file: files[fileIndex].name });
+        });
+      });
+      pingSamples.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    }
+
+    function populatePingFilters() {
+      const endpointSelect = document.getElementById('pingEndpointSelect');
+      const queueSelect = document.getElementById('pingQueueSelect');
+      const endpoints = [...new Set(pingSamples.map(sample => sample.endpoint))].sort();
+      const queues = [...new Set(pingSamples.map(sample => sample.queue))].sort((a, b) => Number(a) - Number(b));
+      endpointSelect.innerHTML = '<option value="">All endpoints</option>' + endpoints.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+      queueSelect.innerHTML = '<option value="">All queues</option>' + queues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+    }
 
     function getCounterPoints(counter) {
       return samples
@@ -649,6 +718,52 @@
       });
 
       document.getElementById('result').innerHTML = output;
+    }
+
+    function clearPingView(message = 'No rds-ping samples found in the loaded files.') {
+      if (pingChart) { pingChart.destroy(); pingChart = null; }
+      document.getElementById('pingSummary').innerHTML = '';
+      document.getElementById('pingResult').innerHTML = `<div class="findings-summary">${escapeHtml(message)}</div>`;
+    }
+
+    function plotPingSamples() {
+      if (!pingSamples.length) { clearPingView(); return; }
+      const endpoint = document.getElementById('pingEndpointSelect').value;
+      const queue = document.getElementById('pingQueueSelect').value;
+      const threshold = Number(document.getElementById('pingThresholdInput').value || 0);
+      const topN = Math.max(1, Number(document.getElementById('pingTopNInput').value || 30));
+      const filtered = pingSamples.filter(sample =>
+        (!endpoint || sample.endpoint === endpoint) && (!queue || sample.queue === queue) && sample.usec >= threshold
+      );
+      if (!filtered.length) { clearPingView('No rds-ping rows match the current filters.'); return; }
+
+      const byLatency = [...filtered].sort((a, b) => b.usec - a.usec);
+      const maxSample = byLatency[0];
+      const minSample = byLatency[byLatency.length - 1];
+      const average = filtered.reduce((sum, sample) => sum + sample.usec, 0) / filtered.length;
+      document.getElementById('pingSummary').innerHTML = `<div class="summary-grid">
+        <div class="summary-card"><div class="label">Matching samples</div><div class="value">${filtered.length.toLocaleString()}</div></div>
+        <div class="summary-card"><div class="label">Highest latency</div><div class="value">${maxSample.usec.toLocaleString()} usec</div></div>
+        <div class="summary-card"><div class="label">Average latency</div><div class="value">${average.toFixed(1)} usec</div></div>
+        <div class="summary-card"><div class="label">Lowest latency</div><div class="value">${minSample.usec.toLocaleString()} usec</div></div>
+      </div>`;
+
+      if (pingChart) pingChart.destroy();
+      pingChart = new Chart(document.getElementById('pingChart').getContext('2d'), {
+        type: 'line',
+        data: { labels: filtered.map(sample => sample.timestamp), datasets: [{
+          label: 'rds-ping latency (usec)', data: filtered.map(sample => sample.usec), borderColor: '#48e1f9',
+          backgroundColor: 'rgba(72, 225, 249, .15)', pointBackgroundColor: filtered.map(sample => sample === maxSample ? '#ff7b72' : '#48e1f9'),
+          pointRadius: 4, borderWidth: 2, fill: true, tension: .15
+        }] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#fff' } } }, scales: {
+          x: { ticks: { color: '#c0d1f7', maxRotation: 45, minRotation: 45 }, grid: { color: 'rgba(53, 55, 76, .27)' }, title: { display: true, text: 'Timestamp', color: '#e1edf7' } },
+          y: { ticks: { color: '#d8e3fa' }, grid: { color: 'rgba(53, 55, 76, .27)' }, title: { display: true, text: 'Latency (usec)', color: '#e1edf7' } }
+        } }
+      });
+
+      const rows = byLatency.slice(0, topN).map(sample => `<tr><td>${escapeHtml(sample.timestamp)}</td><td>${sample.usec.toLocaleString()}</td><td>${escapeHtml(sample.queue)}</td><td>${escapeHtml(sample.sourceIp)}</td><td>${escapeHtml(sample.targetIp)}</td><td>${escapeHtml(sample.file)}</td></tr>`).join('');
+      document.getElementById('pingResult').innerHTML = `<p class="hint-text">Showing the ${Math.min(topN, byLatency.length)} highest-latency rows.</p><div class="data-table-wrapper"><table class="data-table"><thead><tr><th>Timestamp</th><th>Latency (usec)</th><th>Queue</th><th>Source IP</th><th>Target IP</th><th>File</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }
   </script>
 </body>
