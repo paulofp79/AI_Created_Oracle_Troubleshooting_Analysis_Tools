@@ -202,6 +202,32 @@
       box-shadow: 0 1px 8px rgba(9, 60, 76, 0.07);
       letter-spacing: 0.1px;
     }
+    .findings-summary {
+      background: #212c40;
+      border-left: 4px solid #48e1f9;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+      color: #cfeaff;
+    }
+    .finding-card {
+      background: #212c40;
+      border-left: 4px solid #ffe066;
+      border-radius: 10px;
+      padding: 18px;
+      margin: 14px 0;
+      box-shadow: 0 1px 8px rgba(9, 60, 76, 0.12);
+    }
+    .finding-card.critical { border-left-color: #ff5c77; }
+    .finding-card.warning { border-left-color: #ffb347; }
+    .finding-card.advisory { border-left-color: #48e1f9; }
+    .finding-card h4 { margin: 0 0 10px; color: #fff; }
+    .finding-meta { color: #b2dffc; font-size: .92em; margin-bottom: 10px; }
+    .finding-card p { margin: 9px 0; color: #e5ecfa; line-height: 1.45; }
+    .severity { font-size: .78em; padding: 3px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle; }
+    .severity.critical { color: #fff; background: #b52e46; }
+    .severity.warning { color: #211600; background: #ffb347; }
+    .severity.advisory { color: #062635; background: #48e1f9; }
 
     /* Loading overlay */
     .loading-overlay {
@@ -256,7 +282,8 @@
   <div class="container">
     <div class="tab-nav">
       <button class="active" data-tab="0">Counter Analytics</button>
-      <button data-tab="1">Key RDS Congestion Counters</button>
+      <button data-tab="1">Automatic Findings</button>
+      <button data-tab="2">Key RDS Congestion Counters</button>
     </div>
 
     <div class="tab-content active" id="tab-0">
@@ -275,6 +302,11 @@
     </div>
 
     <div class="tab-content" id="tab-1">
+      <h3>Automatic Findings</h3>
+      <div id="findings"><div class="findings-summary">Load RDS data to identify counter increases and receive guidance from the RDS counter knowledge base.</div></div>
+    </div>
+
+    <div class="tab-content" id="tab-2">
       <h3>Key RDS Congestion Counters</h3>
       <div class="rds-congestion-list">
         <h4>Important counters for RDS Congestion analysis:</h4>
@@ -299,9 +331,26 @@
 
     // State
     let chart = null;
-    let unifiedText = '';
     let allCounters = [];
-    let countersToSeries = {};
+    let samples = [];
+    const COUNTER_KNOWLEDGE_BASE = {
+      cong_send_blocked: { severity: 'warning', explanation: 'A blocking local socket could not send until a peer congestion update indicated space was available.', implication: 'This corresponds with delays and points to congestion on a peer socket. Identify the congested peer and determine whether traffic is excessive or peer consumers lack resources.' },
+      cong_send_error: { severity: 'warning', explanation: 'A non-blocking local socket could not send because the peer socket was full (ENOBUFS).', implication: 'This corresponds with delays and is the non-blocking form of cong_send_blocked. Investigate the congested peer, traffic volume, and peer resource availability.' },
+      cong_update_queued: { severity: 'advisory', explanation: 'A local socket congestion-map change was sent to its peer(s).', implication: 'Local consumers are not draining sockets as fast as data arrives. Small or occasional increases are normal on busy systems; investigate sustained activity or correlation with delays.' },
+      cong_update_received: { severity: 'advisory', explanation: 'A congestion-map change was received from a peer socket.', implication: 'A peer is not draining data as fast as it arrives. Small or occasional increases are normal; investigate sustained activity or related performance symptoms.' },
+      conn_reset: { severity: 'warning', explanation: 'A local connection was reset and message state was cleared.', implication: 'Many resets are benign (for example, process death or peer shutdown). Investigate only consistent, large increases together with related errors, CQ errors, or RAC events.' },
+      ib_ack_send_failure: { severity: 'critical', explanation: 'An acknowledgement could not be posted to InfiniBand hardware; the connection is dropped and restarted.', implication: 'This is uncommon and causes delays. Investigate RDS and IB kernel debug buffers, syslog, and InfiniBand switch performance and error counters.' },
+      ib_rdma_mr_pool_wait: { severity: 'critical', explanation: 'Insufficient memory was available for an RDMA FMR-pool allocation, so processes waited for reuse.', implication: 'This causes severe delays and is uncommon. Check workload pressure, VM bugs, slow database processes returning MRs, memory leaks, TEMP spills, and excessive Exadata I/O.' },
+      ib_rx_ring_empty: { severity: 'warning', explanation: 'No receive-work-queue entries were available for incoming messages.', implication: 'This corresponds with delays because local processes are not consuming messages fast enough. Check CPU/resource starvation, VM issues affecting RDS workers, and incoming RDS volume.' },
+      ib_rx_refill_from_thread: { severity: 'advisory', explanation: 'An RDS worker refilled a receive queue that was running low on work-queue entries.', implication: 'This can precede ib_rx_ring_empty, although successful refills may be benign. Correlate it with ib_rx_ring_empty and local resource pressure.' },
+      ib_tx_ring_full: { severity: 'warning', explanation: 'The transmit work queue was full with outstanding outgoing messages.', implication: 'This corresponds with delays and suggests the receiving peer cannot keep up. Look for ib_rx_ring_empty on the peer and local cong_update_received or send_queue_full increases.' },
+      ib_tx_stalled: { severity: 'critical', explanation: 'Transmission stalled because an acknowledgement for a peer queue took too long.', implication: 'This is uncommon and indicates a problem sending to peer InfiniBand hardware. Investigate the peer and IB fabric health.' },
+      recv_drop_bad_checksum: { severity: 'critical', explanation: 'An RDS message header was invalid and the connection was dropped.', implication: 'This is uncommon and suggests data corruption. Inspect IB/RDS driver debug buffers and syslog, identify the originating path, and investigate corruption on that path.' },
+      recv_drop_dead_sock: { severity: 'warning', explanation: 'A message arrived for a dead or orphaned socket and was dropped.', implication: 'A small amount can be a process-death race. For large or persistent increases, look for failing DB processes or abnormal database shutdown.' },
+      recv_drop_no_sock: { severity: 'warning', explanation: 'A message arrived for a closed socket and was dropped.', implication: 'A small amount can be a process-death race. For large or persistent increases, look for failing DB processes or abnormal database shutdown.' },
+      recv_drop_old_seq: { severity: 'warning', explanation: 'A message with an old sequence number arrived and was dropped.', implication: 'This is uncommon and can follow retransmission after a path failover. Check local and peer messages files and RDS kernel debug buffers for fabric path failovers.' },
+      send_queue_full: { severity: 'warning', explanation: 'An RDS socket send buffer was full.', implication: 'This corresponds with delays: non-blocking sendmsg calls fail with EAGAIN and blocking calls wait for ACKs. Investigate peer throughput and the sources of outstanding traffic.' }
+    };
 
     // Utilities
     function escapeHtml(text) {
@@ -388,19 +437,19 @@
           }
         }));
 
-        unifiedText = contents.join('\n');
-        extractCounters();
+        extractCountersAndTimestamps(contents.join('\n'));
         populateCounterDropdown();
 
         if (allCounters.length > 0) {
           document.getElementById('counterSelect').selectedIndex = 0;
           document.getElementById('updateBtn').disabled = false;
           plotCounters();
-          setStatus(`Loaded ${allCounters.length} counters from ${files.length} file(s)`);
+          setStatus(`Loaded ${allCounters.length} counters across ${samples.length} timestamped sample(s) from ${files.length} file(s)`);
         } else {
           setStatus('No counters found in the loaded files');
           document.getElementById('updateBtn').disabled = true;
         }
+        renderFindings();
 
       } catch (err) {
         console.error('Error loading files:', err);
@@ -410,18 +459,37 @@
       }
     });
 
-    function extractCounters() {
-      countersToSeries = {};
-      // Match all 'name value' lines
-      const re = /^\s*([a-zA-Z0-9_]+)\s+(\d+)$/gm;
-      let match;
-      while ((match = re.exec(unifiedText)) !== null) {
-        const name = match[1];
-        const value = parseInt(match[2], 10);
-        if (!(name in countersToSeries)) countersToSeries[name] = [];
-        countersToSeries[name].push(value);
-      }
-      allCounters = Object.keys(countersToSeries).sort();
+    function formatTimestamp(raw) {
+      const iso = raw.trim().replace('T', ' ').replace(/\.\d+(?:Z|[+-]\d{4})$/, '');
+      const mdy = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(.*)$/.exec(iso);
+      return mdy ? `${mdy[3]}-${mdy[1].padStart(2, '0')}-${mdy[2].padStart(2, '0')} ${mdy[4]}` : iso;
+    }
+
+    function extractCountersAndTimestamps(text) {
+      samples = [];
+      const counterNames = new Set();
+      let currentSample = null;
+      const timestampRe = /zzz\s*<([^>]+)>/i;
+      const counterRe = /^\s*([a-zA-Z0-9_-]+)\s+(\d+)\s*$/;
+
+      text.split(/\r?\n/).forEach(line => {
+        const timestampMatch = timestampRe.exec(line);
+        if (timestampMatch) {
+          currentSample = { timestamp: formatTimestamp(timestampMatch[1]), counters: {} };
+          samples.push(currentSample);
+          return;
+        }
+        const counterMatch = counterRe.exec(line);
+        if (currentSample && counterMatch) {
+          const name = counterMatch[1];
+          currentSample.counters[name] = Number(counterMatch[2]);
+          counterNames.add(name);
+        }
+      });
+
+      samples.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+      allCounters = Array.from(counterNames).sort();
+      if (!samples.length) showError('No zzz <timestamp> markers were found. Timestamp-based analysis requires RDS samples that include these markers.');
     }
 
     function populateCounterDropdown() {
@@ -436,6 +504,57 @@
     }
 
     document.getElementById('updateBtn').addEventListener('click', plotCounters);
+
+    function getCounterPoints(counter) {
+      return samples
+        .filter(sample => Object.prototype.hasOwnProperty.call(sample.counters, counter))
+        .map(sample => ({ timestamp: sample.timestamp, value: sample.counters[counter] }));
+    }
+
+    function getIncreases(points) {
+      const increases = [];
+      for (let i = 1; i < points.length; i++) {
+        const delta = points[i].value - points[i - 1].value;
+        if (delta > 0) increases.push({ timestamp: points[i].timestamp, delta });
+      }
+      return increases;
+    }
+
+    function renderFindings() {
+      const findings = document.getElementById('findings');
+      if (!samples.length) {
+        findings.innerHTML = '<div class="findings-summary">Load timestamped RDS data to identify counter increases and receive knowledge-base guidance.</div>';
+        return;
+      }
+
+      const detected = Object.entries(COUNTER_KNOWLEDGE_BASE).map(([counter, knowledge]) => {
+        const increases = getIncreases(getCounterPoints(counter));
+        return { counter, knowledge, increases, totalIncrease: increases.reduce((sum, item) => sum + item.delta, 0) };
+      }).filter(finding => finding.increases.length);
+
+      if (!detected.length) {
+        findings.innerHTML = `<div class="findings-summary"><strong>No known RDS counter increases were detected.</strong><br>Checked ${samples.length} timestamped sample(s). This does not rule out counters absent from the supplied knowledge base.</div>`;
+        return;
+      }
+
+      const severityOrder = { critical: 0, warning: 1, advisory: 2 };
+      detected.sort((a, b) => severityOrder[a.knowledge.severity] - severityOrder[b.knowledge.severity] || b.totalIncrease - a.totalIncrease);
+      const counts = detected.reduce((result, finding) => {
+        result[finding.knowledge.severity]++;
+        return result;
+      }, { critical: 0, warning: 0, advisory: 0 });
+      const cards = detected.map(({ counter, knowledge, increases, totalIncrease }) => {
+        const latest = increases[increases.length - 1];
+        const label = knowledge.severity === 'advisory' ? 'ADVISORY' : knowledge.severity.toUpperCase();
+        return `<article class="finding-card ${knowledge.severity}">
+          <h4><code>${escapeHtml(counter)}</code><span class="severity ${knowledge.severity}">${label}</span></h4>
+          <div class="finding-meta">${increases.length} increasing interval(s) · total observed increase ${totalIncrease.toLocaleString()} · latest ${latest.timestamp} (+${latest.delta.toLocaleString()})</div>
+          <p><strong>What it means:</strong> ${escapeHtml(knowledge.explanation)}</p>
+          <p><strong>Why it matters / next step:</strong> ${escapeHtml(knowledge.implication)}</p>
+        </article>`;
+      }).join('');
+      findings.innerHTML = `<div class="findings-summary"><strong>${detected.length} knowledge-base finding(s)</strong> across ${samples.length} timestamped samples: ${counts.critical} critical, ${counts.warning} warning, ${counts.advisory} advisory.<br><small>RDS counters are cumulative. Findings use positive changes between reported values; the supplied knowledge base has no numeric thresholds, so advisories identify signals that need correlation rather than declaring an incident.</small></div>${cards}`;
+    }
 
     function plotCounters() {
       const select = document.getElementById('counterSelect');
@@ -454,16 +573,15 @@
 
       const datasets = [];
       let output = '';
-      let maxLength = 0;
 
       selected.forEach((counter, idx) => {
-        const values = countersToSeries[counter];
-        if (!values || values.length < 2) {
+        const points = getCounterPoints(counter);
+        const values = points.map(point => point.value);
+        if (values.length < 2) {
           output += `<div style="margin-bottom:15px"><b>${escapeHtml(counter)}</b><br>Not enough data for statistics (need at least 2 samples).</div>`;
           return;
         }
 
-        maxLength = Math.max(maxLength, values.length);
         const first = values[0];
         const last = values[values.length - 1];
         const diff = last - first;
@@ -486,7 +604,7 @@
 
         datasets.push({
           label: counter,
-          data: values,
+          data: samples.map(sample => Object.prototype.hasOwnProperty.call(sample.counters, counter) ? sample.counters[counter] : null),
           borderColor: colors[idx % colors.length],
           backgroundColor: colors[idx % colors.length] + '44',
           fill: false,
@@ -496,7 +614,7 @@
         });
       });
 
-      const labels = Array.from({ length: maxLength }, (_, i) => `Sample ${i + 1}`);
+      const labels = samples.map(sample => sample.timestamp);
 
       const ctx = document.getElementById('myChart').getContext('2d');
       if (chart) chart.destroy();
@@ -519,7 +637,7 @@
             x: {
               ticks: { color: '#c0d1f7' },
               grid: { color: 'rgba(53, 55, 76, 0.27)' },
-              title: { display: true, text: 'Sample/Interval', color: '#e1edf7', font: { weight: 'bold' } }
+              title: { display: true, text: 'Timestamp', color: '#e1edf7', font: { weight: 'bold' } }
             },
             y: {
               ticks: { color: '#d8e3fa' },

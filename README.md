@@ -61,8 +61,9 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 
 **Features:**
 - Multi-file upload (supports `.xz` compression)
-- Counter trend visualization
+- Timestamp-aligned counter trend visualization
 - Statistics calculation (total increase, per-interval increase)
+- Automatic knowledge-base findings for increasing RDS counters
 - Key congestion counter reference
 
 ### 4. Exa_Cell_Metrics_Chart.html

@@ -34,6 +34,7 @@ zzz <2025-08-05T10:00:05.000-0000>
 **File:** `sample_rds.dat`
 
 ```
+zzz <2025-08-05T10:00:00.000-0000>
 send_lock_contention 12345
 send_lock_queue_raced 678
 cong_update_queued 910
@@ -41,7 +42,17 @@ cong_update_received 1112
 cong_send_error 0
 ib_tx_ring_full 50
 ib_tx_stalled 25
+zzz <2025-08-05T10:00:05.000-0000>
+send_lock_contention 12347
+send_lock_queue_raced 678
+cong_update_queued 911
+cong_update_received 1114
+cong_send_error 1
+ib_tx_ring_full 50
+ib_tx_stalled 25
 ```
+
+Each RDS collection block must start with a `zzz <timestamp>` marker. The RDS Info Analysis chart and automatic findings use these timestamps to align counter values and calculate counter increases.
 
 ### For CPU_Charts_From_ATP_Files.html
 
