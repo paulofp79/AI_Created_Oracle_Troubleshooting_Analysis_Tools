@@ -161,6 +161,28 @@
     }
     .export-btn:hover { background: #2a7a4a; }
     .export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .filter-help {
+      color: #aaa;
+      margin: 0 0 12px;
+    }
+    .result-count {
+      color: #00e5ff;
+      margin: 12px 0 0;
+    }
+    .metrics-table-wrap {
+      max-height: 560px;
+      overflow: auto;
+      margin-top: 12px;
+      border: 1px solid #333;
+      border-radius: 5px;
+    }
+    .metrics-table-wrap table { margin-top: 0; }
+    .metrics-table-wrap th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
   </style>
 </head>
 <body>
@@ -178,6 +200,7 @@
     <div class="tab" data-tab="sioAlerts">Smart I/O</div>
     <div class="tab" data-tab="cdioAlerts">Cell Disk</div>
     <div class="tab" data-tab="summary">Summary</div>
+    <div class="tab" data-tab="metricFilter">Metric Filter</div>
   </div>
 
   <!-- Charts Tab -->
@@ -218,6 +241,27 @@
   <div id="summary" class="tabContent">
     <h3>Overall Performance Summary</h3>
     <div id="summaryTable"></div>
+  </div>
+
+  <!-- Metric Filter Tab -->
+  <div id="metricFilter" class="tabContent">
+    <h3>Filter Metrics by Name</h3>
+    <p class="filter-help">Enter a full or partial metric name to view every matching metric record. For example: <code>FC_BY_ALLOCATED</code>.</p>
+    <div class="controls">
+      <div>
+        <label for="metricNameFilter">Metric name:</label>
+        <input id="metricNameFilter" type="search" placeholder="e.g. FC_BY_ALLOCATED" disabled autocomplete="off">
+      </div>
+      <div>
+        <label for="metricMatchType">Match:</label>
+        <select id="metricMatchType" disabled>
+          <option value="contains">Contains</option>
+          <option value="exact">Exact name</option>
+        </select>
+      </div>
+    </div>
+    <div id="metricFilterCount" class="result-count">Load a metrics file to filter its records.</div>
+    <div id="metricFilterResults"></div>
   </div>
 
   <footer>Paulo Portugal - Oracle XTeam</footer>
@@ -314,6 +358,9 @@
           generateSIOAlerts();
           generateCDIOAlerts();
           generateSummary();
+          document.getElementById('metricNameFilter').disabled = false;
+          document.getElementById('metricMatchType').disabled = false;
+          renderMetricFilterResults();
 
           // Enable export
           document.getElementById('exportBtn').disabled = false;
@@ -347,6 +394,49 @@
     });
 
     document.getElementById('targetSelect').addEventListener('change', drawCharts);
+
+    document.getElementById('metricNameFilter').addEventListener('input', renderMetricFilterResults);
+    document.getElementById('metricMatchType').addEventListener('change', renderMetricFilterResults);
+
+    function renderMetricFilterResults() {
+      const filter = document.getElementById('metricNameFilter').value.trim().toUpperCase();
+      const exactMatch = document.getElementById('metricMatchType').value === 'exact';
+      const count = document.getElementById('metricFilterCount');
+      const results = document.getElementById('metricFilterResults');
+
+      if (!parsedData.length) {
+        count.textContent = 'Load a metrics file to filter its records.';
+        results.innerHTML = '';
+        return;
+      }
+
+      if (!filter) {
+        count.textContent = `Enter a metric name to search ${parsedData.length} loaded records.`;
+        results.innerHTML = '';
+        return;
+      }
+
+      const matches = parsedData.filter(d => {
+        const metric = d.metric.toUpperCase();
+        return exactMatch ? metric === filter : metric.includes(filter);
+      });
+      const metricCount = new Set(matches.map(d => d.metric)).size;
+      count.textContent = `${matches.length} record${matches.length === 1 ? '' : 's'} across ${metricCount} metric name${metricCount === 1 ? '' : 's'} found.`;
+
+      if (!matches.length) {
+        results.innerHTML = '<p style="color: #888;">No metric records match that name.</p>';
+        return;
+      }
+
+      results.innerHTML = `
+        <div class="metrics-table-wrap">
+          <table>
+            <thead><tr><th>Metric</th><th>Target</th><th>Value</th><th>Timestamp</th></tr></thead>
+            <tbody>${matches.map(d => `<tr><td>${escapeHtml(d.metric)}</td><td>${escapeHtml(d.target)}</td><td>${d.value}</td><td>${escapeHtml(d.ts)}</td></tr>`).join('')}</tbody>
+          </table>
+        </div>
+      `;
+    }
 
     function drawCharts() {
       const metric = document.getElementById('metricSelect').value;
