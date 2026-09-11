@@ -365,6 +365,15 @@
           <a href="#" class="tool-link streamlit-link" data-streamlit-port="8503" target="_blank" rel="noopener noreferrer">Open Tool</a>
           <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">Iostat Tool: <a href="#" class="streamlit-link" data-streamlit-port="8503" target="_blank" rel="noopener noreferrer" style="color: var(--accent);"></a></p>
         </div>
+
+        <div class="tool-card python-card">
+          <span class="tool-type">Python/Streamlit</span>
+          <div class="tool-icon">NET</div>
+          <h3 class="tool-title">ExaWatcher Netstat Analyzer</h3>
+          <p class="tool-desc">Analyze plain or .xz-compressed netstat captures for peak traffic, optional capacity utilization, TCP retransmissions, timeouts, and interface errors/drops.</p>
+          <a href="#" class="tool-link streamlit-link" data-streamlit-port="8504" target="_blank" rel="noopener noreferrer">Open Tool</a>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">Netstat Tool: <a href="#" class="streamlit-link" data-streamlit-port="8504" target="_blank" rel="noopener noreferrer" style="color: var(--accent);"></a></p>
+        </div>
       </div>
 
       <div style="margin-top: 30px; padding: 20px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border);">
@@ -384,6 +393,10 @@
         </div>
         <div class="command-box" style="margin-top: 10px;">
           <code>streamlit run python/Iostat_Analyzer.py --server.port 8503</code>
+          <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+        </div>
+        <div class="command-box" style="margin-top: 10px;">
+          <code>streamlit run python/Netstat_Analyzer.py --server.port 8504</code>
           <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
         </div>
       </div>
@@ -411,6 +424,7 @@
           <li><strong>ECS Analysis:</strong> .dat files from ECStatJSONExaWatcher</li>
           <li><strong>CPU Charts:</strong> .zip files containing CPUManager_*.json</li>
           <li><strong>RDS Analysis:</strong> .dat, .txt, or .xz compressed files</li>
+          <li><strong>Netstat Analysis:</strong> ExaWatcher netstat output in plain text, .xz, or .bz2 format</li>
           <li><strong>ExaCC Metrics:</strong> Tab-separated .lst or .txt files</li>
           <li><strong>Oracle Query CSV Charter:</strong> CSV query output from SQL*Plus or SQLcl</li>
           <li><strong>FlashcacheContent Analysis:</strong> CSV from <code>scripts/extract_flashcache.sh</code> or a CSV export of the <code>fc_by_object</code> view</li>

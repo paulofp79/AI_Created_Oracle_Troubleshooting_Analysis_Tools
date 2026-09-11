@@ -80,6 +80,35 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
 10:00:01  2  0      0 7950000 200000 4000000    0    0    15    25 1100 2100 28 12 55  5  0
 ```
 
+### For Netstat_Analyzer.py
+
+**File:** ExaWatcher netstat output, optionally compressed as `.xz`
+
+```text
+# Starting Time: 2026/09/10 10:00:00
+# Sample Interval(s): 60
+zzz <09/10/2026 10:00:00> subcount:
+Iface MTU RX-OK RX-ERR RX-DRP RX-OVR TX-OK TX-ERR TX-DRP TX-OVR Flg
+bondeth0 1500 100 0 0 0 200 0 0 0 BMRU
+InOctets: 1000000
+OutOctets: 2000000
+10 segments retransmitted
+1000 segments sent
+TCPTimeouts: 0
+zzz <09/10/2026 10:01:00> subcount:
+Iface MTU RX-OK RX-ERR RX-DRP RX-OVR TX-OK TX-ERR TX-DRP TX-OVR Flg
+bondeth0 1500 200 0 1 0 400 0 0 0 BMRU
+InOctets: 101000000
+OutOctets: 202000000
+11 segments retransmitted
+2000 segments sent
+TCPTimeouts: 1
+```
+
+The analyzer calculates rates from the cumulative `InOctets` and `OutOctets`
+counters. Enter an aggregate bidirectional capacity in the sidebar if a
+percentage utilization view is needed.
+
 ### For alertlog_analyzer.html
 
 **File:** `alert_DBNAME.log`

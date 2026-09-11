@@ -30,6 +30,7 @@ This toolkit provides interactive visualization and analysis capabilities for:
 - **Oracle alert log parsing** with timeline visualization
 - **ExaCC metrics dashboards** with performance alerts
 - **Smart Flash Cache content** by database, object, object type, hit ratio, and storage cell
+- **Network traffic and health** from ExaWatcher netstat output, including `.xz` archives
 
 All HTML-based tools run entirely in the browser with no server required. The Python tool uses Streamlit for an interactive web interface.
 
@@ -47,7 +48,18 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Delta calculation for cumulative counters
 - Interactive metric selection and filtering
 
-### 2. CPU_Charts_From_ATP_Files.html
+### 2. Netstat_Analyzer.py (Streamlit App)
+**Purpose:** Analyze ExaWatcher netstat output for network throughput and health signals
+
+**Features:**
+- Upload plain text, `.xz`, or `.bz2` netstat captures, or provide server-side paths
+- Calculates inbound, outbound, and total peak/average/p95/p99 throughput from `InOctets` and `OutOctets`
+- Optionally calculates utilization against a user-supplied aggregate bidirectional capacity
+- Delta-aligns TCP/IP counters and interface RX/TX errors, drops, and overruns
+- Highlights retransmission ratios, timeouts, packet drops, and interface events with source timestamps
+- CSV downloads for samples, rate intervals, and interface deltas
+
+### 3. CPU_Charts_From_ATP_Files.html
 **Purpose:** Visualize CPU utilization from zipped CPUManager JSON exports
 
 **Features:**
@@ -56,7 +68,7 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - CSV export capability
 - Interactive chart with series toggles
 
-### 3. RDS_Info_Analysis.html
+### 4. RDS_Info_Analysis.html
 **Purpose:** Analyze RDS (Relational Database Service) congestion counters
 
 **Features:**
@@ -66,7 +78,7 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Automatic knowledge-base findings for increasing RDS counters
 - Key congestion counter reference
 
-### 4. Exa_Cell_Metrics_Chart.html
+### 5. Exa_Cell_Metrics_Chart.html
 **Purpose:** ExaCC (Exadata Cloud@Customer) metrics dashboard
 
 **Features:**
@@ -75,7 +87,7 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Color-coded severity levels (Normal/Warning/Critical)
 - Click-to-navigate from alerts to charts
 
-### 5. alertlog_analyzer.html
+### 6. alertlog_analyzer.html
 **Purpose:** Parse and analyze Oracle alert log files
 
 **Features:**
@@ -86,7 +98,7 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Syntax highlighting for ORA- errors, FATAL, FAIL
 - Timeline visualization with Chart.js
 
-### 6. vmstat_multi_plot_with_swap_alerts_highlight.html
+### 7. vmstat_multi_plot_with_swap_alerts_highlight.html
 **Purpose:** Analyze vmstat data for memory pressure issues
 
 **Features:**
@@ -95,7 +107,7 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Automatic swap utilization alerts
 - CSV export
 
-### 7. FlashcacheContent Analysis Tool
+### 8. FlashcacheContent Analysis Tool
 **Purpose:** Collect and explore Exadata Smart Flash Cache contents to identify cache consumers, cold-cache candidates, and cell skew.
 
 **Workflow:**
@@ -129,6 +141,25 @@ pip install -r requirements.txt
 Or install manually:
 ```bash
 pip install streamlit pandas plotly
+```
+
+The startup scripts use a virtual environment at `.venv` by default. The
+Python version used to create it is not fixed; Python 3.11, 3.12, or another
+supported version may be used:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+`startall.sh` and `stopall.sh` validate that this virtual environment exists
+before changing application state. If a virtual environment is already
+activated, the scripts use it automatically. Otherwise, to use a virtual
+environment elsewhere, set either variable when invoking the scripts:
+
+```bash
+PYTHON_ENV_DIR=/opt/exadata-tools-venv ./startall.sh
+PYTHON_BIN=/opt/exadata-tools-venv/bin/python ./startall.sh
 ```
 
 ---
@@ -182,6 +213,14 @@ streamlit run python/ECS_Analysis.py
 
 Then open http://localhost:8501 in your browser.
 
+### Python Tool (Netstat_Analyzer.py)
+
+```bash
+python3 -m streamlit run python/Netstat_Analyzer.py --server.port 8504
+```
+
+Then open http://localhost:8504 in your browser.
+
 ---
 
 ## Input File Formats
@@ -223,6 +262,21 @@ cong_update_queued 67890
 - **Format:** vmstat output files
 - **Structure:** vmstat output with optional `# Starting Time:` header
 
+### Netstat_Analyzer.py
+- **Format:** ExaWatcher netstat output, plain text or `.xz`/`.bz2` compressed
+- **Structure:** Repeated `zzz <timestamp>` sample blocks containing interface rows and cumulative `netstat -s -e` counters
+
+```text
+zzz <09/10/2026 10:00:00> subcount:
+Iface MTU RX-OK RX-ERR RX-DRP RX-OVR TX-OK TX-ERR TX-DRP TX-OVR Flg
+bondeth0 1500 100 0 0 0 200 0 0 0 BMRU
+InOctets: 1000000
+OutOctets: 2000000
+10 segments retransmitted
+100 segments sent
+TCPTimeouts: 0
+```
+
 ### FlashcacheContent Analysis Tool
 - **Raw format:** Timestamped `flashcache_*.csv` output from `scripts/extract_flashcache.sh`
 - **Rollup format:** CSV export of `SELECT * FROM fc_by_object ORDER BY cached_mb DESC`
@@ -239,7 +293,10 @@ cong_update_queued 67890
 ├── index.html                # Main dashboard
 │
 ├── python/                   # Python scripts
-│   └── ECS_Analysis.py       # Streamlit ECstat analyzer
+│   ├── ECS_Analysis.py       # Streamlit ECstat analyzer
+│   ├── Iostat_Analyzer.py    # Streamlit ExaWatcher iostat analyzer
+│   ├── Netstat_Analyzer.py   # Streamlit ExaWatcher netstat analyzer
+│   └── netstat_analysis.py   # Standard-library netstat parser and analysis helpers
 │
 ├── html/                     # HTML-based tools
 │   ├── alertlog_analyzer.html
