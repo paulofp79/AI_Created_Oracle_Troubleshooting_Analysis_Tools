@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VMStat Continuous Plotter and Diagnostic Analyzer</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- fflate provides browser-side .xz decompression; files remain local to the browser. -->
-  <script src="https://cdn.jsdelivr.net/npm/fflate/umd/index.js"></script>
+  <!-- xz-decompress provides browser-side XZ decompression; files remain local to the browser. -->
+  <script src="https://cdn.jsdelivr.net/npm/xz-decompress@0.2.3/dist/package/xz-decompress.min.js"></script>
   <script src="../assets/common.js"></script>
   <style>
     body {
@@ -430,12 +430,21 @@
         return { text: await file.text(), compressed: false };
       }
 
-      if (typeof fflate === 'undefined' || typeof fflate.xzDecompress !== 'function') {
-        throw new Error('XZ decompression is unavailable. Check that the fflate library loaded.');
+      const xzModule = typeof globalThis !== 'undefined' ? globalThis['xz-decompress'] : null;
+      if (!xzModule || typeof xzModule.XzReadableStream !== 'function') {
+        throw new Error('XZ decompression is unavailable. Check that the xz-decompress library loaded.');
       }
 
       const buffer = await file.arrayBuffer();
-      const decompressed = fflate.xzDecompress(new Uint8Array(buffer));
+      if (typeof Blob === 'undefined' || typeof Response === 'undefined') {
+        throw new Error('This browser does not provide the Streams API required for XZ decompression.');
+      }
+
+      const compressedStream = new Blob([buffer]).stream();
+      const decompressedResponse = new Response(
+        new xzModule.XzReadableStream(compressedStream)
+      );
+      const decompressed = await decompressedResponse.arrayBuffer();
       return {
         text: new TextDecoder().decode(decompressed),
         compressed: true
@@ -893,7 +902,7 @@
             result.error,
             'The file did not reach VMStat parsing, so no performance conclusion can be drawn from it.',
             result.compressed
-              ? 'Confirm the .xz archive is complete and valid, and that the browser can load the fflate dependency. Re-create or decompress the capture with xz -t/xz -d if needed.'
+              ? 'Confirm the .xz archive is complete and valid, and that the browser can load the xz-decompress dependency. Re-create or decompress the capture with xz -t/xz -d if needed.'
               : 'Confirm the file is readable text and contains timestamped VMStat rows with the expected headers.'
           ));
           return;
