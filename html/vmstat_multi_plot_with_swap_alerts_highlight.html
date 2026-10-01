@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VMStat Continuous Plotter (Split Swap)</title>
+  <title>VMStat Continuous Plotter and Diagnostic Analyzer</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- fflate provides browser-side .xz decompression; files remain local to the browser. -->
+  <script src="https://cdn.jsdelivr.net/npm/fflate/umd/index.js"></script>
   <script src="../assets/common.js"></script>
   <style>
     body {
@@ -77,6 +79,38 @@
     .alert-yes { color: #ffc107; }
     .alert-no { color: #4caf50; }
 
+    .diagnostic-note {
+      background: #202a36;
+      border-left: 4px solid #48e1f9;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      color: #c7d6e5;
+      line-height: 1.45;
+    }
+    .diagnostic-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .diagnostic-pill {
+      border: 1px solid #45515f;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      background: #20242c;
+    }
+    .severity-critical { color: #ff8a80; }
+    .severity-warning { color: #ffc107; }
+    .severity-advisory { color: #7bc8f8; }
+    .severity-normal { color: #4caf50; }
+    .diagnostic-table { font-size: 13px; }
+    .diagnostic-table th, .diagnostic-table td { vertical-align: top; }
+    .diagnostic-table td { line-height: 1.4; }
+    .finding-title { font-weight: bold; color: #fff; margin-bottom: 4px; }
+    .finding-evidence { color: #b8c6d4; }
+    .diagnostic-empty { color: #8fd694; padding: 12px 0; }
     .status-text {
       color: #7bc8f8;
       font-size: 14px;
@@ -134,12 +168,13 @@
 </head>
 <body>
   <h2>VMStat Continuous Plotter</h2>
-  <p>Select one or more vmstat files to stitch together into a continuous timeline:</p>
+  <p>Select one or more vmstat files to stitch together into a continuous timeline. Plain text and <code>.dat.xz</code>/<code>.xz</code> captures are supported.</p>
 
   <div class="controls">
-    <input type="file" id="fileInput" multiple>
+    <input type="file" id="fileInput" multiple accept=".dat,.dat.xz,.txt,.xz">
     <button onclick="handleFiles()">Plot & Analyze</button>
     <button class="export-btn" id="exportBtn" onclick="exportToCsv()" disabled>Export CSV</button>
+    <button class="export-btn" id="exportDiagnosticsBtn" onclick="exportDiagnosticsToCsv()" disabled>Export Diagnostics</button>
     <button onclick="clearAll()">Clear</button>
   </div>
 
@@ -186,6 +221,15 @@
     <tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>
   </table>
 
+  <h3>Automated Diagnostic Findings</h3>
+  <div class="diagnostic-note">
+    These findings are screening heuristics from the loaded samples, not root-cause proof. Correlate the timestamps with OS, database, storage, and Exadata telemetry before changing configuration. “Possible action” is deliberately phrased as an investigation or remediation direction, not a guaranteed fix.
+  </div>
+  <div id="diagnosticSummary" class="diagnostic-summary"></div>
+  <table id="diagnosticTable" class="diagnostic-table">
+    <tr><th>Source</th><th>Severity</th><th>Signal and evidence</th><th>What it may indicate</th><th>Investigate / possible action</th></tr>
+  </table>
+
   <script>
     let chart1, chart2, chart3;
     let allRecords = [];
@@ -218,63 +262,188 @@
       document.getElementById('statusText').textContent = message;
     }
 
-    function parseVmstat(text, fileName) {
-      const lines = text.split('\n');
-      let startTime = null;
+    const DEFAULT_VMSTAT_COLUMNS = [
+      'r', 'b', 'swpd', 'free', 'buff', 'cache', 'si', 'so',
+      'bi', 'bo', 'in', 'cs', 'us', 'sy', 'id', 'wa', 'st'
+    ];
+    const REQUIRED_VMSTAT_COLUMNS = ['free', 'si', 'so', 'us', 'sy', 'id', 'wa'];
 
-      // Try to find starting time in header
-      const startMatch = text.match(/# Starting Time:\s*([0-9/]+)\s+([0-9:]+)/);
-      if (startMatch) {
-        startTime = new Date(startMatch[1] + ' ' + startMatch[2]);
-      }
-
-      const intervalSec = 1; // vmstat default interval
-      let t = startTime ? new Date(startTime) : null;
-
-      const records = [];
-
-      for (let line of lines) {
-        line = line.trim();
-
-        // Match lines starting with timestamp HH:MM:SS
-        if (!line.match(/^\d\d:\d\d:\d\d/)) continue;
-
-        const parts = line.split(/\s+/);
-        if (parts.length < 17) continue;
-
-        try {
-          const free = parseInt(parts[4]) || 0;
-          const si = parseInt(parts[6]) || 0;
-          const so = parseInt(parts[7]) || 0;
-          const us = parseInt(parts[parts.length - 5]) || 0;
-          const sy = parseInt(parts[parts.length - 4]) || 0;
-          const id = parseInt(parts[parts.length - 3]) || 0;
-          const wa = parseInt(parts[parts.length - 2]) || 0;
-
-          const ts = t ? new Date(t) : new Date();
-          if (t) t = new Date(t.getTime() + intervalSec * 1000);
-
-          records.push({
-            ts,
-            free,
-            si,
-            so,
-            us,
-            sy,
-            id,
-            wa,
-            file: fileName
-          });
-        } catch (e) {
-          console.warn('Failed to parse line:', line);
-        }
-      }
-
-      return records;
+    function updateLoading(message) {
+      const messageElement = document.querySelector('#loadingOverlay .loading-message');
+      if (messageElement) messageElement.textContent = message;
     }
 
-    function handleFiles() {
-      const files = document.getElementById('fileInput').files;
+    function normaliseColumnName(value) {
+      return value.toLowerCase().replace(/[^a-z]/g, '');
+    }
+
+    function parseNumber(value) {
+      const number = Number(String(value).replace(/,/g, ''));
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function parseDateSafely(value) {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function inferStartTime(text, fileName) {
+      const startMatch = text.match(/#\s*Starting Time:\s*([0-9/.-]+)\s+([0-9:]+)/i);
+      if (startMatch) {
+        const headerDate = parseDateSafely(startMatch[1] + ' ' + startMatch[2]);
+        if (headerDate) return headerDate;
+      }
+
+      // ExaWatcher filenames commonly carry YYYY_MM_DD_HH_MM_SS.
+      const fileMatch = fileName.match(/(20\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})/);
+      if (fileMatch) {
+        const inferred = new Date(
+          Number(fileMatch[1]), Number(fileMatch[2]) - 1, Number(fileMatch[3]),
+          Number(fileMatch[4]), Number(fileMatch[5]), Number(fileMatch[6])
+        );
+        if (!Number.isNaN(inferred.getTime())) return inferred;
+      }
+
+      return null;
+    }
+
+    function findVmstatColumns(lines) {
+      for (const line of lines) {
+        const tokens = line.trim().split(/\s+/).map(normaliseColumnName);
+        const start = tokens.indexOf('r');
+        if (start < 0) continue;
+
+        const candidate = tokens.slice(start);
+        const hasRequiredColumns = REQUIRED_VMSTAT_COLUMNS.every(column => candidate.includes(column));
+        if (hasRequiredColumns) return candidate;
+      }
+      return DEFAULT_VMSTAT_COLUMNS.slice();
+    }
+
+    function extractTimestampPrefix(line) {
+      const match = line.match(/^((?:\d{4}[-/]\d{1,2}[-/]\d{1,2}[T ]\d{1,2}:\d{2}:\d{2}(?:\.\d+)?|\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}:\d{2}|\d{2}:\d{2}:\d{2}(?:\.\d+)?))(?:\s+|$)/);
+      return match ? { raw: match[1], length: match[0].length } : null;
+    }
+
+    function timestampForRow(rawTimestamp, startTime, previousTimestamp, generatedTimestamp) {
+      if (!rawTimestamp) return new Date(generatedTimestamp);
+
+      if (/^\d{2}:\d{2}:\d{2}/.test(rawTimestamp)) {
+        const base = startTime ? new Date(startTime) : new Date();
+        const clock = rawTimestamp.split(':');
+        const seconds = Number(clock[2]);
+        base.setHours(Number(clock[0]), Number(clock[1]), Math.floor(seconds), Math.round((seconds % 1) * 1000));
+
+        let timestamp = base;
+        while (previousTimestamp && timestamp.getTime() < previousTimestamp.getTime()) {
+          timestamp = new Date(timestamp.getTime() + 24 * 60 * 60 * 1000);
+        }
+        return timestamp;
+      }
+
+      return parseDateSafely(rawTimestamp) || new Date(generatedTimestamp);
+    }
+
+    function parseVmstatFile(text, fileName) {
+      const lines = text.split(/\r?\n/);
+      const columns = findVmstatColumns(lines);
+      const startTime = inferStartTime(text, fileName);
+      const records = [];
+      let candidateLines = 0;
+      let skippedLines = 0;
+      let previousTimestamp = null;
+      let generatedTimestamp = startTime ? new Date(startTime) : new Date();
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line || line.startsWith('#')) continue;
+
+        const timestampPrefix = extractTimestampPrefix(line);
+        const parts = timestampPrefix
+          ? line.slice(timestampPrefix.length).trim().split(/\s+/)
+          : [];
+        if (!timestampPrefix) continue;
+        candidateLines++;
+
+        if (parts.length < 10) {
+          skippedLines++;
+          continue;
+        }
+
+        const values = {};
+        columns.forEach((column, index) => {
+          values[column] = parseNumber(parts[index]);
+        });
+
+        const timestamp = timestampForRow(
+          timestampPrefix.raw, startTime, previousTimestamp, generatedTimestamp
+        );
+        previousTimestamp = timestamp;
+        generatedTimestamp = new Date(timestamp.getTime() + 1000);
+
+        records.push({
+          ts: timestamp,
+          r: values.r,
+          b: values.b,
+          swpd: values.swpd,
+          free: values.free,
+          buff: values.buff,
+          cache: values.cache,
+          si: values.si,
+          so: values.so,
+          bi: values.bi,
+          bo: values.bo,
+          intr: values.in,
+          cs: values.cs,
+          us: values.us,
+          sy: values.sy,
+          id: values.id,
+          wa: values.wa,
+          st: values.st,
+          file: fileName
+        });
+      }
+
+      const warnings = [];
+      if (!records.length) {
+        warnings.push('No timestamped vmstat data rows were recognized.');
+      } else if (skippedLines) {
+        warnings.push(`${skippedLines} timestamped row(s) were skipped because they had too few columns.`);
+      }
+
+      return {
+        records,
+        warnings,
+        candidateLines,
+        columns
+      };
+    }
+
+    // Kept as a small compatibility wrapper for callers that only need records.
+    function parseVmstat(text, fileName) {
+      return parseVmstatFile(text, fileName).records;
+    }
+
+    async function readVmstatFile(file) {
+      const isCompressed = file.name.toLowerCase().endsWith('.xz');
+      if (!isCompressed) {
+        return { text: await file.text(), compressed: false };
+      }
+
+      if (typeof fflate === 'undefined' || typeof fflate.xzDecompress !== 'function') {
+        throw new Error('XZ decompression is unavailable. Check that the fflate library loaded.');
+      }
+
+      const buffer = await file.arrayBuffer();
+      const decompressed = fflate.xzDecompress(new Uint8Array(buffer));
+      return {
+        text: new TextDecoder().decode(decompressed),
+        compressed: true
+      };
+    }
+
+    async function handleFiles() {
+      const files = Array.from(document.getElementById('fileInput').files);
       if (!files.length) {
         alert('Please select at least one vmstat file!');
         return;
@@ -284,50 +453,56 @@
       allRecords = [];
       fileResults = [];
 
-      const readers = [];
-      for (let i = 0; i < files.length; i++) {
-        readers.push(new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const records = parseVmstat(reader.result, files[i].name);
-            resolve({ name: files[i].name, records });
+      const results = await Promise.all(files.map(async (file, index) => {
+        try {
+          updateLoading(`Reading ${file.name} (${index + 1}/${files.length})`);
+          const loaded = await readVmstatFile(file);
+          const parsed = parseVmstatFile(loaded.text, file.name);
+          return { name: file.name, compressed: loaded.compressed, ...parsed };
+        } catch (error) {
+          console.error('Error reading', file.name, error);
+          return {
+            name: file.name,
+            compressed: file.name.toLowerCase().endsWith('.xz'),
+            records: [],
+            warnings: [],
+            candidateLines: 0,
+            columns: [],
+            error: error.message
           };
-          reader.onerror = () => reject(new Error(`Failed to read ${files[i].name}`));
-          reader.readAsText(files[i]);
-        }));
+        }
+      }));
+
+      fileResults = results;
+      results.forEach(result => {
+        allRecords = allRecords.concat(result.records);
+      });
+      allRecords.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+
+      showAlerts();
+      renderDiagnostics();
+      document.getElementById('exportDiagnosticsBtn').disabled = !diagnosticFindings.length;
+
+      if (!allRecords.length) {
+        document.getElementById('exportBtn').disabled = true;
+        document.getElementById('statsBox').style.display = 'none';
+        setStatus('No valid vmstat data found in the selected files. See diagnostic findings for file-level errors.');
+        hideLoading();
+        return;
       }
 
-      Promise.all(readers)
-        .then(results => {
-          fileResults = results;
+      plotCharts();
+      updateStats();
+      document.getElementById('exportBtn').disabled = false;
 
-          // Merge all records
-          results.forEach(r => {
-            allRecords = allRecords.concat(r.records);
-          });
-
-          // Sort by timestamp
-          allRecords.sort((a, b) => new Date(a.ts) - new Date(b.ts));
-
-          if (allRecords.length === 0) {
-            setStatus('No valid vmstat data found in the selected files.');
-            hideLoading();
-            return;
-          }
-
-          plotCharts();
-          showAlerts();
-          updateStats();
-
-          document.getElementById('exportBtn').disabled = false;
-          setStatus(`Loaded ${allRecords.length} records from ${files.length} file(s)`);
-          hideLoading();
-        })
-        .catch(err => {
-          console.error('Error:', err);
-          setStatus('Error reading files: ' + err.message);
-          hideLoading();
-        });
+      const compressedCount = results.filter(result => result.compressed).length;
+      const failedCount = results.filter(result => result.error).length;
+      const suffix = [
+        compressedCount ? `; ${compressedCount} compressed` : '',
+        failedCount ? `; ${failedCount} file(s) failed` : ''
+      ].join('');
+      setStatus(`Loaded ${allRecords.length.toLocaleString()} records from ${files.length} file(s)${suffix}`);
+      hideLoading();
     }
 
     function updateStats() {
@@ -453,13 +628,23 @@
         row.insertCell(0).textContent = r.name;
 
         const statusCell = row.insertCell(1);
-        statusCell.innerHTML = swapDetected
-          ? '<span class="alert-yes">YES</span>'
-          : '<span class="alert-no">NO</span>';
-
-        row.insertCell(2).textContent = swapDetected
-          ? `Max si=${siMax}, Max so=${soMax}`
-          : 'No swap activity detected';
+        const detailsCell = row.insertCell(2);
+        if (r.error) {
+          statusCell.className = 'alert-yes';
+          statusCell.textContent = 'ERROR';
+          detailsCell.textContent = r.error;
+        } else if (!r.records.length) {
+          statusCell.className = 'alert-yes';
+          statusCell.textContent = 'NO DATA';
+          detailsCell.textContent = (r.warnings || []).join(' ') || 'No valid vmstat samples';
+        } else {
+          statusCell.innerHTML = swapDetected
+            ? '<span class="alert-yes">YES</span>'
+            : '<span class="alert-no">NO</span>';
+          detailsCell.textContent = swapDetected
+            ? `Max si=${siMax}, Max so=${soMax}`
+            : 'No swap activity detected';
+        }
       });
     }
 
@@ -484,7 +669,7 @@
 
       const csv = [
         headers.join(','),
-        ...rows.map(r => r.map(v => typeof v === 'string' && v.includes(',') ? `"${v}"` : v).join(','))
+        ...rows.map(r => r.map(csvCell).join(','))
       ].join('\n');
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -492,6 +677,43 @@
       const link = document.createElement('a');
       link.href = url;
       link.download = 'vmstat_analysis.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function csvCell(value) {
+      const text = String(value ?? '');
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function exportDiagnosticsToCsv() {
+      if (!diagnosticFindings.length) {
+        alert('No diagnostic findings to export.');
+        return;
+      }
+
+      const headers = ['Source', 'Severity', 'Code', 'Finding', 'Evidence', 'Possible_Indication', 'Investigation_or_Action'];
+      const rows = diagnosticFindings.map(item => [
+        item.source,
+        item.severity,
+        item.code,
+        item.title,
+        item.evidence,
+        item.indication,
+        item.action
+      ]);
+      const csv = [
+        headers.join(','),
+        ...rows.map(row => row.map(csvCell).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'vmstat_diagnostics.csv';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -509,8 +731,270 @@
       document.getElementById('alertTable').innerHTML = '<tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>';
       document.getElementById('statsBox').style.display = 'none';
       document.getElementById('exportBtn').disabled = true;
+      document.getElementById('exportDiagnosticsBtn').disabled = true;
       document.getElementById('fileInput').value = '';
+      renderDiagnostics();
       setStatus('');
+    }
+    let diagnosticFindings = [];
+    const DIAGNOSTIC_THRESHOLDS = {
+      cpuBusyPct: 85,
+      systemCpuPct: 30,
+      waitPct: 20,
+      stealPct: 5,
+      runQueue: 4,
+      minimumSamples: 3,
+      minimumRatio: 0.10
+    };
+
+    function metric(record, name) {
+      return Number.isFinite(record[name]) ? record[name] : 0;
+    }
+
+    function average(values) {
+      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    }
+
+    function maximum(values) {
+      return values.length ? Math.max(...values) : 0;
+    }
+
+    function percentile(values, fraction) {
+      if (!values.length) return 0;
+      const sorted = values.slice().sort((a, b) => a - b);
+      const index = Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * fraction));
+      return sorted[index];
+    }
+
+    function ratioText(count, total) {
+      return total ? `${count.toLocaleString()} of ${total.toLocaleString()} samples (${(count * 100 / total).toFixed(1)}%)` : 'no samples';
+    }
+
+    function percentText(value) {
+      return `${value.toFixed(1)}%`;
+    }
+
+    function finding(source, severity, code, title, evidence, indication, action) {
+      return { source, severity, code, title, evidence, indication, action };
+    }
+
+    function analyzeVmstatRecords(records, source) {
+      if (!records.length) return [];
+
+      const total = records.length;
+      const busy = records.map(record => metric(record, 'us') + metric(record, 'sy'));
+      const highCpu = records.filter((record, index) => busy[index] >= DIAGNOSTIC_THRESHOLDS.cpuBusyPct);
+      const highSystem = records.filter(record => metric(record, 'sy') >= DIAGNOSTIC_THRESHOLDS.systemCpuPct);
+      const highWait = records.filter(record => metric(record, 'wa') >= DIAGNOSTIC_THRESHOLDS.waitPct);
+      const swapIn = records.filter(record => metric(record, 'si') > 0);
+      const swapOut = records.filter(record => metric(record, 'so') > 0);
+      const blocked = records.filter(record => metric(record, 'b') > 0);
+      const elevatedRunQueue = records.filter(record => metric(record, 'r') >= DIAGNOSTIC_THRESHOLDS.runQueue);
+      const steal = records.filter(record => metric(record, 'st') >= DIAGNOSTIC_THRESHOLDS.stealPct);
+      const findings = [];
+
+      if (highCpu.length && (total < DIAGNOSTIC_THRESHOLDS.minimumSamples || highCpu.length / total >= DIAGNOSTIC_THRESHOLDS.minimumRatio)) {
+        findings.push(finding(
+          source,
+          highCpu.length / total >= 0.25 ? 'warning' : 'advisory',
+          'cpu-busy',
+          'High CPU busy time observed',
+          `Busy CPU (usr+sys) averaged ${percentText(average(busy))}, reached ${percentText(maximum(busy))}, and was at least ${DIAGNOSTIC_THRESHOLDS.cpuBusyPct}% in ${ratioText(highCpu.length, total)}.`,
+          'The node may be CPU-constrained during these samples. This does not identify whether the workload, database processes, interrupts, or another tenant consumed the CPU.',
+          'Correlate the timestamps with mpstat/top, CPU run queue, Oracle DB time and top SQL. Check whether the load is expected; then consider SQL or workload tuning, scheduling/resource controls, or additional CPU capacity.'
+        ));
+      }
+
+      if (highSystem.length / total >= DIAGNOSTIC_THRESHOLDS.minimumRatio) {
+        findings.push(finding(
+          source,
+          highSystem.length / total >= 0.25 ? 'warning' : 'advisory',
+          'system-cpu',
+          'Elevated system CPU',
+          `System CPU was at least ${DIAGNOSTIC_THRESHOLDS.systemCpuPct}% in ${ratioText(highSystem.length, total)}; average system CPU was ${percentText(average(records.map(record => metric(record, 'sy'))))}.`,
+          'Kernel work, interrupts, system calls, networking, or I/O handling may be contributing materially to CPU consumption.',
+          'Investigate mpstat -P ALL, /proc/interrupts, network and storage activity, and database wait events. Look for abnormal I/O, packet, interrupt, or process behavior before increasing CPU resources.'
+        ));
+      }
+
+      if (highWait.length / total >= DIAGNOSTIC_THRESHOLDS.minimumRatio) {
+        findings.push(finding(
+          source,
+          highWait.length / total >= 0.25 ? 'warning' : 'advisory',
+          'io-wait',
+          'High I/O wait time observed',
+          `I/O wait (%wa) averaged ${percentText(average(records.map(record => metric(record, 'wa'))))}, peaked at ${percentText(maximum(records.map(record => metric(record, 'wa'))))}, and was at least ${DIAGNOSTIC_THRESHOLDS.waitPct}% in ${ratioText(highWait.length, total)}.`,
+          'CPU was idle while work waited for I/O. Storage latency/saturation, a hot device or filesystem, or an I/O-heavy workload are possible contributors.',
+          'Correlate with iostat -xz, AWR I/O wait classes, database file statistics, and Exadata cell metrics. Investigate hot devices, latency, SQL plans, and cache/index choices; fix the bottleneck rather than masking it with a threshold change.'
+        ));
+      }
+
+      if (swapIn.length || swapOut.length) {
+        const swapSamples = records.filter(record => metric(record, 'si') > 0 || metric(record, 'so') > 0);
+        findings.push(finding(
+          source,
+          swapOut.length / total >= DIAGNOSTIC_THRESHOLDS.minimumRatio ? 'warning' : 'advisory',
+          'swap-activity',
+          'Swap activity observed',
+          `Swap-in was non-zero in ${ratioText(swapIn.length, total)} (max ${maximum(records.map(record => metric(record, 'si'))).toLocaleString()}); swap-out was non-zero in ${ratioText(swapOut.length, total)} (max ${maximum(records.map(record => metric(record, 'so'))).toLocaleString()}).`,
+          'Paging can indicate memory pressure, overcommit, or a workload exceeding available RAM. Swap counters alone do not identify the process or prove that the database is the root cause.',
+          'Check free/available memory, swpd, /proc/meminfo, major faults, top/ps, Oracle SGA/PGA/TEMP usage, and OOM/kernel logs at the same timestamps. Reduce the responsible memory pressure or add capacity after confirming the cause; avoid using swap as the sole diagnosis.'
+        ));
+      }
+
+      if (blocked.length / total >= DIAGNOSTIC_THRESHOLDS.minimumRatio) {
+        findings.push(finding(
+          source,
+          blocked.length / total >= 0.25 ? 'warning' : 'advisory',
+          'blocked-processes',
+          'Blocked processes observed',
+          `The blocked-process count (b) was non-zero in ${ratioText(blocked.length, total)} and reached ${maximum(records.map(record => metric(record, 'b'))).toLocaleString()}.`,
+          'Tasks in uninterruptible sleep are often waiting on I/O, although the counter does not identify the exact device or request.',
+          'Correlate with iostat, process state from ps, storage latency, database file waits, and cell-side metrics. Investigate the wait path and overloaded device before changing database or OS limits.'
+        ));
+      }
+
+      if (elevatedRunQueue.length / total >= DIAGNOSTIC_THRESHOLDS.minimumRatio) {
+        findings.push(finding(
+          source,
+          elevatedRunQueue.length / total >= 0.25 ? 'warning' : 'advisory',
+          'run-queue',
+          'Elevated runnable-process queue',
+          `The run queue (r) was at least ${DIAGNOSTIC_THRESHOLDS.runQueue} in ${ratioText(elevatedRunQueue.length, total)} and reached ${maximum(records.map(record => metric(record, 'r'))).toLocaleString()}.`,
+          'Runnable work may be competing for CPU. The meaning of an absolute value depends on the node CPU count, so this is a screening signal rather than a saturation threshold.',
+          'Compare r with nproc/lscpu and mpstat per-CPU utilization, then identify top CPU consumers and Oracle DB time. Investigate workload concurrency, scheduling, and CPU capacity.'
+        ));
+      }
+
+      if (steal.length / total >= DIAGNOSTIC_THRESHOLDS.minimumRatio) {
+        findings.push(finding(
+          source,
+          steal.length / total >= 0.25 ? 'warning' : 'advisory',
+          'cpu-steal',
+          'CPU steal time observed',
+          `Steal time (%st) was at least ${DIAGNOSTIC_THRESHOLDS.stealPct}% in ${ratioText(steal.length, total)} and reached ${percentText(maximum(records.map(record => metric(record, 'st'))))}.`,
+          'A hypervisor or host may be withholding CPU from this VM. This signal is not normally expected on a dedicated physical database node.',
+          'Confirm the deployment type and correlate with hypervisor CPU-ready/steal metrics, host contention, and neighboring workloads. Escalate host placement or capacity issues if the pattern is sustained.'
+        ));
+      }
+
+      return findings;
+    }
+
+    function collectDiagnosticFindings() {
+      const findings = [];
+      fileResults.forEach(result => {
+        if (result.error) {
+          findings.push(finding(
+            result.name,
+            'critical',
+            'file-error',
+            'File could not be loaded',
+            result.error,
+            'The file did not reach VMStat parsing, so no performance conclusion can be drawn from it.',
+            result.compressed
+              ? 'Confirm the .xz archive is complete and valid, and that the browser can load the fflate dependency. Re-create or decompress the capture with xz -t/xz -d if needed.'
+              : 'Confirm the file is readable text and contains timestamped VMStat rows with the expected headers.'
+          ));
+          return;
+        }
+
+        if (!result.records.length) {
+          findings.push(finding(
+            result.name,
+            'warning',
+            'parse-empty',
+            'No VMStat samples were parsed',
+            (result.warnings || []).join(' ') || 'The file contained no recognizable timestamped rows.',
+            'The chart and resource diagnosis for this file are unavailable.',
+            'Check the capture format, timestamp prefix, and column header. Compare with the standard vmstat output format and inspect decompression separately if the source was .xz.'
+          ));
+          return;
+        }
+
+        (result.warnings || []).forEach(warning => {
+          findings.push(finding(
+            result.name,
+            'advisory',
+            'parse-warning',
+            'Some input rows were skipped',
+            warning,
+            'The analysis may not represent every sample in the file.',
+            'Verify that skipped rows are headers or non-data lines. If they are data, capture with a consistent vmstat format before relying on percentages or duration.'
+          ));
+        });
+
+        const fileFindings = analyzeVmstatRecords(result.records, result.name);
+        if (fileFindings.length) {
+          findings.push(...fileFindings);
+        } else {
+          findings.push(finding(
+            result.name,
+            'normal',
+            'no-threshold',
+            'No strong pressure signal crossed the screening thresholds',
+            `${result.records.length.toLocaleString()} parsed sample(s) were checked for CPU, I/O wait, swapping, blocked processes, run queue, and steal time.`,
+            'This is not proof that the system was healthy; short spikes, application-level waits, and issues outside these counters may be absent from the sample.',
+            'Continue correlation with workload, Oracle AWR/ASH, storage/cell metrics, and the incident timeline.'
+          ));
+        }
+      });
+
+      if (fileResults.length > 1 && allRecords.length) {
+        analyzeVmstatRecords(allRecords, 'Combined loaded timeline').forEach(combinedFinding => {
+          findings.push(combinedFinding);
+        });
+      }
+
+      const severityOrder = { critical: 0, warning: 1, advisory: 2, normal: 3 };
+      return findings.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+    }
+
+    function renderDiagnostics() {
+      diagnosticFindings = collectDiagnosticFindings();
+      const summary = document.getElementById('diagnosticSummary');
+      const table = document.getElementById('diagnosticTable');
+      summary.replaceChildren();
+      table.innerHTML = '<tr><th>Source</th><th>Severity</th><th>Signal and evidence</th><th>What it may indicate</th><th>Investigate / possible action</th></tr>';
+
+      const severityLabels = ['critical', 'warning', 'advisory', 'normal'];
+      severityLabels.forEach(severity => {
+        const count = diagnosticFindings.filter(item => item.severity === severity).length;
+        if (!count) return;
+        const pill = document.createElement('span');
+        pill.className = `diagnostic-pill severity-${severity}`;
+        pill.textContent = `${severity[0].toUpperCase() + severity.slice(1)}: ${count}`;
+        summary.appendChild(pill);
+      });
+
+      if (!diagnosticFindings.length) {
+        const empty = document.createElement('div');
+        empty.className = 'diagnostic-empty';
+        empty.textContent = 'Load one or more VMStat files to generate findings.';
+        summary.appendChild(empty);
+        return;
+      }
+
+      diagnosticFindings.forEach(item => {
+        const row = table.insertRow();
+        row.insertCell().textContent = item.source;
+        const severityCell = row.insertCell();
+        severityCell.className = `severity-${item.severity}`;
+        severityCell.textContent = item.severity.toUpperCase();
+
+        const signalCell = row.insertCell();
+        const title = document.createElement('div');
+        title.className = 'finding-title';
+        title.textContent = item.title;
+        signalCell.appendChild(title);
+        const evidence = document.createElement('div');
+        evidence.className = 'finding-evidence';
+        evidence.textContent = item.evidence;
+        signalCell.appendChild(evidence);
+
+        row.insertCell().textContent = item.indication;
+        row.insertCell().textContent = item.action;
+      });
     }
   </script>
 </body>
