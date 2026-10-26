@@ -16,6 +16,14 @@ fi
 
 "${ROOT_DIR}/stopall.sh"
 
+# Create a separate, fresh log for each port-bound application. This also
+# leaves a useful log file when an app fails immediately during startup.
+: > "${ROOT_DIR}/exaweb.log"
+: > "${ROOT_DIR}/streamlit_ecs.log"
+: > "${ROOT_DIR}/streamlit_awr.log"
+: > "${ROOT_DIR}/streamlit_iostat.log"
+: > "${ROOT_DIR}/streamlit_netstat.log"
+
 (
   cd "${ROOT_DIR}"
   nohup python3 -m http.server 8079 --bind 0.0.0.0 > "${ROOT_DIR}/exaweb.log" 2>&1 &
@@ -39,4 +47,7 @@ Logs:
 - ${ROOT_DIR}/streamlit_awr.log
 - ${ROOT_DIR}/streamlit_iostat.log
 - ${ROOT_DIR}/streamlit_netstat.log
+
+Check listeners and log paths with:
+  ${ROOT_DIR}/status.sh
 EOF

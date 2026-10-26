@@ -162,6 +162,12 @@ PYTHON_ENV_DIR=/opt/exadata-tools-venv ./startall.sh
 PYTHON_BIN=/opt/exadata-tools-venv/bin/python ./startall.sh
 ```
 
+Each service writes to its own log in the project directory: `exaweb.log`,
+`streamlit_ecs.log`, `streamlit_awr.log`, `streamlit_iostat.log`, and
+`streamlit_netstat.log`. `startall.sh` clears these logs before launching a
+fresh set of services. Run `./status.sh` to see whether each configured port
+has a listening process and where its log is located.
+
 ---
 
 ## Usage
