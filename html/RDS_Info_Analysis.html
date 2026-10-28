@@ -3,303 +3,277 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RDS Analysis - Paulo Portugal - XTeam</title>
+  <title>RDS Analysis | Oracle Exadata Troubleshooting Tools</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fflate/umd/index.js"></script>
+  <!-- Use the same browser-side XZ stream decoder as the VMStat analyzer. -->
+  <script src="https://cdn.jsdelivr.net/npm/xz-decompress@0.2.3/dist/package/xz-decompress.min.js"></script>
   <script src="../assets/common.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      color-scheme: dark;
+      --page: #101722;
+      --surface: #182331;
+      --surface-raised: #1e2b3b;
+      --surface-inset: #111b27;
+      --border: #2d3c4f;
+      --text: #edf3f9;
+      --muted: #9aacc0;
+      --accent: #48d6c4;
+      --accent-strong: #22b8a8;
+      --blue: #69aef5;
+    }
+    * { box-sizing: border-box; }
     body {
-      background: #181920;
-      color: #f0f2f7;
-      font-family: 'Roboto', Arial, sans-serif;
-      margin: 0;
-      padding: 0;
       min-height: 100vh;
+      margin: 0;
+      padding: 30px 24px 48px;
+      background: radial-gradient(ellipse at 50% -12%, #23364b 0, var(--page) 52%);
+      color: var(--text);
+      font-family: 'Roboto', Arial, sans-serif;
     }
-    h1 {
-      color: #48e1f9;
-      text-align: center;
-      font-size: 2.4rem;
-      font-weight: 900;
-      letter-spacing: 1.5px;
-      margin-top: 38px;
-      margin-bottom: 8px;
-      text-shadow: 0 2px 6px rgba(19, 45, 66, 0.4);
+    .page-header, .container { width: min(1440px, 100%); margin-inline: auto; }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
     }
-    h3 {
-      color: #7bc8f8;
-      letter-spacing: 1px;
-      font-size: 2rem;
-      margin-top: 0;
-      margin-bottom: 30px;
-      font-weight: 700;
-      text-align: center;
+    .page-brand { display: flex; align-items: center; gap: 18px; min-width: 0; }
+    .brand-mark {
+      display: grid;
+      width: 58px;
+      height: 58px;
+      flex: 0 0 58px;
+      place-items: center;
+      border: 1px solid rgba(72, 214, 196, .45);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(72, 214, 196, .2), rgba(105, 174, 245, .12));
+      color: var(--accent);
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: .08em;
     }
+    .page-kicker { margin: 0 0 5px; color: var(--accent); font-size: .72rem; font-weight: 700; letter-spacing: .16em; }
+    h1 { margin: 0; color: var(--text); font-size: clamp(1.65rem, 3vw, 2.25rem); letter-spacing: -.025em; }
+    .page-description { margin: 7px 0 0; color: var(--muted); line-height: 1.5; }
+    .back-link {
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: #d5e2ef;
+      text-decoration: none;
+      transition: border-color .18s, background .18s;
+    }
+    .back-link:hover { border-color: var(--accent); background: rgba(72, 214, 196, .08); }
     .container {
-      max-width: 800px;
-      margin: 32px auto 0 auto;
-      padding: 40px 24px 32px 24px;
-      background: #23243a;
-      border-radius: 18px;
-      box-shadow: 0 4px 40px rgba(14, 15, 31, 0.47);
-      min-height: 620px;
+      overflow: hidden;
+      padding: 22px 28px 30px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(24, 35, 49, .96);
+      box-shadow: 0 18px 55px rgba(0, 0, 0, .24);
     }
     .tab-nav {
       display: flex;
-      background: #131325;
-      border-radius: 18px 18px 0 0;
-      box-shadow: 0 1px 8px rgba(11, 11, 27, 0.33);
-      margin-bottom: 0;
-      overflow: hidden;
+      gap: 5px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
     }
     .tab-nav button {
-      flex: 1;
-      padding: 20px 0 13px 0;
-      background: none;
-      border: none;
-      border-right: 1px solid #23243a;
-      color: #b2dffc;
-      font-family: inherit;
-      font-size: 1.08em;
-      font-weight: 700;
-      letter-spacing: 1px;
+      position: relative;
+      flex: 0 0 auto;
+      padding: 14px 16px;
+      border: 0;
+      border-radius: 8px 8px 0 0;
+      background: transparent;
+      color: var(--muted);
+      font: 600 .94rem 'Roboto', Arial, sans-serif;
       cursor: pointer;
-      transition: background 0.18s, color 0.18s;
-      outline: none;
+      transition: color .18s, background .18s;
     }
-    .tab-nav button:last-child { border-right: none; }
-    .tab-nav button.active {
-      background: linear-gradient(90deg, rgba(26, 218, 166, 0.8), rgba(4, 124, 251, 0.8));
-      color: #fff;
-      font-weight: 900;
+    .tab-nav button:hover { color: var(--text); background: rgba(255,255,255,.035); }
+    .tab-nav button.active { color: var(--accent); background: rgba(72, 214, 196, .08); }
+    .tab-nav button.active::after { position: absolute; right: 10px; bottom: -1px; left: 10px; height: 2px; background: var(--accent); content: ''; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .tab-content { display: none; padding-top: 26px; }
+    .tab-content.active { display: block; animation: fadeIn .22s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    h3 { margin: 0 0 18px; color: var(--text); font-size: 1.45rem; letter-spacing: -.015em; }
+    h4 { color: var(--text); }
+    .hint-text { color: var(--muted); line-height: 1.5; }
+    .upload-panel {
+      display: grid;
+      grid-template-columns: minmax(210px, .85fr) minmax(300px, 1.4fr);
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 16px;
+      padding: 20px 22px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: linear-gradient(110deg, rgba(72, 214, 196, .055), rgba(105, 174, 245, .035));
     }
-    .tab-content {
-      display: none;
-      padding: 30px 0 0 0;
-      min-height: 570px;
-    }
-    .tab-content.active {
-      display: block;
-      animation: fadeIn 0.33s;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(14px); }
-      to { opacity: 1; transform: none; }
-    }
-    label {
-      display: block;
-      margin-top: 1.7em;
-      margin-bottom: 0.7em;
-      font-size: 1.04em;
-      color: #bfcbe7;
-      font-weight: 400;
-    }
-    input[type="file"] {
-      background: #171726;
-      color: #b7e7f9;
-      padding: 0.7em;
+    .upload-copy h2 { margin: 0 0 6px; font-size: 1.05rem; }
+    .upload-copy p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.5; }
+    label { display: block; margin: 0 0 8px; color: #c8d6e4; font-size: .9rem; font-weight: 600; }
+    input[type="file"], input[type="number"], select {
+      width: 100%;
+      border: 1px solid var(--border);
       border-radius: 8px;
-      border: none;
-      width: 100%;
-      margin-bottom: 12px;
-      font-family: inherit;
-      font-size: 1em;
+      background: var(--surface-inset);
+      color: var(--text);
+      font: inherit;
     }
-    select {
-      background: #1e2433;
-      color: #eee;
-      border: 1px solid #343a50;
-      border-radius: 10px;
-      padding: 10px;
-      font-family: inherit;
-      font-size: 1em;
-      margin-bottom: 18px;
-      width: 100%;
-      min-height: 100px;
-      outline: none;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
-      resize: vertical;
+    input[type="file"] { padding: 9px; color: #c8d6e4; }
+    input[type="file"]::file-selector-button {
+      margin-right: 12px;
+      padding: 8px 12px;
+      border: 0;
+      border-radius: 6px;
+      background: #2c4357;
+      color: var(--text);
+      font: 600 .88rem 'Roboto', Arial, sans-serif;
+      cursor: pointer;
+    }
+    input[type="number"] { min-height: 42px; padding: 9px 11px; }
+    select { min-height: 140px; padding: 10px; }
+    #counterSelect { margin-bottom: 14px; }
+    .status-text { min-height: 20px; margin: 12px 0; color: var(--muted); font-size: .9rem; }
+    .error-box {
+      margin: 10px 0;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 110, 120, .45);
+      border-radius: 8px;
+      background: rgba(255, 80, 95, .09);
+      color: #ffabb2;
+      white-space: pre-line;
     }
     #updateBtn, #updatePingBtn {
-      background: linear-gradient(90deg, #047cfb, #1adaa6);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 14px 32px;
-      font-size: 1.09em;
-      font-family: inherit;
-      font-weight: bold;
-      margin-top: 24px;
-      margin-bottom: 32px;
-      cursor: pointer;
-      box-shadow: 0 2px 12px rgba(14, 216, 252, 0.14);
-      transition: background 0.21s;
-      display: block;
-      width: 100%;
-      letter-spacing: 0.5px;
-    }
-    #updateBtn:hover, #updateBtn:focus, #updatePingBtn:hover, #updatePingBtn:focus {
-      background: linear-gradient(90deg, #1adaa6, #047cfb);
-      color: #f6fcff;
-      outline: none;
-    }
-    #updateBtn:disabled, #updatePingBtn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    #myChart {
-      display: block;
-      margin: 35px auto 24px auto;
-      background: #13121b;
-      border-radius: 17px;
-      box-shadow: 0 2px 20px rgba(40, 58, 99, 0.25);
-      border: 1.5px solid #222843;
-      max-width: 100%;
-    }
-    #result {
-      font-family: "Roboto Mono", monospace;
-      font-size: 1em;
-      color: #affcec;
-      background: #212c40;
-      border-radius: 10px;
-      padding: 17px 19px;
-      margin: 28px 0 12px 0;
-      word-break: break-all;
-      box-shadow: 0 1px 5px rgba(34, 51, 68, 0.5);
-      border-left: 4px solid #1adaa6;
-    }
-    .rds-congestion-list {
-      background: #23243a;
-      border-radius: 14px;
-      box-shadow: 0 2px 10px rgba(17, 68, 51, 0.2);
-      padding: 29px 24px;
-      margin: 24px auto;
-      max-width: 500px;
-      color: #ffe066;
-    }
-    .rds-congestion-list h4 {
-      margin-top: 0;
-      margin-bottom: 20px;
-      color: #81e6f0;
-      font-weight: 700;
-      font-size: 1.22em;
-      letter-spacing: 0.7px;
-    }
-    .rds-congestion-list ul {
-      list-style: none;
-      padding-left: 0;
-    }
-    .rds-congestion-list li {
-      background: #212c40;
-      margin-bottom: 13px;
-      border-radius: 6px;
-      padding: 11px 16px;
-      font-family: "Roboto Mono", monospace;
-      font-size: 1.1em;
-      color: #ffe066;
-      border-left: 3px solid #1adaa6;
-      box-shadow: 0 1px 8px rgba(9, 60, 76, 0.07);
-      letter-spacing: 0.1px;
-    }
-    .findings-summary {
-      background: #212c40;
-      border-left: 4px solid #48e1f9;
-      border-radius: 10px;
-      padding: 16px 18px;
-      margin-bottom: 18px;
-      color: #cfeaff;
-    }
-    .finding-card {
-      background: #212c40;
-      border-left: 4px solid #ffe066;
-      border-radius: 10px;
-      padding: 18px;
-      margin: 14px 0;
-      box-shadow: 0 1px 8px rgba(9, 60, 76, 0.12);
-    }
-    .finding-card.critical { border-left-color: #ff5c77; }
-    .finding-card.warning { border-left-color: #ffb347; }
-    .finding-card.advisory { border-left-color: #48e1f9; }
-    .finding-card h4 { margin: 0 0 10px; color: #fff; }
-    .finding-meta { color: #b2dffc; font-size: .92em; margin-bottom: 10px; }
-    .finding-card p { margin: 9px 0; color: #e5ecfa; line-height: 1.45; }
-    .severity { font-size: .78em; padding: 3px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle; }
-    .severity.critical { color: #fff; background: #b52e46; }
-    .severity.warning { color: #211600; background: #ffb347; }
-    .severity.advisory { color: #062635; background: #48e1f9; }
-
-    /* Loading overlay */
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
-      flex-direction: column;
+      display: inline-flex;
       justify-content: center;
       align-items: center;
-      z-index: 1000;
-    }
-    .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top-color: #48e1f9;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    .loading-message { margin-top: 15px; color: #fff; font-size: 16px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Error box */
-    .error-box {
-      background: rgba(255, 80, 80, 0.1);
-      border: 1px solid #ff5050;
+      min-height: 42px;
+      margin: 4px 0 20px;
+      padding: 10px 16px;
+      border: 1px solid var(--accent-strong);
       border-radius: 8px;
-      padding: 12px;
-      margin: 10px 0;
-      color: #ff8080;
+      background: var(--accent-strong);
+      color: #071d1b;
+      font: 700 .92rem 'Roboto', Arial, sans-serif;
+      cursor: pointer;
+      transition: filter .18s, transform .18s;
     }
-
-    /* Status indicator */
-    .status-text {
-      font-size: 0.9em;
-      color: #7bc8f8;
-      margin-top: 10px;
+    #updateBtn:hover, #updatePingBtn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    #updateBtn:disabled, #updatePingBtn:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+    .chart-panel {
+      position: relative;
+      height: 410px;
+      margin: 8px 0 20px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-inset);
     }
+    .chart-panel canvas { display: block; width: 100% !important; height: 100% !important; }
+    #result {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    #result > div {
+      margin: 0 !important;
+      padding: 15px 16px;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 9px;
+      background: var(--surface-raised);
+      color: #dce7f1;
+      line-height: 1.8;
+    }
+    .rds-congestion-list { padding: 22px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-raised); }
+    .rds-congestion-list h4 { margin: 0 0 16px; font-size: 1rem; }
+    .rds-congestion-list ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .rds-congestion-list li { padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-inset); color: #dce7f1; }
+    .rds-congestion-list code, code { color: #a9e8df; font-family: 'Roboto Mono', Consolas, monospace; }
+    .findings-summary { margin-bottom: 14px; padding: 16px 18px; border: 1px solid var(--border); border-left: 3px solid var(--blue); border-radius: 9px; background: var(--surface-raised); color: #dce7f1; line-height: 1.6; }
+    .finding-card { margin: 12px 0; padding: 17px 18px; border: 1px solid var(--border); border-left: 3px solid #f1c46d; border-radius: 9px; background: var(--surface-raised); }
+    .finding-card.critical { border-left-color: #ff7180; }
+    .finding-card.warning { border-left-color: #f1b85b; }
+    .finding-card.advisory { border-left-color: var(--blue); }
+    .finding-card h4 { margin: 0 0 9px; }
+    .finding-meta { margin-bottom: 10px; color: var(--muted); font-size: .88rem; }
+    .finding-card p { margin: 8px 0; color: #dce7f1; line-height: 1.55; }
+    .severity { display: inline-block; margin-left: 8px; padding: 3px 8px; border-radius: 20px; font-size: .7rem; vertical-align: middle; }
+    .severity.critical { background: #9b3442; color: #fff; }
+    .severity.warning { background: #8a6225; color: #fff4d8; }
+    .severity.advisory { background: #285c75; color: #e5f6ff; }
     .control-grid, .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 18px 0; }
-    .control-grid input, .control-grid select { min-height: auto; margin-bottom: 0; width: 100%; }
-    .summary-card { background: #1a2130; border: 1px solid #2e3750; border-radius: 10px; padding: 14px 16px; }
-    .summary-card .label { color: #94a8d6; font-size: .88em; margin-bottom: 5px; }
-    .summary-card .value { color: #f7fbff; font-size: 1.35em; font-weight: 700; }
-    .data-table-wrapper { margin-top: 18px; overflow-x: auto; border: 1px solid #2e3750; border-radius: 10px; background: #13121b; }
-    .data-table { width: 100%; border-collapse: collapse; font-size: .95em; }
-    .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #23243a; white-space: nowrap; }
-    .data-table th { color: #7bc8f8; background: #1b2232; }
-    .data-table td, .hint-text { color: #d9e7fb; }
-
-    @media (max-width: 890px) {
-      .container { padding: 24px 8px; }
-      #myChart { width: 100vw; }
+    .control-grid select { min-height: 42px; }
+    .summary-card { padding: 14px 16px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-raised); }
+    .summary-card .label { margin-bottom: 5px; color: var(--muted); font-size: .86rem; }
+    .summary-card .value { color: var(--text); font-size: 1.25rem; font-weight: 700; }
+    .data-table-wrapper { overflow-x: auto; margin-top: 16px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-inset); }
+    .data-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .data-table th, .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    .data-table th { background: var(--surface-raised); color: #a9e8df; }
+    .data-table td { color: #dce7f1; }
+    .loading-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(6, 12, 19, .84); }
+    .loading-spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    .loading-message { margin-top: 15px; color: var(--text); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 760px) {
+      body { padding: 22px 14px 32px; }
+      .page-header { align-items: flex-start; }
+      .page-brand { align-items: flex-start; gap: 12px; }
+      .brand-mark { width: 48px; height: 48px; flex-basis: 48px; border-radius: 12px; }
+      .back-link { padding: 8px 10px; font-size: .85rem; }
+      .container { padding: 14px; border-radius: 12px; }
+      .upload-panel { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
+      .chart-panel { height: 330px; padding: 8px; }
+      .tab-nav button { padding: 12px 10px; font-size: .86rem; }
+    }
+    @media (max-width: 480px) {
+      .page-header { flex-direction: column; }
+      .page-description { font-size: .9rem; }
+      .chart-panel { height: 280px; }
     }
   </style>
 </head>
 <body>
-  <h1>RDS Analysis - Paulo Portugal - XTeam</h1>
+  <header class="page-header">
+    <div class="page-brand">
+      <div class="brand-mark" aria-hidden="true">RDS</div>
+      <div>
+        <p class="page-kicker">ORACLE EXADATA DIAGNOSTICS</p>
+        <h1>RDS Analysis</h1>
+        <p class="page-description">Explore RDS counters, congestion findings, and RDS ping latency.</p>
+      </div>
+    </div>
+    <a class="back-link" href="../index.html">← All tools</a>
+  </header>
   <div class="container">
-    <div class="tab-nav">
-      <button class="active" data-tab="0">Counter Analytics</button>
-      <button data-tab="1">Automatic Findings</button>
-      <button data-tab="2">RDS Ping Latency</button>
-      <button data-tab="3">Key RDS Congestion Counters</button>
+    <div class="tab-nav" role="tablist" aria-label="RDS analysis views">
+      <button class="active" data-tab="0" role="tab" aria-selected="true">Counter Analytics</button>
+      <button data-tab="1" role="tab" aria-selected="false">Automatic Findings</button>
+      <button data-tab="2" role="tab" aria-selected="false">RDS Ping Latency</button>
+      <button data-tab="3" role="tab" aria-selected="false">Key RDS Counters</button>
     </div>
 
-    <div class="tab-content active" id="tab-0">
+    <div class="tab-content active" id="tab-0" role="tabpanel">
       <h3>Counter Analytics</h3>
-      <input type="file" id="fileInput" multiple accept=".dat,.dat.xz,.txt,.xz">
+      <div class="upload-panel">
+        <div class="upload-copy">
+          <h2>Load RDS files</h2>
+          <p>Choose one or more ExaWatcher or AHF files. Plain text and .xz archives are supported; files are processed in this browser.</p>
+        </div>
+        <div class="upload-control">
+          <label for="fileInput">Select files</label>
+          <input type="file" id="fileInput" multiple accept=".dat,.dat.xz,.txt,.xz">
+        </div>
+      </div>
       <div id="statusText" class="status-text"></div>
       <div id="errorBox"></div>
 
@@ -308,7 +282,7 @@
 
       <button id="updateBtn" disabled>Update Chart</button>
 
-      <canvas id="myChart" width="600" height="300"></canvas>
+      <div class="chart-panel"><canvas id="myChart" width="600" height="300"></canvas></div>
       <div id="result"></div>
     </div>
 
@@ -327,7 +301,7 @@
         <div><label for="pingTopNInput">Top rows:</label><input type="number" id="pingTopNInput" min="1" max="200" step="1" value="30"></div>
       </div>
       <button id="updatePingBtn" disabled>Update Latency View</button>
-      <canvas id="pingChart" width="600" height="300"></canvas>
+      <div class="chart-panel"><canvas id="pingChart" width="600" height="300"></canvas></div>
       <div id="pingSummary"></div>
       <div id="pingResult"></div>
     </div>
@@ -350,9 +324,10 @@
   </div>
 
   <script>
-    // Check library availability
-    if (typeof fflate === 'undefined') {
-      document.getElementById('errorBox').innerHTML = '<div class="error-box">Warning: fflate library not loaded. XZ decompression unavailable.</div>';
+    // Check that the browser-side XZ stream decoder loaded.
+    const xzModule = typeof globalThis !== 'undefined' ? globalThis['xz-decompress'] : null;
+    if (!xzModule || typeof xzModule.XzReadableStream !== 'function') {
+      document.getElementById('errorBox').innerHTML = '<div class="error-box">The XZ decoder did not load. Check the network connection and refresh this page before opening .xz files.</div>';
     }
 
     // State
@@ -421,14 +396,35 @@
       document.getElementById('statusText').textContent = message;
     }
 
+    async function readRdsFile(file) {
+      if (!file.name.toLowerCase().endsWith('.xz')) return file.text();
+      if (!xzModule || typeof xzModule.XzReadableStream !== 'function') {
+        throw new Error('The XZ decoder is unavailable. Check that the xz-decompress library loaded.');
+      }
+      if (typeof Blob === 'undefined' || typeof Response === 'undefined' || typeof Blob.prototype.stream !== 'function') {
+        throw new Error('This browser does not provide the Streams API required for XZ decompression.');
+      }
+
+      const compressedStream = new Blob([await file.arrayBuffer()]).stream();
+      const decompressedResponse = new Response(new xzModule.XzReadableStream(compressedStream));
+      const decompressed = await decompressedResponse.arrayBuffer();
+      return new TextDecoder().decode(decompressed);
+    }
+
     // Tab logic
     document.querySelectorAll('.tab-nav button').forEach(btn => {
       btn.addEventListener('click', () => {
         const tabIndex = btn.dataset.tab;
         document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-nav button').forEach(b => b.setAttribute('aria-selected', 'false'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
         document.getElementById(`tab-${tabIndex}`).classList.add('active');
+        requestAnimationFrame(() => {
+          if (chart) chart.resize();
+          if (pingChart) pingChart.resize();
+        });
       });
     });
 
@@ -441,27 +437,15 @@
       showLoading('Reading files...');
 
       try {
+        const fileErrors = [];
         const contents = await Promise.all(files.map(async (file, idx) => {
           updateLoading(`Reading ${file.name} (${idx + 1}/${files.length})`);
-
-          if (file.name.endsWith('.xz')) {
-            try {
-              const buffer = await file.arrayBuffer();
-              const uint8 = new Uint8Array(buffer);
-
-              if (typeof fflate === 'undefined' || !fflate.xzDecompress) {
-                throw new Error('XZ decompression not available');
-              }
-
-              const decompressed = fflate.xzDecompress(uint8);
-              return new TextDecoder().decode(decompressed);
-            } catch (err) {
-              console.error('Decompression failed for', file.name, err);
-              showError(`Could not decompress ${file.name}: ${err.message}`);
-              return '';
-            }
-          } else {
-            return await file.text();
+          try {
+            return await readRdsFile(file);
+          } catch (err) {
+            console.error('Could not read', file.name, err);
+            fileErrors.push(`${file.name}: ${err.message}`);
+            return '';
           }
         }));
 
@@ -482,6 +466,11 @@
         populatePingFilters();
         document.getElementById('updatePingBtn').disabled = !pingSamples.length;
         if (pingSamples.length) plotPingSamples(); else clearPingView();
+        if (fileErrors.length) {
+          const messages = samples.length ? [] : ['No timestamped RDS samples were found in the readable files.'];
+          messages.push(...fileErrors);
+          showError(`Some files could not be read:\n${messages.join('\n')}`);
+        }
 
       } catch (err) {
         console.error('Error loading files:', err);
