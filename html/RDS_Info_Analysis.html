@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RDS Analysis | Oracle Exadata Troubleshooting Tools</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
   <!-- Use the same browser-side XZ stream decoder as the VMStat analyzer. -->
   <script src="https://cdn.jsdelivr.net/npm/xz-decompress@0.2.3/dist/package/xz-decompress.min.js"></script>
   <script src="../assets/common.js"></script>
@@ -168,31 +168,46 @@
     #updateBtn:hover, #updatePingBtn:hover { filter: brightness(1.1); transform: translateY(-1px); }
     #updateBtn:disabled, #updatePingBtn:disabled { opacity: .48; cursor: not-allowed; transform: none; }
     .chart-panel {
+      display: flex;
       position: relative;
-      height: 410px;
+      flex-direction: column;
+      height: 470px;
       margin: 8px 0 20px;
-      padding: 14px;
+      padding: 15px 18px 10px;
       border: 1px solid var(--border);
       border-radius: 12px;
       background: var(--surface-inset);
     }
-    .chart-panel canvas { display: block; width: 100% !important; height: 100% !important; }
+    .chart-panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .chart-panel-heading strong { display: block; color: var(--text); font-size: .96rem; }
+    .chart-panel-heading p { margin: 4px 0 0; color: var(--muted); font-size: .82rem; }
+    .chart-kicker { display: block; margin-bottom: 4px; color: var(--accent); font-size: .67rem; font-weight: 700; letter-spacing: .13em; }
+    .chart-badge { flex: 0 0 auto; padding: 5px 9px; border: 1px solid #355064; border-radius: 20px; color: #b8c9d8; font-size: .72rem; }
+    .echart { width: 100%; flex: 1; min-height: 0; }
     #result {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 12px;
       margin-top: 18px;
     }
-    #result > div {
-      margin: 0 !important;
+    .counter-stat-card, .empty-state {
+      min-width: 0;
       padding: 15px 16px;
       border: 1px solid var(--border);
       border-left: 3px solid var(--accent);
       border-radius: 9px;
       background: var(--surface-raised);
       color: #dce7f1;
-      line-height: 1.8;
     }
+    .counter-stat-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+    .counter-stat-card header strong { overflow-wrap: anywhere; color: var(--text); font-family: 'Roboto Mono', Consolas, monospace; }
+    .counter-stat-card .net-change { flex: 0 0 auto; color: var(--accent); font-weight: 700; }
+    .counter-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .counter-stat-grid div { min-width: 0; padding: 9px 10px; border-radius: 7px; background: var(--surface-inset); }
+    .counter-stat-grid span { display: block; margin-bottom: 4px; color: var(--muted); font-size: .74rem; }
+    .counter-stat-grid strong { display: block; overflow-wrap: anywhere; color: #e4edf5; font-size: .92rem; }
+    .empty-state { grid-column: 1 / -1; border-left-color: var(--blue); color: var(--muted); line-height: 1.5; }
+    .counter-stat-card.incomplete { border-left-color: #e3af57; }
     .rds-congestion-list { padding: 22px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-raised); }
     .rds-congestion-list h4 { margin: 0 0 16px; font-size: 1rem; }
     .rds-congestion-list ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
@@ -232,13 +247,13 @@
       .back-link { padding: 8px 10px; font-size: .85rem; }
       .container { padding: 14px; border-radius: 12px; }
       .upload-panel { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
-      .chart-panel { height: 330px; padding: 8px; }
+      .chart-panel { height: 410px; padding: 12px 10px 8px; }
       .tab-nav button { padding: 12px 10px; font-size: .86rem; }
     }
     @media (max-width: 480px) {
       .page-header { flex-direction: column; }
       .page-description { font-size: .9rem; }
-      .chart-panel { height: 280px; }
+      .chart-panel { height: 350px; }
     }
   </style>
 </head>
@@ -282,7 +297,13 @@
 
       <button id="updateBtn" disabled>Update Chart</button>
 
-      <div class="chart-panel"><canvas id="myChart" width="600" height="300"></canvas></div>
+      <div class="chart-panel">
+        <div class="chart-panel-heading">
+          <div><span class="chart-kicker">COUNTER HISTORY</span><strong>Selected RDS counters</strong><p>Use the legend to isolate counters; zoom, switch line or bar view, or export the chart.</p></div>
+          <span class="chart-badge">Interactive</span>
+        </div>
+        <div class="echart" id="myChart" role="img" aria-label="Interactive RDS counter history chart"></div>
+      </div>
       <div id="result"></div>
     </div>
 
@@ -301,7 +322,13 @@
         <div><label for="pingTopNInput">Top rows:</label><input type="number" id="pingTopNInput" min="1" max="200" step="1" value="30"></div>
       </div>
       <button id="updatePingBtn" disabled>Update Latency View</button>
-      <div class="chart-panel"><canvas id="pingChart" width="600" height="300"></canvas></div>
+      <div class="chart-panel">
+        <div class="chart-panel-heading">
+          <div><span class="chart-kicker">LATENCY TREND</span><strong>RDS ping samples</strong><p>Inspect the latency trend and use the timeline controls to focus on an interval.</p></div>
+          <span class="chart-badge">Interactive</span>
+        </div>
+        <div class="echart" id="pingChart" role="img" aria-label="Interactive RDS ping latency chart"></div>
+      </div>
       <div id="pingSummary"></div>
       <div id="pingResult"></div>
     </div>
@@ -328,6 +355,9 @@
     const xzModule = typeof globalThis !== 'undefined' ? globalThis['xz-decompress'] : null;
     if (!xzModule || typeof xzModule.XzReadableStream !== 'function') {
       document.getElementById('errorBox').innerHTML = '<div class="error-box">The XZ decoder did not load. Check the network connection and refresh this page before opening .xz files.</div>';
+    }
+    if (typeof echarts === 'undefined') {
+      document.getElementById('errorBox').insertAdjacentHTML('beforeend', '<div class="error-box">The chart library did not load. Check the network connection and refresh this page.</div>');
     }
 
     // State
@@ -426,6 +456,10 @@
           if (pingChart) pingChart.resize();
         });
       });
+    });
+    window.addEventListener('resize', () => {
+      if (chart) chart.resize();
+      if (pingChart) pingChart.resize();
     });
 
     // File input handler
@@ -619,24 +653,24 @@
       const selected = Array.from(select.selectedOptions).map(opt => opt.value);
 
       if (!selected.length) {
-        document.getElementById('result').innerHTML = '<span style="color:#ff8080">Please select at least one counter.</span>';
-        if (chart) chart.destroy();
+        document.getElementById('result').innerHTML = '<div class="empty-state">Select one or more counters above to display the trend and summary.</div>';
+        if (chart) chart.clear();
         return;
       }
 
       const colors = [
-        '#7bc8f8', '#f25f5c', '#70c1b3', '#ffe066', '#bdb2ff', '#247ba0',
-        '#ffb6b9', '#b5ead7', '#ffdac1', '#caff70', '#fea82f', '#2ec4b6'
+        '#48d6c4', '#69aef5', '#f4b860', '#ec7890', '#a995ef', '#75c7a5',
+        '#f18f6d', '#91a9c6', '#d78fc6', '#b6c95a', '#6dc2d3', '#e3a46f'
       ];
 
-      const datasets = [];
+      const series = [];
       let output = '';
 
       selected.forEach((counter, idx) => {
         const points = getCounterPoints(counter);
         const values = points.map(point => point.value);
         if (values.length < 2) {
-          output += `<div style="margin-bottom:15px"><b>${escapeHtml(counter)}</b><br>Not enough data for statistics (need at least 2 samples).</div>`;
+          output += `<article class="counter-stat-card incomplete"><header><strong>${escapeHtml(counter)}</strong></header><p class="hint-text">Not enough data for a trend; at least two samples are required.</p></article>`;
           return;
         }
 
@@ -648,69 +682,117 @@
           ? 'N/A (initial value is 0)'
           : `${((diff / first) * 100).toFixed(2)}%`;
 
-        output += `
-          <div style="margin-bottom:20px">
-            <b style="color:#48e1f9">${escapeHtml(counter)}</b><br>
-            Total samples: <span style="color:#ffeead">${values.length}</span><br>
-            First value: <span style="color:#b2dffc">${first.toLocaleString()}</span><br>
-            Last value: <span style="color:#fad7ac">${last.toLocaleString()}</span><br>
-            Total increase: <span style="color:#b5ead7">${diff.toLocaleString()}</span><br>
-            Increase per interval: <span style="color:#ffe066">${perLineIncrease.toFixed(2)}</span><br>
-            Percent increase: <span style="color:#ffb6b9">${percentIncrease}</span>
+        output += `<article class="counter-stat-card">
+          <header><strong>${escapeHtml(counter)}</strong><span class="net-change">${diff > 0 ? '+' : ''}${diff.toLocaleString()}</span></header>
+          <div class="counter-stat-grid">
+            <div><span>Samples</span><strong>${values.length.toLocaleString()}</strong></div>
+            <div><span>First value</span><strong>${first.toLocaleString()}</strong></div>
+            <div><span>Latest value</span><strong>${last.toLocaleString()}</strong></div>
+            <div><span>Net change</span><strong>${diff.toLocaleString()} (${percentIncrease})</strong></div>
+            <div><span>Average change / interval</span><strong>${perLineIncrease.toFixed(2)}</strong></div>
           </div>
-        `;
+        </article>`;
 
-        datasets.push({
-          label: counter,
+        series.push({
+          name: counter,
+          type: 'line',
           data: samples.map(sample => Object.prototype.hasOwnProperty.call(sample.counters, counter) ? sample.counters[counter] : null),
-          borderColor: colors[idx % colors.length],
-          backgroundColor: colors[idx % colors.length] + '44',
-          fill: false,
-          pointRadius: 4,
-          borderWidth: 3,
-          tension: 0.18
+          smooth: false,
+          showSymbol: samples.length <= 80,
+          symbol: 'circle',
+          symbolSize: 6,
+          connectNulls: false,
+          lineStyle: { width: 2.5 },
+          areaStyle: { opacity: 0.035 },
+          emphasis: { focus: 'series', lineStyle: { width: 3.5 } },
+          sampling: samples.length > 1500 ? 'min-max' : undefined,
+          animation: samples.length < 1000,
+          itemStyle: { color: colors[idx % colors.length] }
         });
       });
 
       const labels = samples.map(sample => sample.timestamp);
+      const chartSeries = series.filter(item => item.data.some(value => value !== null));
+      if (!chartSeries.length) {
+        document.getElementById('result').innerHTML = '<div class="empty-state">No selected counters have enough timestamped samples to chart.</div>';
+        if (chart) chart.clear();
+        return;
+      }
 
-      const ctx = document.getElementById('myChart').getContext('2d');
-      if (chart) chart.destroy();
-
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              labels: {
-                color: '#fff',
-                font: { size: 14, family: "'Roboto', Arial, sans-serif" },
-                padding: 14
-              }
-            }
-          },
-          scales: {
-            x: {
-              ticks: { color: '#c0d1f7' },
-              grid: { color: 'rgba(53, 55, 76, 0.27)' },
-              title: { display: true, text: 'Timestamp', color: '#e1edf7', font: { weight: 'bold' } }
-            },
-            y: {
-              ticks: { color: '#d8e3fa' },
-              grid: { color: 'rgba(53, 55, 76, 0.27)' },
-              title: { display: true, text: 'Value', color: '#e1edf7', font: { weight: 'bold' } }
-            }
+      if (!chart) chart = echarts.init(document.getElementById('myChart'), null, { renderer: 'canvas' });
+      chart.setOption({
+        animation: labels.length < 1000,
+        color: colors,
+        textStyle: { fontFamily: "'Roboto', Arial, sans-serif" },
+        grid: { left: 88, right: 28, top: 58, bottom: 100, containLabel: true },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'cross', label: { backgroundColor: '#30465a' } },
+          backgroundColor: '#101a25',
+          borderColor: '#40576d',
+          textStyle: { color: '#edf3f9' },
+          formatter: params => {
+            const points = Array.isArray(params) ? params : [params];
+            const timestamp = points[0] ? points[0].axisValueLabel : '';
+            const details = points.map(point => `${point.marker}${escapeHtml(point.seriesName)}: <strong>${point.value == null ? '—' : Number(point.value).toLocaleString()}</strong>`).join('<br>');
+            return `<strong>${escapeHtml(timestamp)}</strong><br>${details}`;
           }
-        }
-      });
+        },
+        legend: {
+          show: chartSeries.length > 1,
+          type: 'scroll',
+          top: 5,
+          left: 12,
+          right: 150,
+          textStyle: { color: '#c6d5e3' },
+          pageTextStyle: { color: '#c6d5e3' }
+        },
+        toolbox: {
+          show: true,
+          top: 0,
+          right: 8,
+          itemSize: 15,
+          iconStyle: { borderColor: '#a7bacb' },
+          emphasis: { iconStyle: { borderColor: '#48d6c4' } },
+          feature: {
+            dataZoom: { title: { zoom: 'Zoom in', back: 'Reset zoom' } },
+            magicType: { type: ['line', 'bar'], title: { line: 'Line chart', bar: 'Bar chart' } },
+            restore: { title: 'Restore chart' },
+            saveAsImage: { title: 'Save chart image', name: 'RDS-counter-history', pixelRatio: 2, backgroundColor: '#111b27' }
+          }
+        },
+        dataZoom: [
+          { type: 'inside', xAxisIndex: 0, filterMode: 'none' },
+          { type: 'slider', xAxisIndex: 0, height: 16, bottom: 24, filterMode: 'none', borderColor: '#34485a', fillerColor: 'rgba(72, 214, 196, .16)', handleStyle: { color: '#48d6c4' }, textStyle: { color: '#9aacc0' } }
+        ],
+        xAxis: {
+          type: 'category',
+          data: labels,
+          boundaryGap: false,
+          axisLine: { lineStyle: { color: '#3a4a5c' } },
+          axisTick: { show: false },
+          axisLabel: { color: '#9aacc0', hideOverlap: true, rotate: labels.length > 18 ? 30 : 0, margin: 12 },
+          splitLine: { show: false }
+        },
+        yAxis: {
+          type: 'value',
+          scale: true,
+          name: 'Counter value',
+          nameLocation: 'middle',
+          nameGap: 68,
+          nameTextStyle: { color: '#9aacc0' },
+          axisLabel: { color: '#9aacc0', formatter: value => Number(value).toLocaleString() },
+          axisLine: { show: false },
+          splitLine: { lineStyle: { color: 'rgba(139, 163, 185, .13)', type: 'dashed' } }
+        },
+        series: chartSeries
+      }, { notMerge: true, lazyUpdate: true });
 
       document.getElementById('result').innerHTML = output;
     }
 
     function clearPingView(message = 'No rds-ping samples found in the loaded files.') {
-      if (pingChart) { pingChart.destroy(); pingChart = null; }
+      if (pingChart) pingChart.clear();
       document.getElementById('pingSummary').innerHTML = '';
       document.getElementById('pingResult').innerHTML = `<div class="findings-summary">${escapeHtml(message)}</div>`;
     }
@@ -737,19 +819,90 @@
         <div class="summary-card"><div class="label">Lowest latency</div><div class="value">${minSample.usec.toLocaleString()} usec</div></div>
       </div>`;
 
-      if (pingChart) pingChart.destroy();
-      pingChart = new Chart(document.getElementById('pingChart').getContext('2d'), {
-        type: 'line',
-        data: { labels: filtered.map(sample => sample.timestamp), datasets: [{
-          label: 'rds-ping latency (usec)', data: filtered.map(sample => sample.usec), borderColor: '#48e1f9',
-          backgroundColor: 'rgba(72, 225, 249, .15)', pointBackgroundColor: filtered.map(sample => sample === maxSample ? '#ff7b72' : '#48e1f9'),
-          pointRadius: 4, borderWidth: 2, fill: true, tension: .15
-        }] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#fff' } } }, scales: {
-          x: { ticks: { color: '#c0d1f7', maxRotation: 45, minRotation: 45 }, grid: { color: 'rgba(53, 55, 76, .27)' }, title: { display: true, text: 'Timestamp', color: '#e1edf7' } },
-          y: { ticks: { color: '#d8e3fa' }, grid: { color: 'rgba(53, 55, 76, .27)' }, title: { display: true, text: 'Latency (usec)', color: '#e1edf7' } }
-        } }
-      });
+      const pingLabels = filtered.map(sample => sample.timestamp);
+      if (!pingChart) pingChart = echarts.init(document.getElementById('pingChart'), null, { renderer: 'canvas' });
+      pingChart.setOption({
+        animation: filtered.length < 1000,
+        color: ['#48d6c4'],
+        textStyle: { fontFamily: "'Roboto', Arial, sans-serif" },
+        grid: { left: 82, right: 28, top: 36, bottom: 94, containLabel: true },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'cross', label: { backgroundColor: '#30465a' } },
+          backgroundColor: '#101a25',
+          borderColor: '#40576d',
+          textStyle: { color: '#edf3f9' },
+          formatter: params => {
+            const point = Array.isArray(params) ? params[0] : params;
+            const sample = filtered[point.dataIndex];
+            return `<strong>${escapeHtml(sample.timestamp)}</strong><br>${point.marker}Latency: <strong>${sample.usec.toLocaleString()} usec</strong><br>Endpoint: ${escapeHtml(sample.endpoint)}<br>Queue: ${escapeHtml(sample.queue)}<br>File: ${escapeHtml(sample.file)}`;
+          }
+        },
+        toolbox: {
+          show: true,
+          top: 0,
+          right: 8,
+          itemSize: 15,
+          iconStyle: { borderColor: '#a7bacb' },
+          emphasis: { iconStyle: { borderColor: '#48d6c4' } },
+          feature: {
+            dataZoom: { title: { zoom: 'Zoom in', back: 'Reset zoom' } },
+            restore: { title: 'Restore chart' },
+            saveAsImage: { title: 'Save chart image', name: 'RDS-ping-latency', pixelRatio: 2, backgroundColor: '#111b27' }
+          }
+        },
+        dataZoom: [
+          { type: 'inside', xAxisIndex: 0, filterMode: 'none' },
+          { type: 'slider', xAxisIndex: 0, height: 16, bottom: 24, filterMode: 'none', borderColor: '#34485a', fillerColor: 'rgba(72, 214, 196, .16)', handleStyle: { color: '#48d6c4' }, textStyle: { color: '#9aacc0' } }
+        ],
+        xAxis: {
+          type: 'category',
+          data: pingLabels,
+          boundaryGap: false,
+          axisLine: { lineStyle: { color: '#3a4a5c' } },
+          axisTick: { show: false },
+          axisLabel: { color: '#9aacc0', hideOverlap: true, rotate: pingLabels.length > 16 ? 30 : 0, margin: 12 },
+          splitLine: { show: false }
+        },
+        yAxis: {
+          type: 'value',
+          min: 0,
+          name: 'Latency (usec)',
+          nameLocation: 'middle',
+          nameGap: 62,
+          nameTextStyle: { color: '#9aacc0' },
+          axisLabel: { color: '#9aacc0', formatter: value => Number(value).toLocaleString() },
+          axisLine: { show: false },
+          splitLine: { lineStyle: { color: 'rgba(139, 163, 185, .13)', type: 'dashed' } }
+        },
+        series: [{
+          name: 'rds-ping latency',
+          type: 'line',
+          data: filtered.map(sample => sample.usec),
+          smooth: false,
+          sampling: filtered.length > 1500 ? 'min-max' : undefined,
+          showSymbol: filtered.length <= 300,
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: { width: 2.5, color: '#48d6c4' },
+          itemStyle: { color: '#48d6c4' },
+          areaStyle: { opacity: .06 },
+          emphasis: { focus: 'series', itemStyle: { color: '#ff7180', borderColor: '#fff', borderWidth: 2 } },
+          markLine: {
+            symbol: ['none', 'none'],
+            lineStyle: { color: '#e3af57', type: 'dashed', width: 1.5 },
+            label: { color: '#f2d79e', formatter: params => `Average ${Number(params.value).toLocaleString()} usec` },
+            data: [{ type: 'average', name: 'Average latency' }]
+          },
+          markPoint: {
+            symbol: 'pin',
+            symbolSize: 42,
+            itemStyle: { color: '#ff7180' },
+            label: { color: '#fff', formatter: params => Number(params.value).toLocaleString() },
+            data: [{ type: 'max', name: 'Highest latency' }]
+          }
+        }]
+      }, { notMerge: true, lazyUpdate: true });
 
       const rows = byLatency.slice(0, topN).map(sample => `<tr><td>${escapeHtml(sample.timestamp)}</td><td>${sample.usec.toLocaleString()}</td><td>${escapeHtml(sample.queue)}</td><td>${escapeHtml(sample.sourceIp)}</td><td>${escapeHtml(sample.targetIp)}</td><td>${escapeHtml(sample.file)}</td></tr>`).join('');
       document.getElementById('pingResult').innerHTML = `<p class="hint-text">Showing the ${Math.min(topN, byLatency.length)} highest-latency rows.</p><div class="data-table-wrapper"><table class="data-table"><thead><tr><th>Timestamp</th><th>Latency (usec)</th><th>Queue</th><th>Source IP</th><th>Target IP</th><th>File</th></tr></thead><tbody>${rows}</tbody></table></div>`;
