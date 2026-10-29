@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VMStat Continuous Plotter and Diagnostic Analyzer</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
   <!-- xz-decompress provides browser-side XZ decompression; files remain local to the browser. -->
   <script src="https://cdn.jsdelivr.net/npm/xz-decompress@0.2.3/dist/package/xz-decompress.min.js"></script>
   <script src="../assets/common.js"></script>
@@ -208,13 +208,13 @@
   </div>
 
   <h3>Memory + CPU Usage</h3>
-  <canvas id="chart1" width="1400" height="450"></canvas>
+  <div id="chart1" role="img" aria-label="Memory and CPU usage chart" style="width:100%;height:440px;"></div>
 
   <h3>Swap In (si)</h3>
-  <canvas id="chart2" width="1400" height="250"></canvas>
+  <div id="chart2" role="img" aria-label="Swap in activity chart" style="width:100%;height:300px;"></div>
 
   <h3>Swap Out (so)</h3>
-  <canvas id="chart3" width="1400" height="250"></canvas>
+  <div id="chart3" role="img" aria-label="Swap out activity chart" style="width:100%;height:300px;"></div>
 
   <h3>Swap Utilization Alerts</h3>
   <table id="alertTable">
@@ -232,6 +232,8 @@
 
   <script>
     let chart1, chart2, chart3;
+    const chartInstances = {};
+    window.addEventListener('resize', () => [chart1, chart2, chart3].forEach(chart => chart && chart.resize()));
     let allRecords = [];
     let fileResults = [];
 
@@ -547,80 +549,49 @@
       const siVals = allRecords.map(r => r.si);
       const soVals = allRecords.map(r => r.so);
 
-      const ctx1 = document.getElementById('chart1').getContext('2d');
-      const ctx2 = document.getElementById('chart2').getContext('2d');
-      const ctx3 = document.getElementById('chart3').getContext('2d');
-
-      if (chart1) chart1.destroy();
-      if (chart2) chart2.destroy();
-      if (chart3) chart3.destroy();
-
-      // Memory + CPU chart
-      chart1 = new Chart(ctx1, {
-        type: 'line',
-        data: {
-          labels: times,
-          datasets: [
-            { label: 'Free Mem (KB)', data: freeMem, borderColor: '#3b82f6', yAxisID: 'y', borderWidth: 2, pointRadius: 0 },
-            { label: 'User CPU %', data: usrCpu, borderColor: '#ef4444', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
-            { label: 'System CPU %', data: sysCpu, borderColor: '#f97316', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
-            { label: 'Idle CPU %', data: idleCpu, borderColor: '#22c55e', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 },
-            { label: 'Wait CPU %', data: waCpu, borderColor: '#a855f7', yAxisID: 'y1', borderWidth: 2, pointRadius: 0 }
-          ]
-        },
-        options: {
-          responsive: true,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { labels: { color: '#fff' } },
-            title: { display: true, text: 'Memory + CPU Usage (Continuous)', color: '#fff' }
-          },
-          scales: {
-            x: { ticks: { color: '#aaa', maxRotation: 45 }, grid: { color: '#333' } },
-            y: { type: 'linear', position: 'left', title: { display: true, text: 'Free Mem (KB)', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } },
-            y1: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: 'CPU %', color: '#fff' }, ticks: { color: '#aaa' }, grid: { display: false } }
-          }
-        }
+      const line = (name, values, color, yAxisIndex = 0, area = false) => ({
+        name, type: 'line', yAxisIndex, showSymbol: false, connectNulls: false,
+        sampling: values.length > 1500 ? 'min-max' : undefined,
+        lineStyle: { width: 2, color }, itemStyle: { color },
+        areaStyle: area ? { opacity: 0.12 } : undefined,
+        emphasis: { focus: 'series' }, data: values
       });
+      const shared = {
+        animation: allRecords.length < 2000,
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#111827', borderColor: '#334155', textStyle: { color: '#f8fafc' } },
+        legend: { type: 'scroll', textStyle: { color: '#e5e7eb' }, top: 8 },
+        toolbox: { right: 12, feature: { dataZoom: { yAxisIndex: 'none' }, restore: {}, saveAsImage: { pixelRatio: 2 } } },
+        grid: { left: 70, right: 64, top: 52, bottom: 72, containLabel: true },
+        dataZoom: [{ type: 'inside', xAxisIndex: 0 }, { type: 'slider', xAxisIndex: 0, height: 18, bottom: 22 }],
+        xAxis: { type: 'category', data: times, boundaryGap: false, axisLabel: { color: '#aab4c3', hideOverlap: true }, axisLine: { lineStyle: { color: '#475569' } }, splitLine: { show: false } }
+      };
+      const initChart = (id, option) => {
+        if (!chartInstances[id]) chartInstances[id] = echarts.init(document.getElementById(id));
+        chartInstances[id].resize();
+        chartInstances[id].setOption(option, { notMerge: true });
+        return chartInstances[id];
+      };
 
-      // Swap In chart
-      chart2 = new Chart(ctx2, {
-        type: 'line',
-        data: {
-          labels: times,
-          datasets: [{ label: 'Swap In (si)', data: siVals, borderColor: '#06b6d4', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(6, 182, 212, 0.1)' }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: '#fff' } },
-            title: { display: true, text: 'Swap In Activity (Continuous)', color: '#fff' }
-          },
-          scales: {
-            x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
-            y: { type: 'linear', position: 'left', title: { display: true, text: 'Pages / sec', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } }
-          }
-        }
+      chart1 = initChart('chart1', {
+        ...shared,
+        title: { text: 'Memory + CPU Usage', left: 16, textStyle: { color: '#f8fafc', fontSize: 15, fontWeight: 600 } },
+        yAxis: [
+          { type: 'value', name: 'Free memory (KB)', nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#aab4c3' }, splitLine: { lineStyle: { color: '#303a49' } } },
+          { type: 'value', name: 'CPU (%)', min: 0, max: 100, nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#aab4c3' }, splitLine: { show: false } }
+        ],
+        series: [line('Free memory', freeMem, '#60a5fa'), line('User CPU', usrCpu, '#f87171', 1), line('System CPU', sysCpu, '#fb923c', 1), line('Idle CPU', idleCpu, '#4ade80', 1), line('Wait CPU', waCpu, '#c084fc', 1)]
       });
-
-      // Swap Out chart
-      chart3 = new Chart(ctx3, {
-        type: 'line',
-        data: {
-          labels: times,
-          datasets: [{ label: 'Swap Out (so)', data: soVals, borderColor: '#dc2626', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(220, 38, 38, 0.1)' }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: '#fff' } },
-            title: { display: true, text: 'Swap Out Activity (Continuous)', color: '#fff' }
-          },
-          scales: {
-            x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
-            y: { type: 'linear', position: 'left', title: { display: true, text: 'Pages / sec', color: '#fff' }, ticks: { color: '#aaa' }, grid: { color: '#333' } }
-          }
-        }
+      chart2 = initChart('chart2', {
+        ...shared,
+        title: { text: 'Swap In Activity', left: 16, textStyle: { color: '#f8fafc', fontSize: 15, fontWeight: 600 } },
+        yAxis: { type: 'value', name: 'Pages / sec', nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#aab4c3' }, splitLine: { lineStyle: { color: '#303a49' } } },
+        series: [line('Swap in (si)', siVals, '#22d3ee', 0, true)]
+      });
+      chart3 = initChart('chart3', {
+        ...shared,
+        title: { text: 'Swap Out Activity', left: 16, textStyle: { color: '#f8fafc', fontSize: 15, fontWeight: 600 } },
+        yAxis: { type: 'value', name: 'Pages / sec', nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#aab4c3' }, splitLine: { lineStyle: { color: '#303a49' } } },
+        series: [line('Swap out (so)', soVals, '#f87171', 0, true)]
       });
     }
 
@@ -733,9 +704,9 @@
       allRecords = [];
       fileResults = [];
 
-      if (chart1) { chart1.destroy(); chart1 = null; }
-      if (chart2) { chart2.destroy(); chart2 = null; }
-      if (chart3) { chart3.destroy(); chart3 = null; }
+      if (chart1) { chart1.clear(); chart1 = null; }
+      if (chart2) { chart2.clear(); chart2 = null; }
+      if (chart3) { chart3.clear(); chart3 = null; }
 
       document.getElementById('alertTable').innerHTML = '<tr><th>File</th><th>Swap Detected?</th><th>Details</th></tr>';
       document.getElementById('statsBox').style.display = 'none';

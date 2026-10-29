@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Flash Cache Explorer</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
 <style>
   :root{
     --bg:#0f1214; --panel:#171b1e; --panel2:#1d2226; --line:#2a3136;
@@ -44,6 +45,8 @@
   section.panel h2{font-size:13px;margin:0 0 12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:600;}
   .chartgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
   @media(max-width:860px){.chartgrid{grid-template-columns:1fr;}}
+  #chartDb,#chartType{width:100%;height:350px;}
+  #chartSkew{width:100%;height:390px;}
   .bar-row{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:12.5px;font-family:var(--mono);}
   .bar-row .lbl{width:150px;flex:0 0 150px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .bar-track{flex:1;background:var(--panel2);border-radius:4px;height:16px;overflow:hidden;position:relative;}
@@ -157,6 +160,7 @@
 
 <script>
 let ROWS = [];           // normalized per-object rows
+const flashCharts = {};
 let sortState = {col:'cached_mb', dir:'desc'};
 
 function setStatus(msg, ok){
@@ -289,6 +293,9 @@ function render(){
   if(window._cellSkew && Object.keys(window._cellSkew).length){
     document.getElementById('skewPanel').style.display='block';
     renderSkewChart(window._cellSkew);
+  } else {
+    document.getElementById('skewPanel').style.display='none';
+    if(flashCharts.chartSkew){ flashCharts.chartSkew.dispose(); delete flashCharts.chartSkew; }
   }
 
   // filters
@@ -308,30 +315,43 @@ function rollup(rows, field){
 
 function renderBarChart(elId, pairs, colorClass){
   const el = document.getElementById(elId);
-  if(!pairs.length){ el.innerHTML = '<div class="empty">no data</div>'; return; }
-  const max = Math.max(...pairs.map(p=>p[1]));
-  el.innerHTML = pairs.map(([label,val])=>{
-    const pct = max>0 ? Math.max(2,(val/max*100)) : 0;
-    return `<div class="bar-row"><div class="lbl" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
-      <div class="bar-track"><div class="bar-fill ${colorClass==='cyan'?'cyan':''}" style="width:${pct}%"></div></div>
-      <div class="bar-val">${fmt(val)} MB</div></div>`;
-  }).join('');
+  if(!pairs.length){
+    if(flashCharts[elId]){ flashCharts[elId].dispose(); delete flashCharts[elId]; }
+    el.innerHTML = '<div class="empty">no data</div>';
+    return;
+  }
+  const color = colorClass === 'cyan' ? '#4fc3d9' : '#f5a623';
+  if(!flashCharts[elId]) flashCharts[elId] = echarts.init(el);
+  flashCharts[elId].setOption({
+    animation: pairs.length < 500,
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#171b1e', borderColor: '#38434a', textStyle: { color: '#e7e9ea' }, formatter: params => `${escapeHtml(params[0].name)}<br><strong>${fmt(params[0].value)} MB</strong>` },
+    toolbox: { right: 6, feature: { restore: {}, saveAsImage: { pixelRatio: 2 } } },
+    grid: { left: 14, right: 54, top: 10, bottom: 12, containLabel: true },
+    xAxis: { type: 'value', name: 'Cached MB', axisLabel: { color: '#a6b0b5' }, axisLine: { lineStyle: { color: '#3b454b' } }, splitLine: { lineStyle: { color: '#283034' } } },
+    yAxis: { type: 'category', inverse: true, data: pairs.map(([label]) => label), axisLabel: { color: '#e7e9ea', width: 170, overflow: 'truncate' }, axisLine: { lineStyle: { color: '#3b454b' } } },
+    series: [{ name: 'Cached MB', type: 'bar', barMaxWidth: 22, data: pairs.map(([, value]) => value), itemStyle: { color, borderRadius: [0, 5, 5, 0] }, showBackground: true, backgroundStyle: { color: '#22292d', borderRadius: [0, 5, 5, 0] }, label: { show: true, position: 'right', color: '#aeb8bd', formatter: params => fmt(params.value) }, emphasis: { focus: 'series' } }]
+  }, { notMerge: true });
+  flashCharts[elId].resize();
 }
 
 function renderSkewChart(byCell){
   const entries = Object.entries(byCell);
   const avg = entries.reduce((a,[,v])=>a+v,0)/entries.length;
   const el = document.getElementById('chartSkew');
-  const max = Math.max(...entries.map(([,v])=>v), avg);
-  el.innerHTML = entries.sort((a,b)=>b[1]-a[1]).map(([cell,val])=>{
-    const dev = avg>0 ? (100*(val-avg)/avg) : 0;
-    const skewed = Math.abs(dev) > 25;
-    const pct = max>0 ? Math.max(2, val/max*100) : 0;
-    return `<div class="bar-row"><div class="lbl" title="${escapeHtml(cell)}">${escapeHtml(cell)}</div>
-      <div class="bar-track"><div class="bar-fill ${skewed?'skew':''}" style="width:${pct}%"></div></div>
-      <div class="bar-val">${fmt(val)} MB${skewed?` <span class="badge cold">${dev>0?'+':''}${dev.toFixed(0)}%</span>`:''}</div></div>`;
-  }).join('') + `<div class="hint" style="margin-top:8px;">Cluster average: ${fmt(avg)} MB &middot; flagged when deviation &gt; 25%</div>`;
+  const sorted = entries.sort((a,b)=>b[1]-a[1]);
+  if(!flashCharts.chartSkew) flashCharts.chartSkew = echarts.init(el);
+  flashCharts.chartSkew.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#171b1e', borderColor: '#38434a', textStyle: { color: '#e7e9ea' }, formatter: params => { const value = params[0].value; const deviation = avg ? (100 * (value - avg) / avg) : 0; return `${escapeHtml(params[0].name)}<br>${fmt(value)} MB<br>Cluster deviation: ${deviation > 0 ? '+' : ''}${deviation.toFixed(1)}%`; } },
+    toolbox: { right: 6, feature: { restore: {}, saveAsImage: { pixelRatio: 2 } } },
+    grid: { left: 14, right: 60, top: 16, bottom: 16, containLabel: true },
+    xAxis: { type: 'value', name: 'Cached MB', axisLabel: { color: '#a6b0b5' }, axisLine: { lineStyle: { color: '#3b454b' } }, splitLine: { lineStyle: { color: '#283034' } } },
+    yAxis: { type: 'category', inverse: true, data: sorted.map(([cell])=>cell), axisLabel: { color: '#e7e9ea' }, axisLine: { lineStyle: { color: '#3b454b' } } },
+    series: [{ name: 'Cell cache', type: 'bar', barMaxWidth: 24, data: sorted.map(([, value]) => ({ value, itemStyle: { color: avg && Math.abs(100 * (value - avg) / avg) > 25 ? '#e0563f' : '#5fb87a', borderRadius: [0, 5, 5, 0] } })), markLine: { symbol: 'none', lineStyle: { color: '#f5a623', type: 'dashed', width: 2 }, label: { color: '#f5a623', formatter: `Average ${fmt(avg)} MB` }, data: [{ xAxis: avg }] }, emphasis: { focus: 'series' } }]
+  }, { notMerge: true });
+  flashCharts.chartSkew.resize();
 }
+
+window.addEventListener('resize', () => Object.values(flashCharts).forEach(chart => chart && chart.resize()));
 
 function populateSelect(id, values){
   const sel = document.getElementById(id);

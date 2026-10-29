@@ -8,8 +8,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${ROOT_DIR}/scripts/python_env.sh"
 VENV_PY="$(require_python_env "${ROOT_DIR}")"
 
-if ! "${VENV_PY}" -c 'import streamlit, pandas, plotly' >/dev/null 2>&1; then
-  echo "Python environment is missing one or more required packages: streamlit, pandas, plotly" >&2
+if ! "${VENV_PY}" -c 'import streamlit, pandas' >/dev/null 2>&1; then
+  echo "Python environment is missing one or more required packages: streamlit, pandas" >&2
   echo "Install them with: ${VENV_PY} -m pip install -r ${ROOT_DIR}/requirements.txt" >&2
   exit 1
 fi

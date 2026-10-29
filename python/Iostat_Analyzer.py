@@ -19,8 +19,9 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pandas as pd
-import plotly.express as px
 import streamlit as st
+
+from echarts_component import render_echarts
 
 
 MAX_UPLOAD_MB = 200
@@ -599,16 +600,51 @@ def _render_chart(frame: pd.DataFrame, y_column: str, title: str, color: str = "
         st.info(f"No rows available for {title}.")
         return
     x_column = "timestamp" if "timestamp" in chart_df.columns and chart_df["timestamp"].notna().any() else "sample_number"
-    fig = px.line(
-        chart_df,
-        x=x_column,
-        y=y_column,
-        color=color if color in chart_df.columns else None,
-        hover_data=["source_file", "device"] if "device" in chart_df.columns else ["source_file"],
-        title=title,
-    )
-    fig.update_layout(legend_title_text=color.replace("_", " ").title())
-    st.plotly_chart(fig, use_container_width=True)
+    time_axis = x_column == "timestamp"
+    group_columns = [column for column in (color, "source_file") if column in chart_df.columns and column != x_column]
+    group_columns = list(dict.fromkeys(group_columns))
+    groups = list(chart_df.groupby(group_columns, sort=False, dropna=False)) if group_columns else [("Metric", chart_df)]
+    palette = ["#38bdf8", "#fb923c", "#4ade80", "#f472b6", "#a78bfa", "#facc15", "#2dd4bf", "#f87171"]
+    series = []
+    for index, (group_key, group) in enumerate(groups):
+        group = group.sort_values(x_column)
+        keys = group_key if isinstance(group_key, tuple) else (group_key,)
+        name = " · ".join(str(value) for value in keys if pd.notna(value)) or "Metric"
+        points = []
+        for x_value, y_value in group[[x_column, y_column]].itertuples(index=False, name=None):
+            if pd.isna(x_value) or pd.isna(y_value):
+                continue
+            try:
+                chart_x = pd.Timestamp(x_value).timestamp() * 1000 if time_axis else float(x_value)
+                points.append([chart_x, float(y_value)])
+            except (TypeError, ValueError, OverflowError):
+                continue
+        color_value = palette[index % len(palette)]
+        line_series = {
+            "name": name,
+            "type": "line",
+            "data": points,
+            "showSymbol": len(points) < 100,
+            "symbolSize": 5,
+            "lineStyle": {"color": color_value, "width": 2},
+            "itemStyle": {"color": color_value},
+            "emphasis": {"focus": "series"},
+        }
+        if len(points) > 1500:
+            line_series["sampling"] = "min-max"
+        series.append(line_series)
+    render_echarts({
+        "animation": len(chart_df) < 2000,
+        "title": {"text": title, "left": 14, "textStyle": {"fontSize": 16, "fontWeight": 600}},
+        "tooltip": {"trigger": "axis", "axisPointer": {"type": "cross"}},
+        "legend": {"type": "scroll", "top": 42} if len(series) > 1 else {"show": False},
+        "toolbox": {"right": 12, "feature": {"dataZoom": {"yAxisIndex": "none"}, "restore": {}, "saveAsImage": {"pixelRatio": 2}}},
+        "grid": {"left": 74, "right": 24, "top": 88, "bottom": 76, "containLabel": True},
+        "dataZoom": [{"type": "inside", "xAxisIndex": 0}, {"type": "slider", "xAxisIndex": 0, "height": 18, "bottom": 22}],
+        "xAxis": {"type": "time" if time_axis else "value", "name": "Timestamp" if time_axis else "Sample", "axisLabel": {"hideOverlap": True}},
+        "yAxis": {"type": "value", "name": y_column, "scale": True, "splitLine": {"lineStyle": {"color": "#334155"}}},
+        "series": series,
+    }, height=500)
 
 
 st.set_page_config(

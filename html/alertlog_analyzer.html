@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Oracle Alert Log Analyzer + Timeline (v2)</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
   <script src="../assets/common.js"></script>
   <style>
     body {
@@ -244,7 +244,7 @@
     <p>After analyzing logs, filter events to plot on timeline:</p>
     <input id="timelineFilter" class="filter-input" placeholder="Keyword (e.g. ORA-, FATAL)">
     <button id="buildTimeline">Build Timeline</button>
-    <canvas id="timelineChart" style="width: 100%; max-height: 600px; margin-top: 20px;"></canvas>
+    <div id="timelineChart" role="img" aria-label="Alert log event timeline" style="width: 100%; height: 560px; margin-top: 20px;"></div>
   </div>
 
 <script>
@@ -253,6 +253,7 @@ let alertFiles = [];
 let filteredFiles = [];
 let parsedEvents = [];
 let chartObj = null;
+window.addEventListener('resize', () => chartObj && chartObj.resize());
 
 // Statistics counters
 let stats = {
@@ -630,44 +631,37 @@ document.getElementById('buildTimeline').addEventListener('click', () => {
   const uniqueFiles = [...new Set(data.map(e => e.file))];
   const colors = ['#00bfff', '#ff5050', '#66ff66', '#ffd966', '#ff66cc', '#a366ff', '#ffaa00', '#00ffaa'];
 
-  const datasets = uniqueFiles.map((f, idx) => ({
-    label: f,
-    data: data.filter(e => e.file === f).map(e => ({ x: e.ts, y: f })),
-    backgroundColor: colors[idx % colors.length],
-    pointRadius: 5
+  const series = uniqueFiles.map((file, index) => ({
+    name: file,
+    type: 'scatter',
+    symbolSize: 9,
+    itemStyle: { color: colors[index % colors.length], opacity: 0.82 },
+    emphasis: { focus: 'series', scale: 1.5 },
+    data: data.filter(event => event.file === file).map(event => ({
+      value: [new Date(event.ts).getTime(), file],
+      eventLine: event.line
+    }))
   }));
 
-  const ctx = document.getElementById('timelineChart');
-
-  if (chartObj) chartObj.destroy();
-
-  chartObj = new Chart(ctx, {
-    type: 'scatter',
-    data: { datasets },
-    options: {
-      responsive: true,
-      scales: {
-        x: {
-          type: 'time',
-          title: { text: 'Time', display: true, color: '#ddd' },
-          ticks: { color: '#aaa' }
-        },
-        y: {
-          type: 'category',
-          title: { text: 'Instance/File', display: true, color: '#ddd' },
-          ticks: { color: '#aaa' }
-        }
-      },
-      plugins: {
-        legend: { labels: { color: '#ddd' } },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.raw.y} → ${ctx.raw.x.toISOString()}`
-          }
-        }
-      }
-    }
-  });
+  const chartElement = document.getElementById('timelineChart');
+  if (!chartObj) chartObj = echarts.init(chartElement);
+  chartObj.resize();
+  chartObj.setOption({
+    animation: data.length < 2500,
+    title: { text: 'Alert Events by File and Time', left: 12, textStyle: { color: '#f1f5f9', fontSize: 16, fontWeight: 600 } },
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: '#111827', borderColor: '#334155', textStyle: { color: '#f8fafc' },
+      formatter: params => `<strong>${params.seriesName}</strong><br>${new Date(params.value[0]).toLocaleString()}<br>${escapeHtml(params.data.eventLine || '')}`
+    },
+    legend: { type: 'scroll', top: 34, textStyle: { color: '#cbd5e1' } },
+    toolbox: { right: 10, feature: { dataZoom: { yAxisIndex: 'none' }, restore: {}, saveAsImage: { pixelRatio: 2 } } },
+    grid: { left: 120, right: 30, top: 90, bottom: 72, containLabel: true },
+    dataZoom: [{ type: 'inside', xAxisIndex: 0 }, { type: 'slider', xAxisIndex: 0, height: 18, bottom: 22 }],
+    xAxis: { type: 'time', name: 'Event time', nameLocation: 'middle', nameGap: 34, axisLabel: { color: '#aab4c3' }, axisLine: { lineStyle: { color: '#475569' } }, splitLine: { lineStyle: { color: '#303a49' } } },
+    yAxis: { type: 'category', name: 'File', data: uniqueFiles, axisLabel: { color: '#cbd5e1', width: 180, overflow: 'truncate' }, axisLine: { lineStyle: { color: '#475569' } }, splitLine: { show: true, lineStyle: { color: '#283241' } } },
+    series
+  }, { notMerge: true });
 });
 </script>
 </body>

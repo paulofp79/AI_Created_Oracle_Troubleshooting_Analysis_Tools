@@ -108,7 +108,7 @@
     }
     .card .content { padding: 14px; }
 
-    canvas { width: 100%; height: 420px; }
+    .chart-canvas { width: 100%; height: 420px; }
 
     .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
     .legend label { font-size: 12px; color: var(--muted); cursor: pointer; }
@@ -194,7 +194,7 @@
       <div class="card">
         <h3>CPU Utilization Over Time</h3>
         <div class="content">
-          <canvas id="chart"></canvas>
+          <div id="chart" class="chart-canvas" role="img" aria-label="CPU utilization over time"></div>
           <div class="legend" id="seriesToggles"></div>
         </div>
       </div>
@@ -207,21 +207,20 @@
   </div>
 
   <footer>
-    Works offline after initial load. Uses JSZip + Chart.js. | Paulo Portugal - Oracle XTeam
+    Works offline after initial load. Uses JSZip + Apache ECharts. | Paulo Portugal - Oracle XTeam
   </footer>
 
   <!-- JS libs -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
 
   <script>
     // Check for required libraries
     if (typeof JSZip === 'undefined') {
       document.getElementById('errorBox').innerHTML = '<div class="error-box">Error: JSZip library failed to load. Check your internet connection.</div>';
     }
-    if (typeof Chart === 'undefined') {
-      document.getElementById('errorBox').innerHTML += '<div class="error-box">Error: Chart.js library failed to load. Check your internet connection.</div>';
+    if (typeof echarts === 'undefined') {
+      document.getElementById('errorBox').innerHTML += '<div class="error-box">Error: Apache ECharts failed to load. Check your internet connection.</div>';
     }
 
     // --- Utilities ---
@@ -348,78 +347,51 @@
     let allRows = [];
     let pendingFiles = [];
     let chart;
+    window.addEventListener('resize', () => chart && chart.resize());
 
     function renderChart() {
-      const ctx = document.getElementById('chart');
-      const labels = allRows.map(r => r.timestamp);
-
-      const makeDS = (label, field, color, hidden = false) => ({
-        label,
-        data: allRows.map(r => r[field]),
-        borderColor: color,
-        backgroundColor: color + '20',
-        borderWidth: 1.8,
-        pointRadius: 0,
-        tension: 0.15,
-        hidden
-      });
-
-      const datasets = [
-        makeDS('%usr', '%usr', '#ef4444'),
-        makeDS('%sys', '%sys', '#f97316'),
-        makeDS('%wio', '%wio', '#a855f7'),
-        makeDS('%nice', '%nice', '#22c55e', true),
-        makeDS('%irq', '%irq', '#3b82f6', true),
-        makeDS('%softirq', '%softirq', '#06b6d4', true),
-        makeDS('%steal', '%steal', '#ec4899', true),
-        makeDS('%idle', '%idle', '#6b7280', true)
+      const chartElement = document.getElementById('chart');
+      const seriesDefinitions = [
+        { name: '%usr', field: '%usr', color: '#f87171' },
+        { name: '%sys', field: '%sys', color: '#fb923c' },
+        { name: '%wio', field: '%wio', color: '#c084fc' },
+        { name: '%nice', field: '%nice', color: '#4ade80', hidden: true },
+        { name: '%irq', field: '%irq', color: '#60a5fa', hidden: true },
+        { name: '%softirq', field: '%softirq', color: '#22d3ee', hidden: true },
+        { name: '%steal', field: '%steal', color: '#f472b6', hidden: true },
+        { name: '%idle', field: '%idle', color: '#94a3b8', hidden: true }
       ];
-
-      if (chart) chart.destroy();
-
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { display: true, labels: { color: '#e5e7eb' } },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)}%`
-              }
-            }
-          },
-          scales: {
-            x: {
-              type: 'time',
-              time: { tooltipFormat: 'yyyy-MM-dd HH:mm:ss' },
-              ticks: { color: '#9ca3af' },
-              grid: { color: '#1f2937' }
-            },
-            y: {
-              beginAtZero: true,
-              max: 100,
-              title: { display: true, text: 'Percent', color: '#e5e7eb' },
-              ticks: { color: '#9ca3af' },
-              grid: { color: '#1f2937' }
-            }
-          }
-        }
-      });
+      if (!chart) chart = echarts.init(chartElement);
+      chart.resize();
+      chart.setOption({
+        animation: allRows.length < 2000,
+        color: seriesDefinitions.map(item => item.color),
+        title: { text: 'CPU Utilization Over Time', left: 12, textStyle: { color: '#e5e7eb', fontSize: 15, fontWeight: 600 } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#111827', borderColor: '#334155', textStyle: { color: '#f8fafc' }, valueFormatter: value => `${formatNumber(value)}%` },
+        legend: { type: 'scroll', top: 34, textStyle: { color: '#cbd5e1' }, selected: Object.fromEntries(seriesDefinitions.map(item => [item.name, !item.hidden])) },
+        toolbox: { right: 12, feature: { dataZoom: { yAxisIndex: 'none' }, restore: {}, saveAsImage: { pixelRatio: 2 } } },
+        grid: { left: 62, right: 28, top: 86, bottom: 76, containLabel: true },
+        dataZoom: [{ type: 'inside', xAxisIndex: 0 }, { type: 'slider', xAxisIndex: 0, height: 18, bottom: 22 }],
+        xAxis: { type: 'time', axisLabel: { color: '#9ca3af', hideOverlap: true }, axisLine: { lineStyle: { color: '#475569' } }, splitLine: { lineStyle: { color: '#263142' } } },
+        yAxis: { type: 'value', name: 'Percent', min: 0, max: 100, axisLabel: { color: '#9ca3af', formatter: '{value}%' }, axisLine: { lineStyle: { color: '#475569' } }, splitLine: { lineStyle: { color: '#263142' } } },
+        series: seriesDefinitions.map(item => ({
+          name: item.name, type: 'line', showSymbol: false, connectNulls: false,
+          sampling: allRows.length > 1500 ? 'min-max' : undefined,
+          lineStyle: { width: 1.8, color: item.color }, itemStyle: { color: item.color },
+          emphasis: { focus: 'series' },
+          data: allRows.map(row => [new Date(row.timestamp).getTime(), row[item.field]])
+        }))
+      }, { notMerge: true });
 
       // Series toggles
       const toggles = document.getElementById('seriesToggles');
       toggles.innerHTML = '';
-      chart.data.datasets.forEach((ds, i) => {
+      seriesDefinitions.forEach(ds => {
         const wrap = document.createElement('label');
-        wrap.innerHTML = `<input type="checkbox" ${ds.hidden ? '' : 'checked'} data-idx="${i}"> ${ds.label}`;
+        wrap.innerHTML = `<input type="checkbox" ${ds.hidden ? '' : 'checked'}> ${ds.name}`;
         const checkbox = wrap.querySelector('input');
         checkbox.addEventListener('change', (e) => {
-          chart.setDatasetVisibility(i, e.target.checked);
-          chart.update();
+          chart.dispatchAction({ type: e.target.checked ? 'legendSelect' : 'legendUnSelect', name: ds.name });
         });
         toggles.appendChild(wrap);
       });
@@ -560,7 +532,7 @@
       document.getElementById('downloadBtn').disabled = true;
       loadBtn.disabled = true;
       clearError();
-      if (chart) { chart.destroy(); chart = null; }
+      if (chart) { chart.dispose(); chart = null; }
       document.getElementById('seriesToggles').innerHTML = '';
       document.getElementById('summary').textContent = 'No data loaded yet.';
     });

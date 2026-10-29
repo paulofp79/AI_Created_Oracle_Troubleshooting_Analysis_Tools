@@ -14,8 +14,9 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 import pandas as pd
-import plotly.express as px
 import streamlit as st
+
+from echarts_component import render_echarts
 
 try:
     import oracledb as oracle_driver
@@ -756,38 +757,91 @@ def render_chart(
     series_col: Optional[str],
     title: str,
 ):
-    if chart_type == "line":
-        fig = px.line(frame, x=x_col, y=y_col, color=series_col, markers=True, title=title)
-    elif chart_type == "bar":
-        fig = px.bar(frame, x=x_col, y=y_col, color=series_col, title=title, barmode="group")
-    elif chart_type == "area":
-        fig = px.area(frame, x=x_col, y=y_col, color=series_col, title=title)
-    else:
-        fig = px.scatter(frame, x=x_col, y=y_col, color=series_col, title=title)
+    chart_frame = frame.dropna(subset=[x_col, y_col]).copy()
+    if chart_frame.empty:
+        st.info("No chartable rows are available for the selected metric.")
+        return
 
-    fig.update_layout(legend_title_text=series_col or "", height=520)
-    st.plotly_chart(fig, use_container_width=True)
+    labels = list(dict.fromkeys(chart_frame[x_col].map(str).tolist()))
+    groups = [("Metric", chart_frame)]
+    if series_col and series_col in chart_frame.columns:
+        groups = list(chart_frame.groupby(series_col, sort=False, dropna=False))
+    echarts_type = "line" if chart_type == "area" else chart_type
+    colors = ["#38bdf8", "#fb923c", "#4ade80", "#f472b6", "#a78bfa", "#facc15", "#2dd4bf", "#f87171"]
+    series = []
+    for index, (name, group) in enumerate(groups):
+        color = colors[index % len(colors)]
+        data = []
+        for x_raw, y_value in group[[x_col, y_col]].itertuples(index=False, name=None):
+            x_value = str(x_raw)
+            try:
+                data.append([x_value, float(y_value)])
+            except (TypeError, ValueError):
+                continue
+        item = {
+            "name": str(name),
+            "type": echarts_type,
+            "data": data,
+            "itemStyle": {"color": color},
+            "lineStyle": {"color": color, "width": 2.2},
+            "emphasis": {"focus": "series"},
+        }
+        if echarts_type == "line":
+            item.update({"showSymbol": chart_type == "scatter" or len(data) < 100, "symbolSize": 6, "smooth": False})
+            if len(data) > 1500:
+                item["sampling"] = "min-max"
+        if chart_type == "area":
+            item["areaStyle"] = {"color": color, "opacity": 0.15}
+        if chart_type == "bar":
+            item["barMaxWidth"] = 36
+        if chart_type == "scatter":
+            item["symbolSize"] = 8
+        series.append(item)
+
+    render_echarts({
+        "animation": len(chart_frame) < 2000,
+        "title": {"text": title, "left": 14, "textStyle": {"fontSize": 16, "fontWeight": 600}},
+        "tooltip": {"trigger": "axis" if chart_type != "scatter" else "item", "axisPointer": {"type": "cross"}},
+        "legend": {"type": "scroll", "top": 42} if len(groups) > 1 else {"show": False},
+        "toolbox": {"right": 12, "feature": {"dataZoom": {"yAxisIndex": "none"}, "restore": {}, "saveAsImage": {"pixelRatio": 2}}},
+        "grid": {"left": 70, "right": 24, "top": 88, "bottom": 76, "containLabel": True},
+        "dataZoom": [{"type": "inside", "xAxisIndex": 0}, {"type": "slider", "xAxisIndex": 0, "height": 18, "bottom": 22}],
+        "xAxis": {"type": "category", "data": labels, "boundaryGap": chart_type == "bar", "axisLabel": {"hideOverlap": True}},
+        "yAxis": {"type": "value", "name": y_col, "scale": True, "splitLine": {"lineStyle": {"color": "#334155"}}},
+        "series": series,
+    }, height=520)
 
 
 def render_gc_compare_chart(frame: pd.DataFrame, y_col: str, title: str):
     plot_frame = frame.copy()
     plot_frame["snap_time_label"] = plot_frame["bucket_time"].dt.strftime("%Y-%m-%d %H:%M")
-    fig = px.line(
-        plot_frame,
-        x="snap_time_label",
-        y=y_col,
-        color="period_label",
-        markers=True,
-        title=title,
-        hover_data=["bucket_time"],
-    )
-    fig.update_layout(
-        legend_title_text="Period",
-        height=520,
-        xaxis_title="Snapshot Time",
-        yaxis_title=y_col,
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    labels = list(dict.fromkeys(plot_frame["snap_time_label"].tolist()))
+    colors = ["#38bdf8", "#fb923c", "#4ade80", "#f472b6", "#a78bfa", "#facc15"]
+    series = []
+    for index, (period, group) in enumerate(plot_frame.groupby("period_label", sort=False, dropna=False)):
+        color = colors[index % len(colors)]
+        series.append({
+            "name": str(period),
+            "type": "line",
+            "data": [[str(x_value), float(value)] for x_value, value in group[["snap_time_label", y_col]].itertuples(index=False, name=None) if pd.notna(value)],
+            "showSymbol": True,
+            "symbolSize": 6,
+            "lineStyle": {"color": color, "width": 2.2},
+            "itemStyle": {"color": color},
+            "emphasis": {"focus": "series"},
+        })
+    render_echarts({
+        "animation": len(plot_frame) < 2000,
+        "title": {"text": title, "left": 14, "textStyle": {"fontSize": 16, "fontWeight": 600}},
+        "tooltip": {"trigger": "axis", "axisPointer": {"type": "cross"}},
+        "legend": {"type": "scroll", "top": 42},
+        "toolbox": {"right": 12, "feature": {"dataZoom": {"yAxisIndex": "none"}, "restore": {}, "saveAsImage": {"pixelRatio": 2}}},
+        "grid": {"left": 70, "right": 24, "top": 88, "bottom": 76, "containLabel": True},
+        "dataZoom": [{"type": "inside", "xAxisIndex": 0}, {"type": "slider", "xAxisIndex": 0, "height": 18, "bottom": 22}],
+        "xAxis": {"type": "category", "name": "Snapshot Time", "data": labels, "boundaryGap": False, "axisLabel": {"hideOverlap": True}},
+        "yAxis": {"type": "value", "name": y_col, "scale": True, "splitLine": {"lineStyle": {"color": "#334155"}}},
+        "series": series,
+    }, height=520)
 
 
 st.session_state.setdefault("awr_host", "localhost")

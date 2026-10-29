@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Listener Log Analyzer - Oracle X-Team</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     #progressContainer{width:100%;background:#2a2a2a;border-radius:10px;height:10px;margin-top:12px;overflow:hidden;}
     #progressBar{width:0;height:10px;background:#00b4d8;transition:width .15s linear;}
+    #connectionChart{width:100%;height:500px;background:#1f2937;padding:16px;border-radius:16px;box-shadow:0 10px 24px rgba(0,0,0,.24);}
   </style>
 </head>
 
@@ -51,8 +52,7 @@
     </section>
 
     <section class="max-w-6xl mx-auto mt-10">
-      <canvas id="connectionChart"
-        class="w-full h-[500px] bg-gray-800 p-4 rounded-2xl shadow"></canvas>
+      <div id="connectionChart" role="img" aria-label="Listener connection trend chart"></div>
     </section>
   </main>
 
@@ -66,7 +66,7 @@
     const message=document.getElementById('message');
     const progressContainer=document.getElementById('progressContainer');
     const progressBar=document.getElementById('progressBar');
-    const chartCanvas=document.getElementById('connectionChart');
+    const chartContainer=document.getElementById('connectionChart');
     const timeAgg=document.getElementById('timeAgg');
     const svcToggle=document.getElementById('svcToggle');
     let chartInstance=null, parsedResults={}, timeline=[];
@@ -114,7 +114,7 @@
     });
 
     function buildChart(results, isoTimeline, timeMode, groupSvc){
-      if(chartInstance){chartInstance.destroy();}
+      if(!chartInstance){chartInstance=echarts.init(chartContainer);}
       const palette=['#00b4d8','#ffb703','#90be6d','#f94144','#577590','#f3722c','#4cc9f0','#e07a5f','#3a86ff','#8338ec'];
       const datasets=[];
       let ci=0;
@@ -141,69 +141,31 @@
             }
             values.push(sum);
           }
-          datasets.push({
-            label:svc,
-            data:values,
-            borderColor:palette[ci%palette.length],
-            backgroundColor:palette[ci%palette.length]+'55',
-            borderWidth:2,
-            tension:0.25,
-            fill:false
-          });
+          datasets.push({name:svc,type:'line',data:values,showSymbol:values.length<100,lineStyle:{color:palette[ci%palette.length],width:2},itemStyle:{color:palette[ci%palette.length]},emphasis:{focus:'series'}});
           ci++;
         }
       } else {
         // Normal time aggregation per file
         for(const [fname,counts] of Object.entries(results)){
           const values=labels.map(k=>counts[k]||0);
-          datasets.push({
-            label:fname,
-            data:values,
-            borderColor:palette[ci%palette.length],
-            borderWidth:2,
-            tension:0.25,
-            fill:false
-          });
+          datasets.push({name:fname,type:'line',data:values,showSymbol:values.length<100,lineStyle:{color:palette[ci%palette.length],width:2},itemStyle:{color:palette[ci%palette.length]},emphasis:{focus:'series'}});
           ci++;
         }
       }
 
-      chartInstance=new Chart(chartCanvas,{
-        type:'line',
-        data:{labels,datasets},
-        options:{
-          responsive:true,
-          interaction:{mode:'index',intersect:false},
-          scales:{
-            x:{ticks:{color:'#ccc',maxRotation:45,minRotation:45},grid:{color:'#333'}},
-            y:{ticks:{color:'#ccc'},grid:{color:'#333'},beginAtZero:true,
-               title:{display:true,text:'Connections',color:'#ccc'}}
-          },
-		plugins:{
-  legend:{
-    labels:{color:'#bbb'},
-    onClick: (e, legendItem, legend) => {
-      const chart = legend.chart;
-      const index = legendItem.datasetIndex;
-      const ci = chart;
-      const meta = ci.getDatasetMeta(index);
-      // Toggle visibility
-      meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
-      ci.update();
-    }
-  },
-  title:{
-    display:true,
-    text: groupSvc
-      ? `Connections per ${timeMode} by Service Name`
-      : `Database Connections per ${timeMode}`,
-    color:'#00b4d8',
-    font:{size:18}
-  }
-}
-
-        }
-      });
+      chartInstance.resize();
+      chartInstance.setOption({
+        animation:labels.length<2000,
+        title:{text:groupSvc?`Connections per ${timeMode} by Service Name`:`Database Connections per ${timeMode}`,left:14,textStyle:{color:'#7dd3fc',fontSize:17,fontWeight:600}},
+        tooltip:{trigger:'axis',axisPointer:{type:'cross'},backgroundColor:'#111827',borderColor:'#334155',textStyle:{color:'#f8fafc'}},
+        legend:{type:'scroll',top:42,textStyle:{color:'#cbd5e1'}},
+        toolbox:{right:12,feature:{dataZoom:{yAxisIndex:'none'},restore:{},saveAsImage:{pixelRatio:2}}},
+        grid:{left:62,right:24,top:94,bottom:78,containLabel:true},
+        dataZoom:[{type:'inside',xAxisIndex:0},{type:'slider',xAxisIndex:0,height:18,bottom:22}],
+        xAxis:{type:'category',data:labels,boundaryGap:false,axisLabel:{color:'#9ca3af',hideOverlap:true},axisLine:{lineStyle:{color:'#475569'}},splitLine:{show:false}},
+        yAxis:{type:'value',name:'Connections',min:0,axisLabel:{color:'#9ca3af'},axisLine:{lineStyle:{color:'#475569'}},splitLine:{lineStyle:{color:'#334155'}}},
+        series:datasets
+      },{notMerge:true});
 
       message.textContent=`✅ Analysis complete (${Object.keys(results).length} files, aggregated by ${timeMode}${groupSvc?' and Service':''}).`;
       downloadBtn.classList.remove('hidden');
@@ -221,6 +183,7 @@
         link.click();
       };
     }
+    window.addEventListener('resize',()=>chartInstance&&chartInstance.resize());
   </script>
 </body>
 </html>

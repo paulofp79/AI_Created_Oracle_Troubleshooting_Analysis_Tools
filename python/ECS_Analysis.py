@@ -16,7 +16,8 @@ from typing import List, Dict, Any, Optional
 
 import pandas as pd
 import streamlit as st
-import plotly.express as px
+
+from echarts_component import render_echarts
 
 # Constants
 MAX_FILE_SIZE_MB = 200
@@ -455,24 +456,49 @@ for (cat, met) in key_pairs:
 
 plot_df = pd.concat(plot_rows, ignore_index=True)
 
-# Create chart
-fig = px.line(
-    plot_df,
-    x="timestamp",
-    y="value",
-    color="dtype",
-    line_dash="series" if len(key_pairs) > 1 else None,
-    title=f"Metrics: {', '.join([f'{c}:{m}' for c,m in key_pairs])} ({unit})",
-    labels={"value": unit, "timestamp": "Timestamp", "dtype": "Type (SD/MD)"},
-)
+# Create an interactive ECharts time series. Keep separate metric and disk-type
+# lines so the selected SD/MD comparison remains visible when many metrics are chosen.
+plot_df["timestamp"] = pd.to_datetime(plot_df["timestamp"])
+timestamps = sorted(plot_df["timestamp"].dropna().unique())
+labels = [pd.Timestamp(value).strftime("%Y-%m-%d %H:%M:%S") for value in timestamps]
+series = []
+palette = ["#38bdf8", "#fb923c", "#4ade80", "#f472b6", "#a78bfa", "#facc15", "#2dd4bf", "#f87171"]
+for index, (key, group) in enumerate(plot_df.groupby(["series", "dtype"], sort=False, dropna=False)):
+    metric_name, dtype = key
+    values_by_time = {
+        pd.Timestamp(row.timestamp): float(row.value)
+        for row in group.itertuples(index=False)
+        if pd.notna(row.timestamp) and pd.notna(row.value)
+    }
+    series_name = f"{metric_name} · {dtype}" if len(key_pairs) > 1 else str(dtype)
+    color = palette[index % len(palette)]
+    series.append({
+        "name": series_name,
+        "type": "line",
+        "showSymbol": len(labels) < 100,
+        "symbolSize": 5,
+        "smooth": False,
+        "connectNulls": False,
+        "lineStyle": {"width": 2.2, "color": color, "type": "dashed" if dtype == "MD" else "solid"},
+        "itemStyle": {"color": color},
+        "emphasis": {"focus": "series"},
+        "data": [[label, values_by_time.get(pd.Timestamp(timestamp))] for timestamp, label in zip(timestamps, labels)],
+    })
+    if len(labels) > 1500:
+        series[-1]["sampling"] = "min-max"
 
-fig.update_layout(
-    template="plotly_dark",
-    height=550,
-    legend_title_text="Type / Series"
-)
-
-st.plotly_chart(fig, use_container_width=True)
+render_echarts({
+    "animation": len(labels) < 2000,
+    "title": {"text": f"Metrics: {', '.join([f'{category}:{metric}' for category, metric in key_pairs])} ({unit})", "left": 14, "textStyle": {"color": "#e5e7eb", "fontSize": 16, "fontWeight": 600}},
+    "tooltip": {"trigger": "axis", "axisPointer": {"type": "cross"}},
+    "legend": {"type": "scroll", "top": 44},
+    "toolbox": {"right": 12, "feature": {"dataZoom": {"yAxisIndex": "none"}, "restore": {}, "saveAsImage": {"pixelRatio": 2}}},
+    "grid": {"left": 68, "right": 28, "top": 94, "bottom": 78, "containLabel": True},
+    "dataZoom": [{"type": "inside", "xAxisIndex": 0}, {"type": "slider", "xAxisIndex": 0, "height": 18, "bottom": 22}],
+    "xAxis": {"type": "category", "data": labels, "boundaryGap": False, "axisLabel": {"hideOverlap": True}, "name": "Timestamp", "nameLocation": "middle", "nameGap": 32},
+    "yAxis": {"type": "value", "name": unit, "scale": True, "splitLine": {"lineStyle": {"color": "#334155"}}},
+    "series": series,
+}, height=550)
 
 # Optional data table
 with st.expander("View aggregated data", expanded=False):

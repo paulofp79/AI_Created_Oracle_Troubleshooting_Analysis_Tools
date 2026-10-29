@@ -37,6 +37,7 @@
     select, input[type="file"] { color: var(--text-primary); }
     select { width: 100%; background: #0f172a; border: 1px solid var(--border); border-radius: 5px; padding: 7px; }
     .chart-wrap { position: relative; width: 100%; height: 400px; }
+    .chart { width: 100%; height: 100%; }
     .empty-msg { text-align: center; padding: 18px 0 4px; }
     .back { display: inline-block; margin-top: 20px; color: var(--accent); text-decoration: none; }
     .back:hover { text-decoration: underline; }
@@ -63,7 +64,7 @@
             <div class="field"><label>Chart type <select class="chart-type"><option value="line">Line</option><option value="bar">Bar</option></select></label></div>
           </div>
         </div>
-        <div class="chart-wrap" hidden><canvas class="chart" role="img" aria-label="Chart of selected columns">Chart of selected columns over the chosen X axis.</canvas></div>
+        <div class="chart-wrap" hidden><div class="chart" role="img" aria-label="Chart of selected columns"></div></div>
         <div class="empty-msg">No data loaded yet.</div>
       </section>
       <section class="panel" data-file-panel>
@@ -79,14 +80,14 @@
             <div class="field"><label>Chart type <select class="chart-type"><option value="line">Line</option><option value="bar">Bar</option></select></label></div>
           </div>
         </div>
-        <div class="chart-wrap" hidden><canvas class="chart" role="img" aria-label="Chart of selected columns">Chart of selected columns over the chosen X axis.</canvas></div>
+        <div class="chart-wrap" hidden><div class="chart" role="img" aria-label="Chart of selected columns"></div></div>
         <div class="empty-msg">No data loaded yet.</div>
       </section>
     </div>
     <a class="back" href="../index.html">← Back to dashboard</a>
   </main>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
   <script>
     const palette = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
 
@@ -98,6 +99,7 @@
 
     function initializePanel(panel) {
       const state = { rows: [], cols: [], chart: null };
+      window.addEventListener('resize', () => state.chart && state.chart.resize());
       const fileInput = panel.querySelector('.file-input');
       const controls = panel.querySelector('.controls');
       const xSelect = panel.querySelector('.x-col');
@@ -130,9 +132,34 @@
         if (!xColumn || !yColumns.length || !state.rows.length) { chartWrap.hidden = true; return; }
         chartWrap.hidden = false;
         const type = chartType.value;
-        const datasets = yColumns.map((column, index) => ({ label: column, data: state.rows.map(row => row[column]), borderColor: palette[index % palette.length], backgroundColor: type === 'bar' ? palette[index % palette.length] : palette[index % palette.length] + '1a', borderWidth: 2, fill: false, tension: 0.2, pointRadius: type === 'line' ? 3 : 0 }));
-        if (state.chart) state.chart.destroy();
-        state.chart = new Chart(panel.querySelector('.chart'), { type, data: { labels: state.rows.map(row => row[xColumn]), datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#cbd5e1' }, grid: { color: '#334155' } }, x: { ticks: { color: '#cbd5e1' }, grid: { color: '#334155' } } }, plugins: { legend: { labels: { color: '#f1f5f9' } } } } });
+        const labels = state.rows.map(row => String(row[xColumn] ?? ''));
+        const series = yColumns.map((column, index) => ({
+          name: column,
+          type,
+          showSymbol: type === 'line' && state.rows.length < 100,
+          symbolSize: 6,
+          smooth: type === 'line',
+          data: state.rows.map(row => typeof row[column] === 'number' && Number.isFinite(row[column]) ? row[column] : null),
+          itemStyle: { color: palette[index % palette.length] },
+          lineStyle: { width: 2, color: palette[index % palette.length] },
+          areaStyle: type === 'line' ? { opacity: 0.08 } : undefined,
+          emphasis: { focus: 'series' },
+          large: type === 'bar' && state.rows.length > 1000
+        }));
+        if (!state.chart) state.chart = echarts.init(panel.querySelector('.chart'));
+        state.chart.resize();
+        state.chart.setOption({
+          animation: state.rows.length < 2000,
+          color: palette,
+          tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#0f172a', borderColor: '#334155', textStyle: { color: '#f1f5f9' } },
+          legend: { type: 'scroll', textStyle: { color: '#cbd5e1' }, top: 4 },
+          toolbox: { right: 8, feature: { dataZoom: { yAxisIndex: 'none' }, restore: {}, saveAsImage: { pixelRatio: 2 } } },
+          grid: { left: 62, right: 24, top: 56, bottom: 72, containLabel: true },
+          dataZoom: [{ type: 'inside', xAxisIndex: 0 }, { type: 'slider', xAxisIndex: 0, height: 18, bottom: 22 }],
+          xAxis: { type: 'category', data: labels, boundaryGap: type === 'bar', axisLabel: { color: '#94a3b8', hideOverlap: true }, axisLine: { lineStyle: { color: '#475569' } }, splitLine: { show: false } },
+          yAxis: { type: 'value', scale: true, axisLabel: { color: '#94a3b8' }, axisLine: { show: true, lineStyle: { color: '#475569' } }, splitLine: { lineStyle: { color: '#334155' } } },
+          series
+        }, { notMerge: true });
       }
     }
   </script>

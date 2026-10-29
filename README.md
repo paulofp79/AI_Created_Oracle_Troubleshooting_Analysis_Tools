@@ -96,7 +96,7 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Date/time range filtering
 - Keyword search with context lines
 - Syntax highlighting for ORA- errors, FATAL, FAIL
-- Timeline visualization with Chart.js
+- Interactive charts use Apache ECharts 6.1.0
 
 ### 7. vmstat_multi_plot_with_swap_alerts_highlight.html
 **Purpose:** Analyze vmstat data for memory pressure issues
@@ -140,7 +140,7 @@ pip install -r requirements.txt
 
 Or install manually:
 ```bash
-pip install streamlit pandas plotly
+pip install streamlit pandas
 ```
 
 The startup scripts use a virtual environment at `.venv` by default. The

@@ -12,8 +12,9 @@ from pathlib import Path
 from typing import Dict, List
 
 import pandas as pd
-import plotly.express as px
 import streamlit as st
+
+from echarts_component import render_echarts
 
 from netstat_analysis import (
     COUNTER_LABELS,
@@ -68,16 +69,115 @@ def _plot_if_available(
         st.info(f"No {title.lower()} data was parsed.")
         return
     chart = frame.dropna(subset=[y]).copy()
-    fig = px.line(
-        chart,
-        x="timestamp",
-        y=y,
-        color=color if color in chart.columns else None,
-        hover_data=[column for column in ("source_file", "dt_seconds") if column in chart.columns],
-        title=title,
-    )
-    fig.update_layout(legend_title_text=color.replace("_", " ").title())
-    st.plotly_chart(fig, use_container_width=True)
+    series_columns = [column for column in (color, "source_file") if column in chart.columns]
+    series_columns = list(dict.fromkeys(series_columns))
+    groups = list(chart.groupby(series_columns, sort=False, dropna=False)) if series_columns else [("Metric", chart)]
+    palette = ["#38bdf8", "#fb923c", "#4ade80", "#f472b6", "#a78bfa", "#facc15", "#2dd4bf", "#f87171"]
+    series = []
+    for index, (group_key, group) in enumerate(groups):
+        group = group.sort_values("timestamp")
+        keys = group_key if isinstance(group_key, tuple) else (group_key,)
+        name = " · ".join(str(value) for value in keys if pd.notna(value)) or "Metric"
+        points = []
+        for timestamp, value in group[["timestamp", y]].itertuples(index=False, name=None):
+            if pd.isna(timestamp) or pd.isna(value):
+                continue
+            points.append([pd.Timestamp(timestamp).timestamp() * 1000, float(value)])
+        color_value = palette[index % len(palette)]
+        line_series = {
+            "name": name,
+            "type": "line",
+            "data": points,
+            "showSymbol": len(points) < 100,
+            "symbolSize": 5,
+            "lineStyle": {"color": color_value, "width": 2},
+            "itemStyle": {"color": color_value},
+            "emphasis": {"focus": "series"},
+        }
+        if len(points) > 1500:
+            line_series["sampling"] = "min-max"
+        series.append(line_series)
+    render_echarts({
+        "animation": len(chart) < 2000,
+        "title": {"text": title, "left": 14, "textStyle": {"fontSize": 16, "fontWeight": 600}},
+        "tooltip": {"trigger": "axis", "axisPointer": {"type": "cross"}},
+        "legend": {"type": "scroll", "top": 42} if len(series) > 1 else {"show": False},
+        "toolbox": {"right": 12, "feature": {"dataZoom": {"yAxisIndex": "none"}, "restore": {}, "saveAsImage": {"pixelRatio": 2}}},
+        "grid": {"left": 74, "right": 24, "top": 88, "bottom": 76, "containLabel": True},
+        "dataZoom": [{"type": "inside", "xAxisIndex": 0}, {"type": "slider", "xAxisIndex": 0, "height": 18, "bottom": 22}],
+        "xAxis": {"type": "time", "name": "Timestamp", "axisLabel": {"hideOverlap": True}},
+        "yAxis": {"type": "value", "name": y, "scale": True, "splitLine": {"lineStyle": {"color": "#334155"}}},
+        "series": series,
+    }, height=500)
+
+
+def _render_grouped_time_chart(
+    frame: pd.DataFrame,
+    y: str,
+    title: str,
+    group_columns: List[str],
+    chart_type: str = "line",
+) -> None:
+    chart = frame.dropna(subset=["timestamp", y]).copy()
+    if chart.empty:
+        st.info(f"No {title.lower()} data was parsed.")
+        return
+    group_columns = [column for column in group_columns if column in chart.columns]
+    groups = list(chart.groupby(group_columns, sort=False, dropna=False)) if group_columns else [("Metric", chart)]
+    palette = ["#38bdf8", "#fb923c", "#4ade80", "#f472b6", "#a78bfa", "#facc15", "#2dd4bf", "#f87171"]
+    series = []
+    if chart_type == "bar":
+        timestamps = sorted(pd.Timestamp(value) for value in chart["timestamp"].dropna().unique())
+        labels = [timestamp.strftime("%Y-%m-%d %H:%M:%S") for timestamp in timestamps]
+        label_by_time = {timestamp: label for timestamp, label in zip(timestamps, labels)}
+        for index, (group_key, group) in enumerate(groups):
+            keys = group_key if isinstance(group_key, tuple) else (group_key,)
+            name = " · ".join(str(value) for value in keys if pd.notna(value)) or "Metric"
+            aggregates = group.groupby("timestamp", dropna=True)[y].sum()
+            values_by_time = {pd.Timestamp(timestamp): float(value) for timestamp, value in aggregates.items()}
+            series.append({
+                "name": name,
+                "type": "bar",
+                "data": [values_by_time.get(timestamp) for timestamp in timestamps],
+                "itemStyle": {"color": palette[index % len(palette)]},
+                "emphasis": {"focus": "series"},
+            })
+        x_axis = {"type": "category", "data": labels, "axisLabel": {"hideOverlap": True}}
+    else:
+        for index, (group_key, group) in enumerate(groups):
+            group = group.sort_values("timestamp")
+            keys = group_key if isinstance(group_key, tuple) else (group_key,)
+            name = " · ".join(str(value) for value in keys if pd.notna(value)) or "Metric"
+            points = [
+                [pd.Timestamp(timestamp).timestamp() * 1000, float(value)]
+                for timestamp, value in group[["timestamp", y]].itertuples(index=False, name=None)
+                if pd.notna(timestamp) and pd.notna(value)
+            ]
+            color_value = palette[index % len(palette)]
+            series.append({
+                "name": name,
+                "type": "line",
+                "data": points,
+                "showSymbol": len(points) < 100,
+                "symbolSize": 5,
+                "lineStyle": {"color": color_value, "width": 2},
+                "itemStyle": {"color": color_value},
+                "emphasis": {"focus": "series"},
+            })
+        x_axis = {"type": "time", "name": "Timestamp", "axisLabel": {"hideOverlap": True}}
+
+    render_echarts({
+        "animation": len(chart) < 2000,
+        "title": {"text": title, "left": 14, "textStyle": {"fontSize": 16, "fontWeight": 600}},
+        "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow" if chart_type == "bar" else "cross"}},
+        "legend": {"type": "scroll", "top": 42} if len(series) > 1 else {"show": False},
+        "toolbox": {"right": 12, "feature": {"dataZoom": {"yAxisIndex": "none"}, "restore": {}, "saveAsImage": {"pixelRatio": 2}}},
+        "grid": {"left": 74, "right": 24, "top": 88, "bottom": 76, "containLabel": True},
+        "dataZoom": [{"type": "inside", "xAxisIndex": 0}, {"type": "slider", "xAxisIndex": 0, "height": 18, "bottom": 22}],
+        "xAxis": x_axis,
+        "yAxis": {"type": "value", "name": y, "scale": True, "splitLine": {"lineStyle": {"color": "#334155"}}},
+        "series": series,
+    }, height=520)
 
 
 with st.sidebar:
@@ -286,8 +386,7 @@ with tab_health:
             health_long["counter"] = health_long["counter"].str.replace("_delta", "", regex=False).map(
                 lambda key: COUNTER_LABELS.get(key, key)
             )
-            fig = px.line(health_long, x="timestamp", y="delta", color="counter", line_group="group", title="Network Health Counter Deltas")
-            st.plotly_chart(fig, use_container_width=True)
+            _render_grouped_time_chart(health_long, "delta", "Network Health Counter Deltas", ["counter", "group"])
             st.dataframe(health_long[health_long["delta"].fillna(0) > 0], use_container_width=True, hide_index=True)
         else:
             st.success("No positive timeout, UDP receive-error, IP discard/route-drop, or TCP backlog-drop deltas were observed.")
@@ -313,15 +412,7 @@ with tab_interfaces:
             )
             event_frame = event_frame[event_frame["delta"].fillna(0) > 0]
             if not event_frame.empty:
-                fig = px.bar(
-                    event_frame,
-                    x="timestamp",
-                    y="delta",
-                    color="counter",
-                    facet_row="interface",
-                    title="Interface Error/Drop Deltas",
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                _render_grouped_time_chart(event_frame, "delta", "Interface Error/Drop Deltas", ["interface", "counter"], "bar")
                 st.dataframe(event_frame, use_container_width=True, hide_index=True)
 
 with tab_raw:

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ExaCC Metrics Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
   <script src="../assets/common.js"></script>
   <style>
     body {
@@ -47,12 +47,14 @@
     }
     .tabContent.active { display: block; }
 
-    canvas {
-      background: #222;
+    .echart {
+      width: 100%;
       border: 1px solid #444;
       margin-bottom: 30px;
       border-radius: 8px;
     }
+    #lineChart { height: 340px; }
+    #barChart { height: 300px; }
 
     select, input[type=file] {
       background: #1f1f1f;
@@ -215,8 +217,8 @@
         <select id="targetSelect"></select>
       </div>
     </div>
-    <canvas id="lineChart" height="300"></canvas>
-    <canvas id="barChart" height="250"></canvas>
+    <div id="lineChart" class="echart" role="img" aria-label="Selected ExaCC metric over time"></div>
+    <div id="barChart" class="echart" role="img" aria-label="Average ExaCC metric by target"></div>
   </div>
 
   <!-- Flash Cache Alerts Tab -->
@@ -307,6 +309,7 @@
       document.querySelectorAll('.tabContent').forEach(c => c.classList.remove('active'));
       document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
       document.getElementById(tabName).classList.add('active');
+      if (tabName === 'charts') requestAnimationFrame(() => [lineChart, barChart].forEach(chart => chart && chart.resize()));
     }
 
     document.querySelectorAll('.tab').forEach(tab => {
@@ -449,32 +452,20 @@
       const values = data.map(d => d.value);
 
       // Line chart
-      if (lineChart) lineChart.destroy();
-      lineChart = new Chart(document.getElementById('lineChart'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: `${metric} (${target})`,
-            data: values,
-            borderColor: chartColors[0],
-            backgroundColor: chartColors[0] + '30',
-            fill: true,
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: '#fff' } },
-            title: { display: true, text: 'Time Series', color: '#fff' }
-          },
-          scales: {
-            x: { ticks: { color: '#aaa', maxRotation: 45 }, grid: { color: '#333' } },
-            y: { ticks: { color: '#aaa' }, grid: { color: '#333' }, beginAtZero: true }
-          }
-        }
-      });
+      if (!lineChart) lineChart = echarts.init(document.getElementById('lineChart'));
+      lineChart.resize();
+      lineChart.setOption({
+        animation: data.length < 2000,
+        title: { text: 'Time Series', left: 14, textStyle: { color: '#f1f5f9', fontSize: 15, fontWeight: 600 } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#111827', borderColor: '#334155', textStyle: { color: '#f8fafc' } },
+        legend: { top: 34, textStyle: { color: '#cbd5e1' } },
+        toolbox: { right: 12, feature: { dataZoom: { yAxisIndex: 'none' }, restore: {}, saveAsImage: { pixelRatio: 2 } } },
+        grid: { left: 64, right: 24, top: 82, bottom: 72, containLabel: true },
+        dataZoom: [{ type: 'inside', xAxisIndex: 0 }, { type: 'slider', xAxisIndex: 0, height: 18, bottom: 20 }],
+        xAxis: { type: 'category', data: labels, boundaryGap: false, axisLabel: { color: '#aaa', hideOverlap: true }, axisLine: { lineStyle: { color: '#555' } }, splitLine: { show: false } },
+        yAxis: { type: 'value', scale: true, name: metric, nameTextStyle: { color: '#aaa' }, axisLabel: { color: '#aaa' }, splitLine: { lineStyle: { color: '#333' } } },
+        series: [{ name: `${metric} (${target})`, type: 'line', data: values, showSymbol: data.length < 100, symbolSize: 6, smooth: true, sampling: data.length > 1500 ? 'min-max' : undefined, lineStyle: { color: chartColors[0], width: 2.5 }, itemStyle: { color: chartColors[0] }, areaStyle: { color: chartColors[0], opacity: 0.12 }, emphasis: { focus: 'series' } }]
+      }, { notMerge: true });
 
       // Bar chart - all targets for this metric
       const all = parsedData.filter(d => d.metric === metric);
@@ -489,30 +480,21 @@
         return vals.reduce((a, b) => a + b, 0) / vals.length;
       });
 
-      if (barChart) barChart.destroy();
-      barChart = new Chart(document.getElementById('barChart'), {
-        type: 'bar',
-        data: {
-          labels: barLabels,
-          datasets: [{
-            label: `${metric} (avg by target)`,
-            data: barValues,
-            backgroundColor: chartColors.slice(0, barLabels.length)
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: '#fff' } },
-            title: { display: true, text: 'Average by Target', color: '#fff' }
-          },
-          scales: {
-            x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
-            y: { ticks: { color: '#aaa' }, grid: { color: '#333' }, beginAtZero: true }
-          }
-        }
-      });
+      if (!barChart) barChart = echarts.init(document.getElementById('barChart'));
+      barChart.resize();
+      barChart.setOption({
+        animation: barLabels.length < 500,
+        title: { text: 'Average by Target', left: 14, textStyle: { color: '#f1f5f9', fontSize: 15, fontWeight: 600 } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#111827', borderColor: '#334155', textStyle: { color: '#f8fafc' } },
+        toolbox: { right: 12, feature: { restore: {}, saveAsImage: { pixelRatio: 2 } } },
+        grid: { left: 64, right: 24, top: 60, bottom: 66, containLabel: true },
+        xAxis: { type: 'category', data: barLabels, axisLabel: { color: '#aaa', rotate: barLabels.length > 8 ? 25 : 0, hideOverlap: true }, axisLine: { lineStyle: { color: '#555' } } },
+        yAxis: { type: 'value', name: metric, nameTextStyle: { color: '#aaa' }, axisLabel: { color: '#aaa' }, splitLine: { lineStyle: { color: '#333' } } },
+        series: [{ name: `${metric} (avg by target)`, type: 'bar', data: barValues.map((value, index) => ({ value, itemStyle: { color: chartColors[index % chartColors.length], borderRadius: [5, 5, 0, 0] } })), barMaxWidth: 48, showBackground: true, backgroundStyle: { color: 'rgba(255,255,255,0.035)', borderRadius: [5, 5, 0, 0] }, emphasis: { focus: 'series' } }]
+      }, { notMerge: true });
     }
+
+    window.addEventListener('resize', () => [lineChart, barChart].forEach(chart => chart && chart.resize()));
 
     // Alert generation functions
     function generateAlerts() {
