@@ -9,6 +9,8 @@ apps=(
   "AWR Repository Explorer|8502|streamlit_awr.log"
   "ExaWatcher Iostat Analyzer|8503|streamlit_iostat.log"
   "ExaWatcher Netstat Analyzer|8504|streamlit_netstat.log"
+  "ExaWatcher Workbench|8505|streamlit_exawatcher.log"
+  "AWR RAC Transfer Explorer|8506|streamlit_awr_transfer.log"
 )
 
 if ! command -v lsof >/dev/null 2>&1; then

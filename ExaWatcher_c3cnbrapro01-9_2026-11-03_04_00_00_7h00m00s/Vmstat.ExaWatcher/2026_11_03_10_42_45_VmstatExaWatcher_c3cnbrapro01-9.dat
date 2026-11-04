@@ -1,0 +1,1707 @@
+############################################################
+# Starting Time:	11/03/2026 10:42:45
+# Sample Interval(s):	5
+# Version:		26.1.3.0.0.260910
+# Archive Count:	360
+# Collection Module:	VmstatExaWatcher
+# Collection Command:	/usr/bin/vmstat  5  2
+############################################################
+zzz <11/03/2026 10:42:45> Count:0
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+30  0      0 465761216 1326168 53452340    0    0     0     3    0    0  1  1 99  0  0
+201  0      0 466264224 1326192 53456152    0    0     3  2216 1317124 857454 12 15 73  0  0
+zzz <11/03/2026 10:42:50> Count:1
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+253  0      0 466254912 1326192 53456152    0    0     0     3    0    0  1  1 99  0  0
+23  0      0 465965696 1326212 53461764    0    0     0  2655 1141733 816280 11 14 74  0  0
+zzz <11/03/2026 10:42:55> Count:2
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+18  0      0 465960128 1326212 53461796    0    0     0     3    0    0  1  1 99  0  0
+24  0      0 466274912 1326236 53465180    0    0     3  1989 1026400 893853 12 15 74  0  0
+zzz <11/03/2026 10:43:00> Count:3
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+17  0      0 466273664 1326236 53465180    0    0     0     3    0    0  1  1 99  0  0
+200  0      0 465231520 1326264 53466848    0    0     0  1002 1249471 1017213 14 17 69  0  0
+zzz <11/03/2026 10:43:05> Count:4
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+237  0      0 465242112 1326264 53466848    0    0     0     3    0    0  1  1 99  0  0
+71  0      0 466714368 1326288 53469948    0    0     3  1631 1205270 1017851 14 17 70  0  0
+zzz <11/03/2026 10:43:10> Count:5
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+62  0      0 466704320 1326288 53469948    0    0     0     3    0    0  1  1 99  0  0
+164  0      0 466829888 1326324 53472184    0    0     0  1592 1077721 934275 12 14 74  0  0
+zzz <11/03/2026 10:43:15> Count:6
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+155  0      0 466829152 1326324 53472188    0    0     0     3    0    0  1  1 99  0  0
+127  0      0 467043648 1326364 53474856    0    0     0  1697 984155 843356 11 14 75  0  0
+zzz <11/03/2026 10:43:20> Count:7
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+84  0      0 467045632 1326364 53474860    0    0     0     3    0    0  1  1 99  0  0
+141  0      0 466519968 1326400 53480396    0    0     4  2430 1090540 848832 11 14 75  0  0
+zzz <11/03/2026 10:43:25> Count:8
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+180  0      0 466547200 1326400 53480396    0    0     0     3    0    0  1  1 99  0  0
+132  0      0 467409440 1326424 53482380    0    0     0  1482 941068 808415 10 10 80  0  0
+zzz <11/03/2026 10:43:30> Count:9
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+101  0      0 467404640 1326424 53482380    0    0     0     3    0    0  1  1 99  0  0
+18  0      0 467575040 1326440 53459592    0    0     0  1402 1113199 950073 12 12 76  0  0
+zzz <11/03/2026 10:43:35> Count:10
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+21  0      0 467566976 1326440 53459592    0    0     0     3    0    0  1  1 99  0  0
+90  0      0 467701984 1326476 53461544    0    0     0  1350 1058126 918989 11  9 79  0  0
+zzz <11/03/2026 10:43:40> Count:11
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+174  0      0 467707296 1326476 53461544    0    0     0     3    0    0  1  1 99  0  0
+125  0      0 467958624 1326524 53464172    0    0     4  1540 1017231 877146 11 10 79  0  0
+zzz <11/03/2026 10:43:45> Count:12
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+170  0      0 467949024 1326524 53464172    0    0     0     3    0    0  1  1 99  0  0
+35  0      0 467986048 1326540 53467432    0    0     0  1548 996365 861933 10  8 82  0  0
+zzz <11/03/2026 10:43:50> Count:13
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+46  0      0 467981760 1326540 53467432    0    0     0     3    0    0  1  1 99  0  0
+12  0      0 467914528 1326552 53473916    0    0     0  2143 989206 850124 10  7 83  0  0
+zzz <11/03/2026 10:43:55> Count:14
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+12  0      0 467913536 1326552 53473924    0    0     0     3    0    0  1  1 99  0  0
+64  0      0 467594240 1326592 53477920    0    0     0  2221 1349525 955625 12 15 73  0  0
+zzz <11/03/2026 10:44:00> Count:15
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+48  0      0 467598560 1326592 53477920    0    0     0     3    0    0  1  1 99  0  0
+215  0      0 466693344 1326624 53458084    0    0     4  1658 1198245 936003 12 11 77  0  0
+zzz <11/03/2026 10:44:05> Count:16
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+178  0      0 466904384 1326624 53458084    0    0     0     3    0    0  1  1 99  0  0
+27  0      0 467266208 1326644 53461784    0    0     0  1418 1082692 926964 11 10 79  0  0
+zzz <11/03/2026 10:44:10> Count:17
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+30  0      0 467220640 1326644 53461820    0    0     0     3    0    0  1  1 99  0  0
+66  0      0 467815744 1326680 53464356    0    0     0  1666 1206022 940334 12 11 77  0  0
+zzz <11/03/2026 10:44:15> Count:18
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+35  0      0 467808672 1326680 53464356    0    0     0     3    0    0  1  1 99  0  0
+56  0      0 467823296 1326692 53466916    0    0     0  1307 1216521 950408 12 11 77  0  0
+zzz <11/03/2026 10:44:20> Count:19
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+69  0      0 467821344 1326692 53466916    0    0     0     3    0    0  1  1 99  0  0
+88  0      0 467803424 1326700 53471736    0    0     1  2408 999197 872135 11 11 79  0  0
+zzz <11/03/2026 10:44:25> Count:20
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+46  0      0 467796864 1326700 53471740    0    0     0     3    0    0  1  1 99  0  0
+124  1      0 466489120 1326716 53457492    0    0     5  1455 1026759 858005 10  8 82  0  0
+zzz <11/03/2026 10:44:30> Count:21
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+124  0      0 466442752 1326724 53457488    0    0     0     3    0    0  1  1 99  0  0
+48  0      0 468027584 1326728 53459812    0    0     0   580 1088685 869860 10  9 81  0  0
+zzz <11/03/2026 10:44:35> Count:22
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+54  0      0 468031488 1326728 53459972    0    0     0     3    0    0  1  1 99  0  0
+52  0      0 468159104 1326748 53437336    0    0     0  1715 1199774 1049843 13 12 75  0  0
+zzz <11/03/2026 10:44:40> Count:23
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+43  0      0 468154560 1326748 53437340    0    0     0     3    0    0  1  1 99  0  0
+14  0      0 467947520 1326784 53440564    0    0     0  1536 899297 771372  9  9 82  0  0
+zzz <11/03/2026 10:44:45> Count:24
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+18  0      0 467944768 1326784 53440564    0    0     0     3    0    0  1  1 99  0  0
+19  0      0 467917696 1326812 53438572    0    0     0  1352 886563 756286  9  8 83  0  0
+zzz <11/03/2026 10:44:50> Count:25
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+25  0      0 467915936 1326812 53438572    0    0     0     3    0    0  1  1 99  0  0
+118  0      0 467767872 1326820 53445788    0    0     3  2140 1115125 965541 12 12 76  0  0
+zzz <11/03/2026 10:44:55> Count:26
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+123  0      0 467762112 1326820 53445792    0    0     0     3    0    0  1  1 99  0  0
+264  0      0 467365248 1326848 53451132    0    0     3  2097 990218 856173 11 11 78  0  0
+zzz <11/03/2026 10:45:00> Count:27
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+299  0      0 467360192 1326848 53451136    0    0     0     3    0    0  1  1 99  0  0
+17  0      0 467037408 1326856 53454844    0    0     0  1476 1021741 866730 11 11 77  0  0
+zzz <11/03/2026 10:45:05> Count:28
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+19  0      0 467038944 1326856 53454904    0    0     0     3    0    0  1  1 99  0  0
+258  0      0 466839904 1326868 53458208    0    0     0  1599 1159837 893832 11 11 78  0  0
+zzz <11/03/2026 10:45:10> Count:29
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+243  0      0 466831584 1326868 53458208    0    0     0     3    0    0  1  1 99  0  0
+268  0      0 466971520 1326904 53461460    0    0     0  1577 1168827 902586 11 10 78  0  0
+zzz <11/03/2026 10:45:15> Count:30
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+226  0      0 466960992 1326904 53461492    0    0     0     3    0    0  1  1 99  0  0
+110  0      0 466814144 1326920 53464364    0    0     0  1482 1233663 936475 12 14 74  0  0
+zzz <11/03/2026 10:45:20> Count:31
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+97  0      0 466803072 1326920 53464396    0    0     0     3    0    0  1  1 99  0  0
+208  0      0 466478208 1326944 53443436    0    0     0  2612 1145838 994611 12 12 75  0  0
+zzz <11/03/2026 10:45:25> Count:32
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+212  0      0 466475168 1326944 53443440    0    0     0     3    0    0  1  1 99  0  0
+38  0      0 466472128 1326980 53450364    0    0   260  2259 1258101 1086583 14 17 69  0  0
+zzz <11/03/2026 10:45:30> Count:33
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+40  0      0 466471424 1326980 53450364    0    0     0     3    0    0  1  1 99  0  0
+18  0      0 466626688 1326992 53452096    0    0     0  1165 920993 783657 10 10 80  0  0
+zzz <11/03/2026 10:45:35> Count:34
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+16  0      0 466626432 1326992 53452096    0    0     0     3    0    0  1  1 99  0  0
+198  0      0 466414656 1327004 53455564    0    0     0  1688 994351 874160 12 15 73  0  0
+zzz <11/03/2026 10:45:40> Count:35
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+150  0      0 466404832 1327004 53455564    0    0     0     3    0    0  1  1 99  0  0
+112  0      0 466436832 1327028 53458884    0    0     0  1499 1324436 1039242 14 14 72  0  0
+zzz <11/03/2026 10:45:45> Count:36
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+59  0      0 466430016 1327028 53458888    0    0     0     3    0    0  1  1 99  0  0
+98  0      0 466112992 1327052 53463040    0    0     0  1734 952856 814080 11 12 77  0  0
+zzz <11/03/2026 10:45:50> Count:37
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+55  0      0 466112736 1327052 53463044    0    0     0     3    0    0  1  1 99  0  0
+22  0      0 464907680 1327084 53468016    0    0     0  2163 1233194 885790 12 16 72  0  0
+zzz <11/03/2026 10:45:55> Count:38
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+35  0      0 464876928 1327084 53468016    0    0     0     3    0    0  1  1 99  0  0
+214  0      0 464128800 1327108 53472664    0    0     0  1854 1550443 1107985 16 25 59  0  0
+zzz <11/03/2026 10:46:00> Count:39
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+220  1      0 464231616 1327108 53472688    0    0     0     3    0    0  1  1 99  0  0
+69  0      0 465059808 1327124 53452848    0    0     5  2038 1292364 948594 13 19 67  0  0
+zzz <11/03/2026 10:46:05> Count:40
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+36  1      0 465051264 1327124 53452884    0    0     0     3    0    0  1  1 99  0  0
+187  0      0 464418336 1327136 53457756    0    0     3  2409 1172147 971517 13 20 67  0  0
+zzz <11/03/2026 10:46:10> Count:41
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+221  0      0 464414048 1327136 53457756    0    0     0     3    0    0  1  1 99  0  0
+30  0      0 464382016 1327152 53461328    0    0     0  2244 1050256 925949 12 18 70  0  0
+zzz <11/03/2026 10:46:15> Count:42
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+28  0      0 464378464 1327152 53461336    0    0     0     3    0    0  1  1 99  0  0
+65  0      0 464314080 1327172 53464072    0    0     0  1832 1170426 1006247 14 23 63  0  0
+zzz <11/03/2026 10:46:20> Count:43
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+44  0      0 464307008 1327172 53464084    0    0     0     3    0    0  1  1 99  0  0
+160  0      0 463909632 1327204 53470384    0    0     0  2766 1252651 1068934 15 19 66  0  0
+zzz <11/03/2026 10:46:25> Count:44
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+139  0      0 463903840 1327204 53470432    0    0     0     3    0    0  1  1 99  0  0
+32  0      0 463654912 1327216 53474344    0    0     0  2112 1071277 907263 13 18 69  0  0
+zzz <11/03/2026 10:46:30> Count:45
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+35  0      0 463654432 1327216 53474348    0    0     0     3    0    0  1  1 99  0  0
+220  0      0 463523552 1327220 53476912    0    0     8  2111 1282162 1111434 16 26 58  0  0
+zzz <11/03/2026 10:46:35> Count:46
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+261  0      0 463525824 1327220 53476912    0    0     0     3    0    0  1  1 99  0  0
+256  0      0 463384896 1327236 53481692    0    0     5  2487 1229318 1071757 15 26 59  0  0
+zzz <11/03/2026 10:46:40> Count:47
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+239  0      0 463381856 1327236 53481692    0    0     0     3    0    0  1  1 99  0  0
+28  0      0 462837120 1327260 53462324    0    0     5  2930 1081122 972321 14 22 64  0  0
+zzz <11/03/2026 10:46:45> Count:48
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+31  0      0 462833344 1327260 53462324    0    0     0     3    0    0  1  1 99  0  0
+194  0      0 462522368 1327288 53469116    0    0     0  2167 1151182 1044922 15 24 60  0  0
+zzz <11/03/2026 10:46:50> Count:49
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+182  0      0 462516064 1327288 53469116    0    0     0     3    0    0  1  1 99  0  0
+21  0      0 462152512 1327308 53478708    0    0     0  2186 1316466 983267 15 25 59  0  0
+zzz <11/03/2026 10:46:56> Count:50
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+18  0      0 462153024 1327308 53478708    0    0     0     3    0    0  1  1 99  0  0
+252  0      0 461888640 1327328 53483876    0    0     0  1805 1050536 896456 13 20 67  0  0
+zzz <11/03/2026 10:47:01> Count:51
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+189  0      0 461877792 1327328 53483876    0    0     0     3    0    0  1  1 99  0  0
+186  0      0 461649760 1327336 53489972    0    0     0  1733 1159836 1001670 14 28 57  0  0
+zzz <11/03/2026 10:47:06> Count:52
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+193  0      0 461647264 1327336 53489972    0    0     0     3    0    0  1  1 99  0  0
+229  0      0 461361792 1327356 53494620    0    0     0  1763 1028478 935119 14 23 63  0  0
+zzz <11/03/2026 10:47:11> Count:53
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+221  0      0 461359040 1327356 53494620    0    0     0     3    0    0  1  1 99  0  0
+57  0      0 461114784 1327360 53497672    0    0     0  1690 1163747 1057438 16 28 56  0  0
+zzz <11/03/2026 10:47:16> Count:54
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+43  0      0 461129920 1327360 53497680    0    0     0     3    0    0  1  1 99  0  0
+201  0      0 461434528 1327372 53504584    0    0     5  2381 1293770 917904 14 22 64  0  0
+zzz <11/03/2026 10:47:21> Count:55
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+231  0      0 461430240 1327372 53504584    0    0     0     3    0    0  1  1 99  0  0
+36  0      0 461046976 1327388 53513232    0    0     6  3365 1200721 1034147 15 30 56  0  0
+zzz <11/03/2026 10:47:26> Count:56
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+37  0      0 461066624 1327388 53513240    0    0     0     3    0    0  1  1 99  0  0
+288  0      0 460308192 1327400 53495128    0    0     0  1818 1156857 903903 13 20 67  0  0
+zzz <11/03/2026 10:47:31> Count:57
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+256  0      0 460215712 1327400 53495128    0    0     0     3    0    0  1  1 99  0  0
+252  0      0 459532416 1327444 53500416    0    0     0  9338 1326090 994668 18 27 55  0  0
+zzz <11/03/2026 10:47:36> Count:58
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+277  0      0 459471680 1327444 53500416    0    0     0     3    0    0  1  1 99  0  0
+16  0      0 461123328 1327452 53502456    0    0     0  1641 1256321 985288 14 26 60  0  0
+zzz <11/03/2026 10:47:41> Count:59
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+15  0      0 461122560 1327452 53502456    0    0     0     3    0    0  1  1 99  0  0
+172  0      0 461439296 1327456 53504440    0    0     0  1927 1179930 1023913 15 26 59  0  0
+zzz <11/03/2026 10:47:46> Count:60
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+195  0      0 461435968 1327456 53504464    0    0     0     3    0    0  1  1 99  0  0
+208  1      0 460323008 1327464 53508304    0    0     0  1634 1260703 989961 15 24 61  0  0
+zzz <11/03/2026 10:47:51> Count:61
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+219  0      0 460334624 1327468 53508300    0    0     0     3    0    0  1  1 99  0  0
+25  0      0 461073952 1327468 53511916    0    0     0  1384 1280549 1040899 16 27 58  0  0
+zzz <11/03/2026 10:47:56> Count:62
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+38  0      0 461070944 1327468 53511916    0    0     0     3    0    0  1  1 99  0  0
+246  0      0 461419616 1327480 53513932    0    0     0  1457 1323009 956733 15 24 61  0  0
+zzz <11/03/2026 10:48:01> Count:63
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+225  0      0 461418368 1327480 53513932    0    0     0     3    0    0  1  1 99  0  0
+233  0      0 461783616 1327500 53516148    0    0     0  1934 1122918 929703 14 23 63  0  0
+zzz <11/03/2026 10:48:06> Count:64
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+243  0      0 461780352 1327500 53516148    0    0     0     3    0    0  1  1 99  0  0
+308  0      0 461841280 1327500 53519040    0    0     1  1732 1102791 931865 14 22 64  0  0
+zzz <11/03/2026 10:48:11> Count:65
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+242  0      0 461856160 1327500 53519040    0    0     0     3    0    0  1  1 99  0  0
+255  0      0 461783712 1327524 53523428    0    0    10  2295 1078487 901755 13 19 68  0  0
+zzz <11/03/2026 10:48:16> Count:66
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+237  0      0 461774144 1327524 53523428    0    0     0     3    0    0  1  1 99  0  0
+310  0      0 461724512 1327532 53528136    0    0     0  1612 1248544 915911 14 24 63  0  0
+zzz <11/03/2026 10:48:21> Count:67
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+295  0      0 461739136 1327532 53528136    0    0     0     3    0    0  1  1 99  0  0
+222  0      0 461685152 1327544 53530572    0    0     0  2481 1127565 951603 14 25 62  0  0
+zzz <11/03/2026 10:48:26> Count:68
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+221  0      0 461679840 1327544 53530572    0    0     0     3    0    0  1  1 99  0  0
+121  0      0 461728064 1327576 53507168    0    0     0  1740 1187037 982907 15 25 60  0  0
+zzz <11/03/2026 10:48:31> Count:69
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+112  0      0 461731392 1327576 53507168    0    0     0     3    0    0  1  1 99  0  0
+16  0      0 461823968 1327596 53508268    0    0     0  1449 1002340 724907 10 13 76  0  0
+zzz <11/03/2026 10:48:36> Count:70
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+13  0      0 461837344 1327596 53508268    0    0     0     3    0    0  1  1 99  0  0
+149  0      0 462106240 1327616 53510244    0    0     0  1651 1196868 1023038 15 27 58  0  0
+zzz <11/03/2026 10:48:41> Count:71
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+159  0      0 462095392 1327616 53510280    0    0     0     3    0    0  1  1 99  0  0
+97  0      0 462152512 1327632 53512632    0    0     0  1635 1089111 927149 14 22 65  0  0
+zzz <11/03/2026 10:48:46> Count:72
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+111  0      0 462147456 1327632 53512636    0    0     0     3    0    0  1  1 99  0  0
+170  0      0 462353792 1327652 53515488    0    0     0  1566 1022077 880307 13 20 67  0  0
+zzz <11/03/2026 10:48:51> Count:73
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+105  0      0 462350528 1327652 53515488    0    0     0     3    0    0  1  1 99  0  0
+239  0      0 462591264 1327664 53517484    0    0     0  1835 1052455 934878 14 23 63  0  0
+zzz <11/03/2026 10:48:56> Count:74
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+187  0      0 462580928 1327664 53517484    0    0     0     3    0    0  1  1 99  0  0
+238  0      0 462986752 1327680 53521288    0    0     0  1919 1200198 914597 14 23 63  0  0
+zzz <11/03/2026 10:49:01> Count:75
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+243  0      0 462980640 1327680 53521296    0    0     0     3    0    0  1  1 99  0  0
+19  0      0 462979456 1327716 53525484    0    0     2  1867 1133564 973110 14 24 62  0  0
+zzz <11/03/2026 10:49:06> Count:76
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+20  0      0 462976704 1327716 53525484    0    0     0     3    0    0  1  1 99  0  0
+212  0      0 462811936 1327736 53530708    0    0    10  2243 1105180 966991 14 22 64  0  0
+zzz <11/03/2026 10:49:11> Count:77
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+241  0      0 462800928 1327736 53530936    0    0     0     3    0    0  1  1 99  0  0
+236  0      0 462764416 1327744 53534296    0    0     0  1490 1042110 908481 13 20 67  0  0
+zzz <11/03/2026 10:49:16> Count:78
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+224  0      0 462762176 1327744 53534296    0    0     0     3    0    0  1  1 99  0  0
+234  0      0 462870976 1327764 53523584    0    0     0  2158 1131771 988209 14 23 62  0  0
+zzz <11/03/2026 10:49:21> Count:79
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+224  0      0 462868192 1327764 53523584    0    0     0     3    0    0  1  1 99  0  0
+228  0      0 463145856 1327784 53521868    0    0     0  1924 1174157 1010066 14 24 62  0  0
+zzz <11/03/2026 10:49:26> Count:80
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+220  0      0 463140320 1327784 53521868    0    0     0     3    0    0  1  1 99  0  0
+117  0      0 463417152 1327800 53523632    0    0     0  1411 1074415 898303 12 19 69  0  0
+zzz <11/03/2026 10:49:31> Count:81
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+150  0      0 463416640 1327800 53523632    0    0     0     3    0    0  1  1 99  0  0
+209  0      0 462213344 1327812 53526356    0    0     0  1408 1330298 1051800 15 26 59  0  0
+zzz <11/03/2026 10:49:36> Count:82
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+225  0      0 462230752 1327812 53526360    0    0     0     3    0    0  1  1 99  0  0
+248  0      0 463677760 1327824 53528996    0    0     0  1651 1378498 1011955 15 26 60  0  0
+zzz <11/03/2026 10:49:41> Count:83
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+228  0      0 463668448 1327824 53528996    0    0     0     3    0    0  1  1 99  0  0
+11  0      0 464004288 1327832 53506248    0    0     0  1889 1058752 887199 12 17 71  0  0
+zzz <11/03/2026 10:49:46> Count:84
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+11  0      0 463995968 1327832 53506248    0    0     0     3    0    0  1  1 99  0  0
+23  0      0 463700768 1327840 53510516    0    0     0  1615 1194012 1030169 14 24 62  0  0
+zzz <11/03/2026 10:49:51> Count:85
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+26  0      0 463687968 1327840 53510516    0    0     0     3    0    0  1  1 99  0  0
+194  0      0 463852928 1327848 53513468    0    0     0  1886 1108731 959796 13 20 67  0  0
+zzz <11/03/2026 10:49:56> Count:86
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+188  0      0 463849920 1327848 53513468    0    0     0     3    0    0  1  1 99  0  0
+159  0      0 463881184 1327856 53515884    0    0     0  1605 1201435 1026629 14 23 63  0  0
+zzz <11/03/2026 10:50:01> Count:87
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+153  0      0 463872896 1327856 53515892    0    0     0     3    0    0  1  1 99  0  0
+177  1      0 462225312 1327860 53518372    0    0     0  1512 1405862 961195 13 20 67  0  0
+zzz <11/03/2026 10:50:06> Count:88
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+194  0      0 462216000 1327860 53518412    0    0     0     3    0    0  1  1 99  0  0
+14  0      0 462874400 1327868 53522376    0    0     0  1996 1196172 910037 13 20 67  0  0
+zzz <11/03/2026 10:50:11> Count:89
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+16  0      0 462827040 1327868 53522376    0    0     0     3    0    0  1  1 99  0  0
+192  0      0 463720704 1327880 53525624    0    0     0  2092 1276439 986391 14 22 65  0  0
+zzz <11/03/2026 10:50:16> Count:90
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+201  0      0 463722976 1327880 53525632    0    0     0     3    0    0  1  1 99  0  0
+20  0      0 463899520 1327892 53530320    0    0     0  2088 1127384 966753 13 19 68  0  0
+zzz <11/03/2026 10:50:21> Count:91
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+21  0      0 463908320 1327892 53530320    0    0     0     3    0    0  1  1 99  0  0
+224  0      0 463478048 1327900 53533040    0    0     0  2217 989077 837424 11 15 74  0  0
+zzz <11/03/2026 10:50:26> Count:92
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+256  0      0 463477312 1327900 53533044    0    0     0     3    0    0  1  1 99  0  0
+187  0      0 463644224 1327904 53535192    0    0     0  1480 1196260 1012653 14 20 66  0  0
+zzz <11/03/2026 10:50:31> Count:93
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+177  0      0 463663872 1327904 53535192    0    0     0     3    0    0  1  1 99  0  0
+186  0      0 463714112 1327912 53537212    0    0     0  1263 1062439 697547  9 11 80  0  0
+zzz <11/03/2026 10:50:36> Count:94
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+185  0      0 463711328 1327912 53537212    0    0     0     3    0    0  1  1 99  0  0
+225  0      0 463894560 1327928 53539620    0    0     0  1715 1185427 1031251 13 15 72  0  0
+zzz <11/03/2026 10:50:41> Count:95
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+226  0      0 463885472 1327928 53539620    0    0     0     3    0    0  1  1 99  0  0
+183  0      0 463955488 1327936 53541504    0    0     0  1452 1170688 1059356 15 22 64  0  0
+zzz <11/03/2026 10:50:46> Count:96
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+195  0      0 463948928 1327936 53541504    0    0     0     3    0    0  1  1 99  0  0
+281  0      0 464092160 1327936 53545372    0    0     4  1557 1046809 899565 12 17 71  0  0
+zzz <11/03/2026 10:50:51> Count:97
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+276  0      0 464089408 1327936 53545372    0    0     0     3    0    0  1  1 99  0  0
+190  0      0 463979776 1327960 53523452    0    0     0  2080 1076864 932458 13 18 69  0  0
+zzz <11/03/2026 10:50:56> Count:98
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+197  0      0 463969952 1327960 53523452    0    0     0     3    0    0  1  1 99  0  0
+192  0      0 464065216 1327960 53525860    0    0     0  1483 1249023 1066851 14 22 64  0  0
+zzz <11/03/2026 10:51:01> Count:99
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+215  0      0 464056640 1327960 53525860    0    0     0     3    0    0  1  1 99  0  0
+198  0      0 463848576 1327972 53528484    0    0     0  1332 1122534 964462 13 20 66  0  0
+zzz <11/03/2026 10:51:06> Count:100
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+178  0      0 463865376 1327972 53528484    0    0     0     3    0    0  1  1 99  0  0
+38  0      0 463913184 1327976 53530412    0    0     0  1577 1147663 963473 13 16 70  0  0
+zzz <11/03/2026 10:51:11> Count:101
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+51  0      0 463913472 1327976 53530412    0    0     0     3    0    0  1  1 99  0  0
+186  0      0 464492992 1327996 53532172    0    0     0  1342 1206412 1023581 15 22 63  0  0
+zzz <11/03/2026 10:51:16> Count:102
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+180  0      0 464482944 1327996 53532172    0    0     0     3    0    0  1  1 99  0  0
+171  0      0 464584000 1328016 53536296    0    0     0  2176 1354166 1138657 17 25 58  0  0
+zzz <11/03/2026 10:51:21> Count:103
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+188  0      0 464580704 1328016 53536296    0    0     0     3    0    0  1  1 99  0  0
+234  0      0 464815552 1328020 53538772    0    0     0  1721 1331654 971461 13 18 68  0  0
+zzz <11/03/2026 10:51:26> Count:104
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+205  0      0 464813024 1328020 53538776    0    0     0     3    0    0  1  1 99  0  0
+149  0      0 464851136 1328024 53540672    0    0     0  1266 990565 824263 11 15 74  0  0
+zzz <11/03/2026 10:51:31> Count:105
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+126  0      0 464847616 1328024 53540672    0    0     0     3    0    0  1  1 99  0  0
+153  0      0 465105952 1328032 53541912    0    0     8  1375 1118354 975821 12 15 72  0  0
+zzz <11/03/2026 10:51:37> Count:106
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+191  0      0 465104000 1328032 53541912    0    0     0     3    0    0  1  1 99  0  0
+16  0      0 465683104 1328040 53543412    0    0     0  1173 1154702 985606 13 18 69  0  0
+zzz <11/03/2026 10:51:42> Count:107
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+22  0      0 465685376 1328040 53543416    0    0     0     3    0    0  1  1 99  0  0
+17  0      0 465628544 1328052 53544912    0    0     0  1332 1140656 1004875 14 17 69  0  0
+zzz <11/03/2026 10:51:47> Count:108
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+26  0      0 465626752 1328052 53544912    0    0     0     3    0    0  1  1 99  0  0
+140  0      0 465695552 1328056 53549492    0    0     0  1993 1153611 1026908 14 18 68  0  0
+zzz <11/03/2026 10:51:52> Count:109
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+107  0      0 465691296 1328056 53549496    0    0     0     3    0    0  1  1 99  0  0
+163  0      0 465652160 1328060 53553012    0    0     0  1701 1168468 1083885 15 22 63  0  0
+zzz <11/03/2026 10:51:57> Count:110
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+155  0      0 465647904 1328060 53553012    0    0     0     3    0    0  1  1 99  0  0
+205  1      0 465920416 1328076 53557088    0    0     1  1676 1262605 924651 13 17 69  0  0
+zzz <11/03/2026 10:52:02> Count:111
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+202  1      0 465936480 1328076 53557088    0    0     0     3    0    0  1  1 99  0  0
+163  0      0 465897792 1328088 53558796    0    0     0   682 1264682 1070876 15 16 70  0  0
+zzz <11/03/2026 10:52:07> Count:112
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+161  0      0 465888992 1328088 53558800    0    0     0     3    0    0  1  1 99  0  0
+115  0      0 466148768 1328108 53560064    0    0     0  1301 1201311 1011839 14 15 71  0  0
+zzz <11/03/2026 10:52:12> Count:113
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+110  0      0 466143488 1328108 53560064    0    0     0     3    0    0  1  1 99  0  0
+130  0      0 466225088 1328116 53561244    0    0     0  1148 1170463 1001438 13 17 69  0  0
+zzz <11/03/2026 10:52:17> Count:114
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+184  0      0 466223360 1328116 53561256    0    0     0     3    0    0  1  1 99  0  0
+189  0      0 466312256 1328124 53539292    0    0     0  1758 1080755 917920 12 11 77  0  0
+zzz <11/03/2026 10:52:22> Count:115
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+189  1      0 466305216 1328124 53539292    0    0     0     3    0    0  1  1 99  0  0
+136  0      0 466229888 1328136 53542064    0    0     0  1949 1275030 1090745 15 18 67  0  0
+zzz <11/03/2026 10:52:27> Count:116
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+122  0      0 466224576 1328136 53542064    0    0     0     3    0    0  1  1 99  0  0
+18  0      0 465595680 1328152 53543484    0    0     0  1341 944928 818130  9  8 83  0  0
+zzz <11/03/2026 10:52:32> Count:117
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+11  0      0 465551072 1328152 53543536    0    0     0     3    0    0  1  1 99  0  0
+193  0      0 465898176 1328156 53547212    0    0     0  1614 1324154 1000613 13 13 74  0  0
+zzz <11/03/2026 10:52:37> Count:118
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+165  0      0 465898688 1328156 53547212    0    0     0     3    0    0  1  1 99  0  0
+90  0      0 466014176 1328172 53549572    0    0     0  1824 1064357 880133 12 13 75  0  0
+zzz <11/03/2026 10:52:42> Count:119
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+113  0      0 466012480 1328172 53549572    0    0     0     3    0    0  1  1 99  0  0
+154  0      0 466258848 1328176 53551928    0    0     0  1446 1428898 1130456 15 17 67  0  0
+zzz <11/03/2026 10:52:47> Count:120
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+137  0      0 466253824 1328176 53551936    0    0     0     3    0    0  1  1 99  0  0
+174  0      0 466186752 1328180 53555388    0    0     0  1601 1102495 939693 12 12 76  0  0
+zzz <11/03/2026 10:52:52> Count:121
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+187  0      0 466182976 1328180 53555396    0    0     0     3    0    0  1  1 99  0  0
+22  0      0 466217600 1328188 53557092    0    0     0  1640 1090533 944093 12 10 78  0  0
+zzz <11/03/2026 10:52:57> Count:122
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+17  0      0 466215328 1328188 53557092    0    0     0     3    0    0  1  1 99  0  0
+71  0      0 466445504 1328200 53558184    0    0     0  1172 1393467 1210178 16 15 69  0  0
+zzz <11/03/2026 10:53:02> Count:123
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+93  0      0 466443008 1328200 53558188    0    0     0     3    0    0  1  1 99  0  0
+45  0      0 466549472 1328220 53560112    0    0     0  1690 1345966 1046207 14 11 75  0  0
+zzz <11/03/2026 10:53:07> Count:124
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+45  0      0 466546464 1328220 53560112    0    0     0     3    0    0  1  1 99  0  0
+121  0      0 465876448 1328236 53563656    0    0     0  1772 1091335 927133 12 12 75  0  0
+zzz <11/03/2026 10:53:12> Count:125
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+90  0      0 465854784 1328236 53563668    0    0     0     3    0    0  1  1 99  0  0
+204  0      0 466213376 1328244 53565792    0    0     0  1913 1374529 1044496 14 12 74  0  0
+zzz <11/03/2026 10:53:17> Count:126
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+121  0      0 466228928 1328244 53565792    0    0     0     3    0    0  1  1 99  0  0
+76  0      0 466037568 1328264 53570168    0    0     0  1738 1212666 1057311 14 13 73  0  0
+zzz <11/03/2026 10:53:22> Count:127
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+49  0      0 466035328 1328264 53570196    0    0     0     3    0    0  1  1 99  0  0
+31  0      0 466166240 1328280 53574132    0    0     0  2521 1092929 938743 11  6 83  0  0
+zzz <11/03/2026 10:53:27> Count:128
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+36  0      0 466161440 1328280 53574132    0    0     0     3    0    0  1  1 99  0  0
+ 8  0      0 466438208 1328284 53574900    0    0     0  1216 1169404 1018223 13 13 75  0  0
+zzz <11/03/2026 10:53:32> Count:129
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+15  0      0 466437728 1328284 53574900    0    0     0     3    0    0  1  1 99  0  0
+166  0      0 466550848 1328304 53578104    0    0     0  1688 1178709 887530 12 13 75  0  0
+zzz <11/03/2026 10:53:37> Count:130
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+138  0      0 466549856 1328304 53578108    0    0     0     3    0    0  1  1 99  0  0
+167  0      0 466598016 1328308 53554920    0    0     0  1584 1317766 1126951 14 12 74  0  0
+zzz <11/03/2026 10:53:42> Count:131
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+160  0      0 466594976 1328308 53554920    0    0     0     3    0    0  1  1 99  0  0
+78  0      0 465356928 1328332 53557148    0    0     0  1704 1343408 1120467 15 14 71  0  0
+zzz <11/03/2026 10:53:47> Count:132
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+51  0      0 465349920 1328332 53557148    0    0     0     3    0    0  1  1 99  0  0
+137  0      0 466692352 1328352 53562904    0    0     0  1874 1585648 1215716 17 19 64  0  0
+zzz <11/03/2026 10:53:52> Count:133
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+127  0      0 466691072 1328352 53562904    0    0     0     3    0    0  1  1 99  0  0
+70  0      0 466619008 1328372 53566092    0    0     1  2113 1152962 992353 13 15 72  0  0
+zzz <11/03/2026 10:53:57> Count:134
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+62  0      0 466619776 1328372 53566092    0    0     0     3    0    0  1  1 99  0  0
+25  0      0 466438272 1328392 53568408    0    0     0  1542 1304405 1131263 14 13 72  0  0
+zzz <11/03/2026 10:54:02> Count:135
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+30  0      0 466434112 1328392 53568408    0    0     0     3    0    0  1  1 99  0  0
+197  0      0 466952384 1328408 53569856    0    0     0  1280 1252701 1076127 15 19 66  0  0
+zzz <11/03/2026 10:54:07> Count:136
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+182  0      0 466952128 1328408 53569856    0    0     0     3    0    0  1  1 99  0  0
+24  0      0 466762208 1328424 53574008    0    0     0  1842 1064909 901230 11 11 78  0  0
+zzz <11/03/2026 10:54:12> Count:137
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+24  0      0 466782880 1328424 53574020    0    0     0     3    0    0  1  1 99  0  0
+61  0      0 466408416 1328432 53578024    0    0     0  2024 1262876 1118147 15 16 70  0  0
+zzz <11/03/2026 10:54:17> Count:138
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+53  0      0 466422528 1328432 53578088    0    0     0     3    0    0  1  1 99  0  0
+253  0      0 466189696 1328444 53582440    0    0     1  2656 1043099 914054 12 16 72  0  0
+zzz <11/03/2026 10:54:22> Count:139
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+258  0      0 466182368 1328444 53582444    0    0     0     3    0    0  1  1 99  0  0
+233  0      0 466265472 1328452 53584072    0    0     0  1804 1183758 1044938 14 20 66  0  0
+zzz <11/03/2026 10:54:27> Count:140
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+243  0      0 466273280 1328452 53584072    0    0     0     3    0    0  1  1 99  0  0
+231  0      0 466385760 1328460 53585744    0    0     0  1600 1072947 916978 12 17 71  0  0
+zzz <11/03/2026 10:54:32> Count:141
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+221  0      0 466385536 1328460 53585820    0    0     0     3    0    0  1  1 99  0  0
+70  0      0 465828512 1328468 53588480    0    0     0  1773 1270061 1104009 15 20 65  0  0
+zzz <11/03/2026 10:54:37> Count:142
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+37  0      0 465845664 1328468 53588228    0    0     0     3    0    0  1  1 99  0  0
+11  0      0 466086048 1328488 53567300    0    0     0  2187 1114538 971624 13 16 70  0  0
+zzz <11/03/2026 10:54:42> Count:143
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+21  0      0 466083296 1328488 53567300    0    0     0     3    0    0  1  1 99  0  0
+101  0      0 466112128 1328500 53567192    0    0     0  1634 1039819 942036 12 17 70  0  0
+zzz <11/03/2026 10:54:47> Count:144
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+72  0      0 466108928 1328500 53567192    0    0     0     3    0    0  1  1 99  0  0
+44  0      0 465600352 1328524 53572540    0    0     1  2767 1145925 1001776 13 20 67  0  0
+zzz <11/03/2026 10:54:52> Count:145
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+21  0      0 465610688 1328524 53572540    0    0     0     3    0    0  1  1 99  0  0
+192  0      0 465636096 1328556 53576132    0    0     0  1887 1135157 993526 13 21 66  0  0
+zzz <11/03/2026 10:54:57> Count:146
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+225  0      0 465635072 1328556 53576132    0    0     0     3    0    0  1  1 99  0  0
+154  0      0 465635936 1328564 53578784    0    0     0  1369 1407660 1038574 15 20 66  0  0
+zzz <11/03/2026 10:55:02> Count:147
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+164  0      0 465652320 1328564 53578792    0    0     0     3    0    0  1  1 99  0  0
+158  0      0 465834176 1328588 53581856    0    0     0  2178 1367289 1042613 15 21 64  0  0
+zzz <11/03/2026 10:55:07> Count:148
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+168  0      0 465831648 1328588 53581856    0    0     0     3    0    0  1  1 99  0  0
+27  0      0 465559456 1328596 53582984    0    0     0  1804 1212592 1052760 14 16 70  0  0
+zzz <11/03/2026 10:55:12> Count:149
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+16  0      0 465547104 1328596 53582996    0    0     0     3    0    0  1  1 99  0  0
+202  0      0 466220992 1328608 53586028    0    0     0  1778 1067370 910655 12 12 76  0  0
+zzz <11/03/2026 10:55:17> Count:150
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+226  0      0 466221504 1328608 53586036    0    0     0     3    0    0  1  1 99  0  0
+208  0      0 466112576 1328616 53590512    0    0     1  2724 1129872 1004519 14 19 67  0  0
+zzz <11/03/2026 10:55:22> Count:151
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+180  0      0 466099200 1328616 53590508    0    0     0     3    0    0  1  1 99  0  0
+145  0      0 466069856 1328624 53591964    0    0     0  1557 1456936 1153441 16 23 60  0  0
+zzz <11/03/2026 10:55:27> Count:152
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+154  0      0 466086464 1328624 53591968    0    0     0     3    0    0  1  1 99  0  0
+95  0      0 466044416 1328640 53595512    0    0     0  2155 1195342 1018311 13 16 70  0  0
+zzz <11/03/2026 10:55:32> Count:153
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+65  0      0 466036640 1328640 53595520    0    0     0     3    0    0  1  1 99  0  0
+148  0      0 465607360 1328660 53598212    0    0     0  1753 1310393 1152259 16 17 67  0  0
+zzz <11/03/2026 10:55:37> Count:154
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+122  0      0 465604352 1328660 53598212    0    0     0     3    0    0  1  1 99  0  0
+64  0      0 465316992 1328672 53604136    0    0     0  2384 999657 836026 11 10 79  0  0
+zzz <11/03/2026 10:55:42> Count:155
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+49  0      0 465312960 1328672 53604136    0    0     0     3    0    0  1  1 99  0  0
+151  0      0 465294368 1328688 53641128    0    0     0  2228 1360862 1156154 16 23 60  0  0
+zzz <11/03/2026 10:55:47> Count:156
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+141  0      0 465309280 1328688 53641132    0    0     0     3    0    0  1  1 99  0  0
+154  0      0 465367936 1328708 53644388    0    0     0  1525 1262082 1092588 15 20 65  0  0
+zzz <11/03/2026 10:55:52> Count:157
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+112  0      0 465363168 1328708 53644404    0    0     0     3    0    0  1  1 99  0  0
+135  0      0 465111712 1328720 53651140    0    0     1  3367 1319902 1119224 16 19 65  0  0
+zzz <11/03/2026 10:55:57> Count:158
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+100  0      0 465104160 1328720 53651200    0    0     0     3    0    0  1  1 99  0  0
+176  0      0 465010656 1328736 53656704    0    0     0  1697 1098514 994371 14 18 68  0  0
+zzz <11/03/2026 10:56:02> Count:159
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+126  0      0 465008160 1328736 53656704    0    0     0     3    0    0  1  1 99  0  0
+174  0      0 465313280 1328744 53658568    0    0     0  2354 1252120 1129985 16 23 61  0  0
+zzz <11/03/2026 10:56:07> Count:160
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+177  0      0 465295136 1328744 53658604    0    0     0     3    0    0  1  1 99  0  0
+136  0      0 465323520 1328748 53662204    0    0     0  1747 1397428 1169662 16 20 64  0  0
+zzz <11/03/2026 10:56:12> Count:161
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+140  0      0 465390112 1328748 53662208    0    0     0     3    0    0  1  1 99  0  0
+32  0      0 465757056 1328748 53664368    0    0     0  1118 1263806 955665 13 16 71  0  0
+zzz <11/03/2026 10:56:18> Count:162
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+28  0      0 465752768 1328748 53664372    0    0     0     3    0    0  1  1 99  0  0
+26  0      0 465118272 1328756 53668064    0    0     0  1556 1086108 954838 14 21 65  0  0
+zzz <11/03/2026 10:56:23> Count:163
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 9  0      0 465098656 1328756 53668624    0    0     0     3    0    0  1  1 99  0  0
+28  0      0 465818656 1328784 53672308    0    0     0  2554 1393329 1056510 15 22 63  0  0
+zzz <11/03/2026 10:56:28> Count:164
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+32  0      0 465818432 1328784 53672328    0    0     0     3    0    0  1  1 99  0  0
+116  0      0 466114464 1328788 53674952    0    0     0  1504 1308645 1090021 15 16 69  0  0
+zzz <11/03/2026 10:56:33> Count:165
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+119  0      0 466114976 1328788 53674952    0    0     0     3    0    0  1  1 99  0  0
+49  0      0 466052320 1328808 53678512    0    0     8  1803 1164165 985723 13 14 72  0  0
+zzz <11/03/2026 10:56:38> Count:166
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+39  0      0 466051072 1328808 53678512    0    0     0     3    0    0  1  1 99  0  0
+114  0      0 465809408 1328816 53683980    0    0     2  2179 1312968 938969 14 16 71  0  0
+zzz <11/03/2026 10:56:43> Count:167
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+136  0      0 465808896 1328816 53683984    0    0     0     3    0    0  1  1 99  0  0
+18  0      0 465967392 1328816 53687036    0    0     0  2053 1136957 947543 14 17 69  0  0
+zzz <11/03/2026 10:56:48> Count:168
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+21  0      0 465966656 1328816 53687040    0    0     0     3    0    0  1  1 99  0  0
+175  0      0 466116576 1328824 53692404    0    0     0  2113 1090989 905969 13 17 70  0  0
+zzz <11/03/2026 10:56:53> Count:169
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+126  0      0 466116096 1328824 53692404    0    0     0     3    0    0  1  1 99  0  0
+32  0      0 465982976 1328832 53670152    0    0     0  2161 1252486 1049161 15 20 66  0  0
+zzz <11/03/2026 10:56:58> Count:170
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+33  0      0 465980768 1328832 53670168    0    0     0     3    0    0  1  1 99  0  0
+156  0      0 465994016 1328840 53672888    0    0     0  1589 1121328 936356 13 18 69  0  0
+zzz <11/03/2026 10:57:03> Count:171
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+147  0      0 465994816 1328840 53672888    0    0     0     3    0    0  1  1 99  0  0
+117  0      0 466083232 1328860 53676752    0    0     0  1628 1264239 1054857 15 20 66  0  0
+zzz <11/03/2026 10:57:08> Count:172
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+110  0      0 466074912 1328860 53676756    0    0     0     3    0    0  1  1 99  0  0
+70  0      0 466223520 1328864 53679008    0    0     0  1576 1126611 925552 12 12 76  0  0
+zzz <11/03/2026 10:57:13> Count:173
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+75  0      0 466220992 1328864 53679008    0    0     0     3    0    0  1  1 99  0  0
+137  0      0 466285856 1328864 53681512    0    0     0  1701 1105511 895235 13 14 73  0  0
+zzz <11/03/2026 10:57:18> Count:174
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+140  0      0 466282080 1328864 53681512    0    0     0     3    0    0  1  1 99  0  0
+122  0      0 466214784 1328888 53686708    0    0     0  2280 1244594 1033847 15 18 67  0  0
+zzz <11/03/2026 10:57:23> Count:175
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+123  0      0 466217056 1328888 53686708    0    0     0     3    0    0  1  1 99  0  0
+100  1      0 466050656 1328900 53690548    0    0     3  2310 1345217 1126345 15 13 72  0  0
+zzz <11/03/2026 10:57:28> Count:176
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+90  0      0 466034624 1328900 53690556    0    0     0     3    0    0  1  1 99  0  0
+65  0      0 465900576 1328908 53693564    0    0     0  1647 1207926 1034819 13 10 77  0  0
+zzz <11/03/2026 10:57:33> Count:177
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+70  0      0 465904096 1328908 53693564    0    0     0     3    0    0  1  1 99  0  0
+74  0      0 465974464 1328912 53698428    0    0     0  2225 1191682 985787 13 11 75  0  0
+zzz <11/03/2026 10:57:38> Count:178
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+77  0      0 465970464 1328912 53698428    0    0     0     3    0    0  1  1 99  0  0
+140  0      0 465673280 1328936 53705228    0    0     0  2365 1274842 873399 12 12 77  0  0
+zzz <11/03/2026 10:57:43> Count:179
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+121  0      0 465666976 1328936 53705228    0    0     0     3    0    0  1  1 99  0  0
+201  0      0 465426656 1328956 54121176    0    0     0  5483 1145556 799491 11 13 76  0  0
+zzz <11/03/2026 10:57:48> Count:180
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+181  0      0 465422144 1328956 54121284    0    0     0     3    0    0  1  1 99  0  0
+67  0      0 465033376 1328976 54103288    0    0     0  9707 1018458 870276 12 17 71  0  0
+zzz <11/03/2026 10:57:53> Count:181
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+139  0      0 465029344 1328976 54103292    0    0     0     3    0    0  1  1 99  0  0
+185  0      0 464799584 1328996 54106656    0    0     0 89239 979858 849423 11 14 75  0  0
+zzz <11/03/2026 10:57:58> Count:182
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+187  0      0 464785248 1328996 54106668    0    0     0     3    0    0  1  1 99  0  0
+134  0      0 464341632 1329020 54109440    0    0     0  1890 1399624 1191803 16 20 64  0  0
+zzz <11/03/2026 10:58:03> Count:183
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+156  0      0 464358304 1329020 54109444    0    0     0     3    0    0  1  1 99  0  0
+75  0      0 463976032 1329020 54113252    0    0     4  1724 1308951 1113618 16 26 58  0  0
+zzz <11/03/2026 10:58:08> Count:184
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+62  0      0 463998464 1329020 54113252    0    0     0     3    0    0  1  1 99  0  0
+25  0      0 463898368 1329036 54116728    0    0     2  2044 901203 746296 10 12 78  0  0
+zzz <11/03/2026 10:58:13> Count:185
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+18  0      0 463897856 1329036 54116728    0    0     0     3    0    0  1  1 99  0  0
+229  0      0 463714080 1329052 54119296    0    0     0  1692 1175613 1005004 14 22 64  0  0
+zzz <11/03/2026 10:58:18> Count:186
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+220  0      0 463734752 1329052 54119296    0    0     0     3    0    0  1  1 99  0  0
+215  0      0 463587168 1329064 54123432    0    0     0  1922 1184597 1008821 14 22 64  0  0
+zzz <11/03/2026 10:58:23> Count:187
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+206  0      0 463601984 1329064 54123448    0    0     0     3    0    0  1  1 99  0  0
+260  0      0 463734912 1329100 54126456    0    0     0  2396 1096090 918046 13 21 66  0  0
+zzz <11/03/2026 10:58:28> Count:188
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+238  0      0 463708032 1329100 54126612    0    0     0     3    0    0  1  1 99  0  0
+184  0      0 463666144 1329132 54129068    0    0     0  1638 1257485 1062873 15 23 62  0  0
+zzz <11/03/2026 10:58:33> Count:189
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+163  0      0 463671968 1329132 54129068    0    0     0     3    0    0  1  1 99  0  0
+242  0      0 463495392 1329148 54130288    0    0     0  1537 1110135 946494 13 22 66  0  0
+zzz <11/03/2026 10:58:38> Count:190
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+191  0      0 463491904 1329148 54130328    0    0     0     3    0    0  1  1 99  0  0
+190  0      0 463340224 1329152 54107452    0    0     0  1855 1247234 1067972 15 26 59  0  0
+zzz <11/03/2026 10:58:43> Count:191
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+176  1      0 463338752 1329152 54107472    0    0     0     3    0    0  1  1 99  0  0
+217  0      0 463364544 1329156 54109948    0    0     0  1524 1134056 966651 13 20 66  0  0
+zzz <11/03/2026 10:58:48> Count:192
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+204  0      0 463360256 1329156 54109952    0    0     0     3    0    0  1  1 99  0  0
+153  0      0 463616224 1329172 54114228    0    0     0  1634 1297784 1150414 16 26 58  0  0
+zzz <11/03/2026 10:58:53> Count:193
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+169  0      0 463612480 1329172 54114232    0    0     0     3    0    0  1  1 99  0  0
+155  0      0 463489728 1329184 54117752    0    0     2  2087 1215385 1079409 16 26 58  0  0
+zzz <11/03/2026 10:58:58> Count:194
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+170  0      0 463484224 1329184 54117772    0    0     0     3    0    0  1  1 99  0  0
+168  0      0 463730784 1329200 54121264    0    0     5  1779 1096468 944902 13 19 68  0  0
+zzz <11/03/2026 10:59:03> Count:195
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+200  0      0 463727776 1329200 54121264    0    0     0     3    0    0  1  1 99  0  0
+215  0      0 463662624 1329208 54123328    0    0     0  1392 1225029 1075142 15 24 62  0  0
+zzz <11/03/2026 10:59:08> Count:196
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+178  0      0 463661856 1329208 54123328    0    0     0     3    0    0  1  1 99  0  0
+32  0      0 463688192 1329224 54125320    0    0     0  1448 1273625 1062258 15 23 62  0  0
+zzz <11/03/2026 10:59:13> Count:197
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+31  0      0 463687424 1329224 54125320    0    0     0     3    0    0  1  1 99  0  0
+200  0      0 463840224 1329244 54126972    0    0     0  1198 981326 825310 11 16 72  0  0
+zzz <11/03/2026 10:59:18> Count:198
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+205  0      0 463835456 1329244 54126972    0    0     0     3    0    0  1  1 99  0  0
+57  0      0 464000128 1329252 54132860    0    0     0  2147 1113883 1026896 14 22 63  0  0
+zzz <11/03/2026 10:59:23> Count:199
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+33  0      0 463999872 1329252 54132860    0    0     0     3    0    0  1  1 99  0  0
+171  0      0 463974240 1329264 54135312    0    0     0  2086 1220562 1044670 15 23 62  0  0
+zzz <11/03/2026 10:59:28> Count:200
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+168  0      0 463970208 1329264 54135312    0    0     0     3    0    0  1  1 99  0  0
+242  0      0 464068384 1329268 54137324    0    0     0  1339 1131168 991938 14 22 64  0  0
+zzz <11/03/2026 10:59:33> Count:201
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+235  0      0 464063104 1329268 54137324    0    0     0     3    0    0  1  1 99  0  0
+146  0      0 464086016 1329280 54140104    0    0     0  1546 1158670 1120076 16 22 63  0  0
+zzz <11/03/2026 10:59:38> Count:202
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+137  0      0 464082464 1329280 54140124    0    0     0     3    0    0  1  1 99  0  0
+116  0      0 463978912 1329288 54142436    0    0     0  1403 1177804 1077733 15 22 64  0  0
+zzz <11/03/2026 10:59:43> Count:203
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+144  0      0 463976896 1329288 54142440    0    0     0     3    0    0  1  1 99  0  0
+123  0      0 464022688 1329300 54144532    0    0     0  1263 1350556 1033200 14 19 67  0  0
+zzz <11/03/2026 10:59:48> Count:204
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+147  0      0 464022944 1329300 54144532    0    0     0     3    0    0  1  1 99  0  0
+113  0      0 464022912 1329308 54124708    0    0     7  2333 1169879 1024824 14 20 66  0  0
+zzz <11/03/2026 10:59:53> Count:205
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+120  0      0 464020416 1329308 54124708    0    0     0     3    0    0  1  1 99  0  0
+140  0      0 464015104 1329312 54126992    0    0     2  1602 1254466 1110193 16 23 61  0  0
+zzz <11/03/2026 10:59:58> Count:206
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+146  0      0 464009600 1329312 54126996    0    0     0     3    0    0  1  1 99  0  0
+92  0      0 464079616 1329328 54148464    0    0     3  2167 1220047 1033032 15 16 69  0  0
+zzz <11/03/2026 11:00:03> Count:207
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+73  0      0 464076160 1329328 54148472    0    0     0     3    0    0  1  1 99  0  0
+68  0      0 464249312 1329344 53946640    0    0     0  6597 1190406 1018740 14 17 69  0  0
+zzz <11/03/2026 11:00:08> Count:208
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+88  1      0 464246784 1329344 53946640    0    0     0     3    0    0  1  1 99  0  0
+185  0      0 464389600 1329368 53948448    0    0     0  2989 1272217 1102672 15 17 68  0  0
+zzz <11/03/2026 11:00:13> Count:209
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+184  0      0 464387584 1329368 53948448    0    0     0     3    0    0  1  1 99  0  0
+38  0      0 464547680 1329388 53949904    0    0     0  1628 1204236 1001680 14 18 68  0  0
+zzz <11/03/2026 11:00:18> Count:210
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+58  0      0 464548736 1329388 53949908    0    0     0     3    0    0  1  1 99  0  0
+168  0      0 464715488 1329400 53955216    0    0     0  2305 1114243 923978 12 11 77  0  0
+zzz <11/03/2026 11:00:23> Count:211
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+196  0      0 464727328 1329400 53955228    0    0     0     3    0    0  1  1 99  0  0
+151  0      0 464685568 1329408 53956560    0    0     0   650 1273494 1098939 15 21 64  0  0
+zzz <11/03/2026 11:00:28> Count:212
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+158  0      0 464677504 1329408 53956560    0    0     0     3    0    0  1  1 99  0  0
+157  0      0 465088576 1329412 53958380    0    0     0  1460 1177632 1022722 14 19 67  0  0
+zzz <11/03/2026 11:00:33> Count:213
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+163  0      0 465088832 1329412 53958380    0    0     0     3    0    0  1  1 99  0  0
+162  0      0 465352416 1329420 53959168    0    0     0  1292 1077642 932324 13 17 70  0  0
+zzz <11/03/2026 11:00:38> Count:214
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+157  0      0 465344608 1329420 53959168    0    0     0     3    0    0  1  1 99  0  0
+146  0      0 465284480 1329428 53961280    0    0     0  1462 1148792 1034856 14 17 69  0  0
+zzz <11/03/2026 11:00:43> Count:215
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+164  0      0 465281472 1329428 53961284    0    0     0     3    0    0  1  1 99  0  0
+116  0      0 465571712 1329440 53965420    0    0     5  2044 1130067 987688 14 16 70  0  0
+zzz <11/03/2026 11:00:49> Count:216
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+148  0      0 465571456 1329440 53965428    0    0     0     3    0    0  1  1 99  0  0
+129  0      0 465517024 1329448 53971456    0    0     6  2600 1125326 1058906 14 20 66  0  0
+zzz <11/03/2026 11:00:54> Count:217
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+126  0      0 465503680 1329448 53971464    0    0     0     3    0    0  1  1 99  0  0
+135  0      0 465291648 1329452 53942928    0    0     0  1661 1129233 1068381 15 20 65  0  0
+zzz <11/03/2026 11:00:59> Count:218
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+139  0      0 465294656 1329452 53942928    0    0     0     3    0    0  1  1 99  0  0
+242  0      0 465380000 1329456 53944860    0    0     0  1281 1119530 988061 14 19 67  0  0
+zzz <11/03/2026 11:01:04> Count:219
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+264  0      0 465376736 1329456 53944864    0    0     0     3    0    0  1  1 99  0  0
+171  0      0 465520320 1329468 53946492    0    0     0  1409 1078667 967402 14 19 68  0  0
+zzz <11/03/2026 11:01:09> Count:220
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+157  0      0 465517824 1329468 53946492    0    0     0     3    0    0  1  1 99  0  0
+140  0      0 465750240 1329500 53947920    0    0     3  1254 1232772 1080241 15 21 64  0  0
+zzz <11/03/2026 11:01:14> Count:221
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+142  0      0 465746240 1329500 53947920    0    0     0     3    0    0  1  1 99  0  0
+109  0      0 466072896 1329516 53949732    0    0     0  1301 1227928 1076338 14 16 70  0  0
+zzz <11/03/2026 11:01:19> Count:222
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+142  0      0 466071136 1329516 53949732    0    0     0     3    0    0  1  1 99  0  0
+117  0      0 466018272 1329516 53953752    0    0     0  2272 1215356 1102777 15 18 67  0  0
+zzz <11/03/2026 11:01:24> Count:223
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+132  0      0 466016768 1329516 53953752    0    0     0     3    0    0  1  1 99  0  0
+105  0      0 466302272 1329520 53953916    0    0     0  1370 1246859 1111871 15 16 69  0  0
+zzz <11/03/2026 11:01:29> Count:224
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+67  0      0 466319168 1329520 53953916    0    0     0     3    0    0  1  1 99  0  0
+76  0      0 466664448 1329536 53955544    0    0     8  1260 1355063 1210588 15 10 75  0  0
+zzz <11/03/2026 11:01:34> Count:225
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+69  0      0 466672800 1329536 53955544    0    0     0     3    0    0  1  1 99  0  0
+119  0      0 467361472 1329552 53957024    0    0     0  1317 1263839 1144042 14 13 72  0  0
+zzz <11/03/2026 11:01:39> Count:226
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+143  0      0 467360224 1329552 53957024    0    0     0     3    0    0  1  1 99  0  0
+250  0      0 467444416 1329572 53959588    0    0     0  1621 966422 853228 10  9 81  0  0
+zzz <11/03/2026 11:01:44> Count:227
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+230  0      0 467438112 1329572 53959588    0    0     0     3    0    0  1  1 99  0  0
+128  0      0 467448512 1329580 53963268    0    0     4  1740 1189820 1056694 14 17 70  0  0
+zzz <11/03/2026 11:01:49> Count:228
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+116  0      0 467444224 1329580 53963272    0    0     0     3    0    0  1  1 99  0  0
+68  0      0 467592064 1329600 53969504    0    0     7  1794 1002225 865803 11 12 77  0  0
+zzz <11/03/2026 11:01:54> Count:229
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+74  0      0 467592832 1329600 53969536    0    0     0     3    0    0  1  1 99  0  0
+65  0      0 467698336 1329620 53973608    0    0     0  2735 960510 832781 10 10 80  0  0
+zzz <11/03/2026 11:01:59> Count:230
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+104  0      0 467695072 1329620 53973612    0    0     0     3    0    0  1  1 99  0  0
+67  0      0 467601856 1329640 53976572    0    0     0  1669 1437766 1237774 16 14 69  0  0
+zzz <11/03/2026 11:02:04> Count:231
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+119  0      0 467597568 1329640 53976572    0    0     0     3    0    0  1  1 99  0  0
+39  0      0 467471072 1329656 53979620    0    0     0  1293 1296261 1091394 14 12 73  0  0
+zzz <11/03/2026 11:02:09> Count:232
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+36  0      0 467468544 1329656 53979620    0    0     0     3    0    0  1  1 99  0  0
+127  0      0 467508448 1329664 53956732    0    0     0  1588 1064173 963020 13 14 73  0  0
+zzz <11/03/2026 11:02:14> Count:233
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+119  0      0 467507424 1329664 53956752    0    0     0     3    0    0  1  1 99  0  0
+176  0      0 467628384 1329672 53960156    0    0     0  2138 1049779 792672 10  9 82  0  0
+zzz <11/03/2026 11:02:19> Count:234
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+220  0      0 467623872 1329672 53960168    0    0     0     3    0    0  1  1 99  0  0
+113  0      0 467508256 1329684 53965324    0    0     0  2171 1201999 1043520 13 11 76  0  0
+zzz <11/03/2026 11:02:24> Count:235
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+111  0      0 467506240 1329684 53965324    0    0     0     3    0    0  1  1 99  0  0
+125  0      0 467504544 1329696 53968688    0    0     0  1836 1247556 1065267 13 12 75  0  0
+zzz <11/03/2026 11:02:29> Count:236
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+130  0      0 467499008 1329696 53968688    0    0     0     3    0    0  1  1 99  0  0
+124  1      0 467359808 1329704 53973044    0    0     0  5623 1367533 1154791 16 13 70  0  0
+zzz <11/03/2026 11:02:34> Count:237
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+148  1      0 467365376 1329704 53973044    0    0     0     3    0    0  1  1 99  0  0
+25  0      0 467725504 1329732 53975368    0    0     0  4147 1075793 908208 12 11 77  0  0
+zzz <11/03/2026 11:02:39> Count:238
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+34  0      0 467749440 1329732 53975368    0    0     0     3    0    0  1  1 99  0  0
+98  0      0 467695328 1329732 53987436    0    0  2111  1422 1362938 1193254 15 10 75  0  0
+zzz <11/03/2026 11:02:44> Count:239
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+99  0      0 467688800 1329732 53987436    0    0     0     3    0    0  1  1 99  0  0
+66  0      0 467793056 1329740 54021068    0    0  2342  1811 1163651 994801 13 10 76  0  0
+zzz <11/03/2026 11:02:49> Count:240
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+64  0      0 467788288 1329740 54021072    0    0     0     3    0    0  1  1 99  0  0
+48  0      0 466947648 1329744 54006748    0    0     9  7235 1242366 1081675 13 10 77  0  0
+zzz <11/03/2026 11:02:54> Count:241
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+52  0      0 466943872 1329744 54006752    0    0     0     3    0    0  1  1 99  0  0
+242  0      0 466533536 1329768 54010880    0    0     0  2058 1305609 1146423 15 14 72  0  0
+zzz <11/03/2026 11:02:59> Count:242
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+231  0      0 466546144 1329768 54010908    0    0     0     3    0    0  1  1 99  0  0
+118  0      0 466257728 1329776 54014208    0    0     0  1835 1300153 1124799 15 20 65  0  0
+zzz <11/03/2026 11:03:04> Count:243
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+137  0      0 466260512 1329776 54014212    0    0     0     3    0    0  1  1 99  0  0
+57  0      0 465814560 1329788 54017788    0    0     0  1868 1226565 1045373 14 12 74  0  0
+zzz <11/03/2026 11:03:09> Count:244
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+53  0      0 465809728 1329788 54017976    0    0     0     3    0    0  1  1 99  0  0
+207  0      0 465725760 1329792 54021584    0    0     0  1778 1246399 1077565 14 16 70  0  0
+zzz <11/03/2026 11:03:14> Count:245
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+185  0      0 465724768 1329792 54021652    0    0     0     3    0    0  1  1 99  0  0
+25  0      0 465665344 1329800 54025028    0    0     0  1981 1305524 1138172 16 22 62  0  0
+zzz <11/03/2026 11:03:19> Count:246
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+33  0      0 465664096 1329800 54025032    0    0     0     3    0    0  1  1 99  0  0
+155  0      0 465224768 1329812 54032316    0    0     0  2548 1213017 1151463 16 23 61  0  0
+zzz <11/03/2026 11:03:24> Count:247
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+169  0      0 465228640 1329812 54032824    0    0     0     3    0    0  1  1 99  0  0
+181  0      0 464854304 1329840 54034720    0    0     0  1602 1088127 969989 13 15 71  0  0
+zzz <11/03/2026 11:03:29> Count:248
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+153  0      0 464859392 1329840 54034656    0    0     0     3    0    0  1  1 99  0  0
+82  0      0 464676288 1329848 54011528    0    0     8  1746 1345804 1068234 15 20 65  0  0
+zzz <11/03/2026 11:03:34> Count:249
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+80  0      0 464668064 1329848 54011532    0    0     0     3    0    0  1  1 99  0  0
+199  0      0 464307904 1329856 54019328    0    0     0  2595 1237456 1057329 15 20 65  0  0
+zzz <11/03/2026 11:03:39> Count:250
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+167  0      0 464300096 1329856 54019396    0    0     0     3    0    0  1  1 99  0  0
+107  1      0 463993408 1329864 54022116    0    0     0  1642 1283970 1079496 15 20 65  0  0
+zzz <11/03/2026 11:03:44> Count:251
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+151  0      0 463990400 1329864 54022200    0    0     0     3    0    0  1  1 99  0  0
+132  0      0 463551584 1329880 54026572    0    0     2  1913 1206674 1083057 16 23 62  0  0
+zzz <11/03/2026 11:03:49> Count:252
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+127  0      0 463550688 1329880 54026632    0    0     0     3    0    0  1  1 99  0  0
+185  0      0 463050336 1329900 54035624    0    0     9  3087 1221286 1134990 16 25 58  0  0
+zzz <11/03/2026 11:03:54> Count:253
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+157  0      0 463044288 1329900 54035624    0    0     0     3    0    0  1  1 99  0  0
+243  0      0 462879808 1329920 54039824    0    0     0  1946 1128163 1084015 15 25 59  0  0
+zzz <11/03/2026 11:03:59> Count:254
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+273  0      0 462875520 1329920 54039824    0    0     0     3    0    0  1  1 99  0  0
+231  0      0 462276512 1329924 54043036    0    0     0  1777 1068000 1019407 14 23 63  0  0
+zzz <11/03/2026 11:04:04> Count:255
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+256  0      0 462268736 1329924 54043036    0    0     0     3    0    0  1  1 99  0  0
+176  0      0 462018240 1329936 54021060    0    0     0  1683 1228905 1086156 15 26 59  0  0
+zzz <11/03/2026 11:04:09> Count:256
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+240  0      0 462010688 1329936 54021060    0    0     0     3    0    0  1  1 99  0  0
+147  0      0 461688896 1329940 54023628    0    0     0  1518 1118306 1082100 16 24 60  0  0
+zzz <11/03/2026 11:04:14> Count:257
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+183  0      0 461681600 1329940 54023628    0    0     0     3    0    0  1  1 99  0  0
+260  0      0 461698304 1329940 54025908    0    0     0  1420 1128234 1034338 15 25 61  0  0
+zzz <11/03/2026 11:04:19> Count:258
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+242  0      0 461696288 1329940 54025908    0    0     0     3    0    0  1  1 99  0  0
+178  0      0 461897088 1329956 54030160    0    0     0  1727 1189984 1091985 16 30 54  0  0
+zzz <11/03/2026 11:04:24> Count:259
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+192  0      0 461893056 1329956 54030160    0    0     0     3    0    0  1  1 99  0  0
+209  0      0 461808768 1329960 54032968    0    0     0  1904 1023650 903028 13 20 67  0  0
+zzz <11/03/2026 11:04:29> Count:260
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+216  0      0 461822656 1329960 54032972    0    0     0     3    0    0  1  1 99  0  0
+318  0      0 461584064 1329976 54034904    0    0     0  1651 1002328 926645 13 21 66  0  0
+zzz <11/03/2026 11:04:34> Count:261
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+320  0      0 461587360 1329976 54034912    0    0     0     3    0    0  1  1 99  0  0
+159  1      0 461275200 1329988 54040100    0    0     0  1430 1126891 963102 14 26 60  0  0
+zzz <11/03/2026 11:04:39> Count:262
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+184  0      0 461315072 1329988 54040100    0    0     0     3    0    0  1  1 99  0  0
+18  0      0 461062496 1329992 54045588    0    0     0  1867 1342044 978838 15 25 59  0  0
+zzz <11/03/2026 11:04:44> Count:263
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+33  0      0 461063008 1329992 54045596    0    0     0     3    0    0  1  1 99  0  0
+222  0      0 461289184 1330012 54047292    0    0     0  1684 801046 687993  9 13 78  0  0
+zzz <11/03/2026 11:04:49> Count:264
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+231  0      0 461282112 1330012 54047296    0    0     0     3    0    0  1  1 99  0  0
+43  0      0 460955360 1330020 54054464    0    0     6  2446 1110376 978520 14 25 61  0  0
+zzz <11/03/2026 11:04:54> Count:265
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+19  0      0 460954400 1330020 54054468    0    0     0     3    0    0  1  1 99  0  0
+218  0      0 460702304 1330040 54060108    0    0     6  2098 1245264 1076906 16 32 52  0  0
+zzz <11/03/2026 11:04:59> Count:266
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+214  0      0 460698304 1330040 54060108    0    0     0     3    0    0  1  1 99  0  0
+234  0      0 460785792 1330048 54062376    0    0     0  2583 1198992 1020477 15 27 58  0  0
+zzz <11/03/2026 11:05:04> Count:267
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+234  0      0 460781280 1330048 54062376    0    0     0     3    0    0  1  1 99  0  0
+136  0      0 460600320 1330088 54065988    0    0     0  1617 1241639 1048208 15 31 54  0  0
+zzz <11/03/2026 11:05:09> Count:268
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+137  0      0 460597568 1330088 54065988    0    0     0     3    0    0  1  1 99  0  0
+60  0      0 460558144 1330120 54042792    0    0     0  1789 1039807 883128 12 16 72  0  0
+zzz <11/03/2026 11:05:14> Count:269
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+24  0      0 460556896 1330120 54042792    0    0     0     3    0    0  1  1 99  0  0
+232  0      0 460403136 1330156 54045612    0    0     0  1628 1212700 1067227 15 30 55  0  0
+zzz <11/03/2026 11:05:19> Count:270
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+201  0      0 460396320 1330156 54045612    0    0     0     3    0    0  1  1 99  0  0
+192  0      0 460638336 1330188 54052376    0    0     0  2615 1169918 1082928 19 28 53  0  0
+zzz <11/03/2026 11:05:24> Count:271
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+194  0      0 460636832 1330188 54052376    0    0     0     3    0    0  1  1 99  0  0
+226  0      0 460732640 1330192 54053412    0    0     0  2109 1107288 1006135 15 27 59  0  0
+zzz <11/03/2026 11:05:30> Count:272
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+240  0      0 460728608 1330192 54053420    0    0     0     3    0    0  1  1 99  0  0
+241  0      0 460686080 1330204 54056328    0    0     0  2043 1182686 1064390 15 29 55  0  0
+zzz <11/03/2026 11:05:35> Count:273
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+213  0      0 460679808 1330204 54056332    0    0     0     3    0    0  1  1 99  0  0
+203  0      0 460512352 1330212 54059188    0    0     0  1653 1203008 1063621 16 30 54  0  0
+zzz <11/03/2026 11:05:40> Count:274
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+231  0      0 460507360 1330212 54059196    0    0     0     3    0    0  1  1 99  0  0
+211  0      0 460544224 1330224 54061716    0    0     0  1718 1104224 1075095 16 29 55  0  0
+zzz <11/03/2026 11:05:45> Count:275
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+214  0      0 460535904 1330224 54061716    0    0     0     3    0    0  1  1 99  0  0
+197  1      0 460271232 1330240 54064556    0    0     0  1714 1216835 1029929 15 27 58  0  0
+zzz <11/03/2026 11:05:50> Count:276
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+151  0      0 460258368 1330240 54064556    0    0     0     3    0    0  1  1 99  0  0
+224  0      0 459988224 1330244 54072416    0    0     0  2182 1080662 1006023 15 27 58  0  0
+zzz <11/03/2026 11:05:55> Count:277
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+184  0      0 459982176 1330244 54072416    0    0     0     3    0    0  1  1 99  0  0
+207  0      0 460286720 1330244 54049384    0    0     7  2071 1118185 1016182 15 28 57  0  0
+zzz <11/03/2026 11:06:00> Count:278
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+213  0      0 460300832 1330244 54049384    0    0     0     3    0    0  1  1 99  0  0
+244  1      0 460820992 1330264 54052608    0    0     3  7790 1096836 921166 13 23 64  0  0
+zzz <11/03/2026 11:06:05> Count:279
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+243  0      0 460832096 1330264 54052616    0    0     0     3    0    0  1  1 99  0  0
+231  0      0 460771872 1330272 54056292    0    0     0  1463 1122762 961340 14 25 60  0  0
+zzz <11/03/2026 11:06:10> Count:280
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+193  0      0 460768096 1330272 54056292    0    0     0     3    0    0  1  1 99  0  0
+19  0      0 461012192 1330288 54058440    0    0     0  1914 997711 895593 13 21 66  0  0
+zzz <11/03/2026 11:06:15> Count:281
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+13  0      0 461008928 1330288 54058440    0    0     0     3    0    0  1  1 99  0  0
+164  0      0 461042688 1330328 54060060    0    0     0  1747 968466 828256 11 19 70  0  0
+zzz <11/03/2026 11:06:20> Count:282
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+154  0      0 461040672 1330328 54060060    0    0     0     3    0    0  1  1 99  0  0
+218  0      0 461154912 1330336 54038792    0    0     0  1765 1110546 937032 13 25 61  0  0
+zzz <11/03/2026 11:06:25> Count:283
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+190  0      0 461150880 1330336 54038792    0    0     0     3    0    0  1  1 99  0  0
+192  0      0 461137920 1330352 54042212    0    0     0  2182 1161015 1031471 16 31 53  0  0
+zzz <11/03/2026 11:06:30> Count:284
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+194  0      0 461132384 1330352 54042212    0    0     0     3    0    0  1  1 99  0  0
+78  0      0 461295104 1330352 54043888    0    0     8  1555 1051465 937328 13 24 62  0  0
+zzz <11/03/2026 11:06:35> Count:285
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+61  0      0 461292320 1330352 54043888    0    0     0     3    0    0  1  1 99  0  0
+233  0      0 461180416 1330356 54045072    0    0     0  1196 1127602 939926 14 27 59  0  0
+zzz <11/03/2026 11:06:40> Count:286
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+214  0      0 461175392 1330356 54045072    0    0     0     3    0    0  1  1 99  0  0
+228  0      0 461548224 1330372 54047108    0    0     0  1820 1074350 945880 14 25 61  0  0
+zzz <11/03/2026 11:06:45> Count:287
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+227  0      0 461542464 1330372 54047132    0    0     0     3    0    0  1  1 99  0  0
+43  0      0 461974144 1330380 54049012    0    0     0  1454 1059583 983871 15 26 60  0  0
+zzz <11/03/2026 11:06:50> Count:288
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+40  0      0 461971616 1330380 54049012    0    0     0     3    0    0  1  1 99  0  0
+215  0      0 461766272 1330384 54054572    0    0     6  2392 1163259 964884 14 27 59  0  0
+zzz <11/03/2026 11:06:55> Count:289
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+251  0      0 461759232 1330384 54054572    0    0     0     3    0    0  1  1 99  0  0
+28  0      0 462006304 1330408 54059112    0    0     6  2273 1181679 1022416 15 29 56  0  0
+zzz <11/03/2026 11:07:00> Count:290
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+60  0      0 462004288 1330408 54059112    0    0     0     3    0    0  1  1 99  0  0
+211  0      0 462228768 1330420 54061168    0    0     0  1596 1073753 916349 13 21 66  0  0
+zzz <11/03/2026 11:07:05> Count:291
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+191  0      0 462241440 1330420 54061220    0    0     0     3    0    0  1  1 99  0  0
+212  0      0 462203680 1330440 54063840    0    0     0  1830 1081992 963739 14 22 65  0  0
+zzz <11/03/2026 11:07:10> Count:292
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+236  0      0 462197376 1330440 54063844    0    0     0     3    0    0  1  1 99  0  0
+169  1      0 462283712 1330448 54066284    0    0     0  1655 1105130 965233 13 23 63  0  0
+zzz <11/03/2026 11:07:15> Count:293
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+209  0      0 462280192 1330448 54066292    0    0     0     3    0    0  1  1 99  0  0
+69  0      0 462304256 1330460 54069148    0    0     0  1716 1091386 946016 13 23 64  0  0
+zzz <11/03/2026 11:07:20> Count:294
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+45  0      0 462304000 1330460 54069148    0    0     0     3    0    0  1  1 99  0  0
+246  0      0 462406144 1330468 54073932    0    0     0  2354 794755 674308  9 12 78  0  0
+zzz <11/03/2026 11:07:25> Count:295
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+258  0      0 462425216 1330468 54073932    0    0     0     3    0    0  1  1 99  0  0
+168  0      0 462295072 1330476 54076560    0    0     0  2027 1196707 893936 13 20 67  0  0
+zzz <11/03/2026 11:07:30> Count:296
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+181  0      0 462293568 1330476 54076560    0    0     0     3    0    0  1  1 99  0  0
+163  0      0 462363200 1330488 54053816    0    0     0  2142 1235454 1058109 15 28 56  0  0
+zzz <11/03/2026 11:07:35> Count:297
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+138  0      0 462360160 1330488 54053816    0    0     0     3    0    0  1  1 99  0  0
+233  0      0 462576224 1330500 54056152    0    0     0  1389 1004583 917784 13 19 69  0  0
+zzz <11/03/2026 11:07:40> Count:298
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+201  0      0 462569408 1330500 54056152    0    0     0     3    0    0  1  1 99  0  0
+170  0      0 462794336 1330504 54058704    0    0     0  1693 1110259 1012274 14 23 63  0  0
+zzz <11/03/2026 11:07:45> Count:299
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+129  0      0 462792832 1330504 54058724    0    0     0     3    0    0  1  1 99  0  0
+157  0      0 462712320 1330508 54060636    0    0     0  1328 1127107 1028592 15 24 62  0  0
+zzz <11/03/2026 11:07:50> Count:300
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+174  0      0 462707296 1330508 54060640    0    0     0     3    0    0  1  1 99  0  0
+207  0      0 462533440 1330520 54064460    0    0     0  1578 1254729 1081649 15 26 59  0  0
+zzz <11/03/2026 11:07:55> Count:301
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+241  0      0 462527552 1330520 54064580    0    0     0     3    0    0  1  1 99  0  0
+210  0      0 462652096 1330532 54068888    0    0     5  2033 1166363 1029569 14 25 61  0  0
+zzz <11/03/2026 11:08:00> Count:302
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+256  0      0 462648576 1330532 54068888    0    0     0     3    0    0  1  1 99  0  0
+52  0      0 462837408 1330548 54073484    0    0     7  2312 1271070 1064562 16 27 57  0  0
+zzz <11/03/2026 11:08:05> Count:303
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+70  0      0 462836672 1330548 54073484    0    0     0     3    0    0  1  1 99  0  0
+175  0      0 463178944 1330556 54075052    0    0     0  1584 1105916 946358 13 20 67  0  0
+zzz <11/03/2026 11:08:10> Count:304
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+189  0      0 463177152 1330556 54075052    0    0     0     3    0    0  1  1 99  0  0
+206  0      0 462509184 1330584 54076572    0    0     0  1418 1170782 860848 12 17 71  0  0
+zzz <11/03/2026 11:08:15> Count:305
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+178  0      0 462527072 1330584 54076592    0    0     0     3    0    0  1  1 99  0  0
+235  0      0 463306720 1330592 54079004    0    0     0  1973 998874 866011 12 17 71  0  0
+zzz <11/03/2026 11:08:20> Count:306
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+236  0      0 463302944 1330592 54079004    0    0     0     3    0    0  1  1 99  0  0
+170  1      0 463514176 1330600 54082740    0    0     0  1001 1224052 1088464 15 26 58  0  0
+zzz <11/03/2026 11:08:25> Count:307
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+175  1      0 463513952 1330604 54082740    0    0     0     3    0    0  1  1 99  0  0
+185  0      0 463629024 1330620 54083348    0    0     0   918 1082342 952438 13 20 67  0  0
+zzz <11/03/2026 11:08:30> Count:308
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+151  0      0 463625344 1330620 54083348    0    0     0     3    0    0  1  1 99  0  0
+14  0      0 463860928 1330632 54086552    0    0     0  1579 840306 721203  9 11 80  0  0
+zzz <11/03/2026 11:08:35> Count:309
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 6  0      0 463860160 1330632 54086552    0    0     0     3    0    0  1  1 99  0  0
+63  0      0 462704416 1330640 54088340    0    0     0  1481 863522 713789  9 12 79  0  0
+zzz <11/03/2026 11:08:40> Count:310
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+61  0      0 462645184 1330640 54088352    0    0     0     3    0    0  1  1 99  0  0
+138  0      0 463918272 1330648 54067984    0    0     8  2511 1504790 1095523 16 24 60  0  0
+zzz <11/03/2026 11:08:45> Count:311
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+150  0      0 463942208 1330648 54067984    0    0     0     3    0    0  1  1 99  0  0
+35  0      0 463750592 1330664 54071804    0    0     4  2160 1275027 1107292 15 21 64  0  0
+zzz <11/03/2026 11:08:50> Count:312
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+28  0      0 463742816 1330664 54071880    0    0     0     3    0    0  1  1 99  0  0
+189  0      0 464234944 1330692 54056160    0    0     0  1814 1296485 1105196 16 24 59  0  0
+zzz <11/03/2026 11:08:55> Count:313
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+178  0      0 464232416 1330692 54056164    0    0     0     3    0    0  1  1 99  0  0
+184  0      0 464008768 1330716 54059424    0    0     0  1780 1329294 1012759 15 21 64  0  0
+zzz <11/03/2026 11:09:00> Count:314
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+161  0      0 464006272 1330716 54059432    0    0     0     3    0    0  1  1 99  0  0
+184  0      0 464079904 1330724 54061760    0    0     0  1949 1275081 1060709 15 24 61  0  0
+zzz <11/03/2026 11:09:05> Count:315
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+184  0      0 464073376 1330724 54061760    0    0     0     3    0    0  1  1 99  0  0
+158  0      0 464375456 1330732 54063568    0    0     0  1531 1320828 1108714 16 26 58  0  0
+zzz <11/03/2026 11:09:10> Count:316
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+131  0      0 464372928 1330732 54063568    0    0     0     3    0    0  1  1 99  0  0
+23  0      0 463566272 1330744 54065900    0    0     0  1682 1020183 884707 12 17 72  0  0
+zzz <11/03/2026 11:09:15> Count:317
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+15  0      0 463565504 1330744 54065900    0    0     0     3    0    0  1  1 99  0  0
+178  0      0 464322944 1330760 54068636    0    0    14  2267 1516802 1008980 15 22 64  0  0
+zzz <11/03/2026 11:09:20> Count:318
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+172  0      0 464317920 1330760 54068648    0    0     0     3    0    0  1  1 99  0  0
+221  0      0 464501472 1330776 54074384    0    0     2  2525 1264713 1039616 15 22 63  0  0
+zzz <11/03/2026 11:09:25> Count:319
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+222  0      0 464496512 1330776 54074388    0    0     0     3    0    0  1  1 99  0  0
+254  0      0 464435232 1330804 54080084    0    0    10  3225 1221998 1047217 15 24 61  0  0
+zzz <11/03/2026 11:09:30> Count:320
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+245  0      0 464414304 1330804 54080084    0    0     0     3    0    0  1  1 99  0  0
+216  0      0 464218272 1330816 54058204    0    0     0  2376 1246138 1100675 16 28 55  0  0
+zzz <11/03/2026 11:09:35> Count:321
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+184  0      0 464212224 1330816 54058208    0    0     0     3    0    0  1  1 99  0  0
+172  0      0 464095936 1330852 54060900    0    0     0  2078 1212285 1027569 14 23 62  0  0
+zzz <11/03/2026 11:09:40> Count:322
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+162  0      0 464091424 1330852 54060900    0    0     0     3    0    0  1  1 99  0  0
+114  0      0 464059136 1330860 54062824    0    0     0  1410 1198923 1031785 14 22 63  0  0
+zzz <11/03/2026 11:09:45> Count:323
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+98  0      0 464056864 1330860 54062824    0    0     0     3    0    0  1  1 99  0  0
+144  0      0 464197088 1330880 54065712    0    0     0  1829 1264418 1073657 15 20 65  0  0
+zzz <11/03/2026 11:09:50> Count:324
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+148  0      0 464195584 1330880 54065712    0    0     0     3    0    0  1  1 99  0  0
+163  0      0 464397184 1330888 54069100    0    0     0  1731 1322835 1127457 16 26 57  0  0
+zzz <11/03/2026 11:09:55> Count:325
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+179  0      0 464392672 1330888 54069100    0    0     0     3    0    0  1  1 99  0  0
+165  0      0 464471776 1330904 54071804    0    0     0  1808 1338982 1119758 16 23 61  0  0
+zzz <11/03/2026 11:10:00> Count:326
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+194  0      0 464469248 1330904 54071804    0    0     0     3    0    0  1  1 99  0  0
+101  0      0 464889152 1330920 54074168    0    0     0  1579 1143624 980049 13 17 69  0  0
+zzz <11/03/2026 11:10:05> Count:327
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+154  0      0 464888384 1330920 54074168    0    0     0     3    0    0  1  1 99  0  0
+184  0      0 464918624 1330940 54075596    0    0     0  1750 1157083 938031 13 18 69  0  0
+zzz <11/03/2026 11:10:11> Count:328
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+166  0      0 464916352 1330940 54075600    0    0     0     3    0    0  1  1 99  0  0
+130  0      0 465195872 1330960 54078928    0    0     6  2186 1313189 1091994 15 22 63  0  0
+zzz <11/03/2026 11:10:16> Count:329
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+122  0      0 465192096 1330960 54078940    0    0     0     3    0    0  1  1 99  0  0
+34  0      0 465599616 1330976 54084000    0    0   561  2551 1198630 1012561 14 17 69  0  0
+zzz <11/03/2026 11:10:21> Count:330
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+30  0      0 465603168 1330976 54084000    0    0     0     3    0    0  1  1 99  0  0
+13  0      0 465906496 1330980 54085872    0    0     0  2021 1215428 1043078 14 15 72  0  0
+zzz <11/03/2026 11:10:26> Count:331
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 9  0      0 465904992 1330980 54085872    0    0     0     3    0    0  1  1 99  0  0
+138  0      0 465183168 1331016 54086768    0    0     0  1535 1187005 1008343 13 16 71  0  0
+zzz <11/03/2026 11:10:31> Count:332
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+128  0      0 465135040 1331016 54086768    0    0     0     3    0    0  1  1 99  0  0
+74  0      0 466570912 1331032 54089128    0    0     0  2010 1464756 1023266 15 14 71  0  0
+zzz <11/03/2026 11:10:36> Count:333
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+104  0      0 466579008 1331032 54089128    0    0     0     3    0    0  1  1 99  0  0
+130  0      0 467202368 1331040 54090172    0    0     0  1471 1156063 988841 11  6 82  0  0
+zzz <11/03/2026 11:10:41> Count:334
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+113  0      0 467201600 1331040 54090176    0    0     0     3    0    0  1  1 99  0  0
+62  0      0 467532704 1331044 54093036    0    0     0  1889 1138103 978194 12  7 81  0  0
+zzz <11/03/2026 11:10:46> Count:335
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+75  0      0 467533248 1331044 54093044    0    0     0     3    0    0  1  1 99  0  0
+71  0      0 467848640 1331064 54096644    0    0     0  1769 1282025 1111221 13  7 80  0  0
+zzz <11/03/2026 11:10:51> Count:336
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+66  0      0 467847904 1331064 54096644    0    0     0     3    0    0  1  1 99  0  0
+163  0      0 466600032 1331076 54097480    0    0     0  1469 1055323 833955 10  9 81  0  0
+zzz <11/03/2026 11:10:56> Count:337
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+195  0      0 466574592 1331076 54097492    0    0     0     3    0    0  1  1 99  0  0
+53  0      0 468443040 1331092 54100348    0    0     0  1403 1352492 1037540 12  8 80  0  0
+zzz <11/03/2026 11:11:01> Count:338
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+81  0      0 468444576 1331092 54100348    0    0     0     3    0    0  1  1 99  0  0
+78  0      0 468687456 1331104 54078684    0    0     2  2526 1121374 953224 12  7 81  0  0
+zzz <11/03/2026 11:11:06> Count:339
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+75  0      0 468684672 1331104 54078684    0    0     0     3    0    0  1  1 99  0  0

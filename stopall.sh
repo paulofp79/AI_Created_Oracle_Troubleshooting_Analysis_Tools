@@ -23,5 +23,7 @@ kill_port 8501
 kill_port 8502
 kill_port 8503
 kill_port 8504
+kill_port 8505
+kill_port 8506
 
 echo "Stopped app processes for ${ROOT_DIR}"

@@ -1,0 +1,149 @@
+<!-- Copyright (c) 2016, 2025, Oracle and/or its affiliates. -->
+<!-- All rights reserved.-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>ExaWatcher Menu</title>
+    <meta name="description" content="Menu for ExaWatcher charts"/>
+    <meta name="keywords" content="menu"/>
+    <link rel="stylesheet" id="uxiconfont" href="https://static.oracle.com/cdn/fnd/gallery/2310.0.1/images/iconfont/ojuxIconFont.min.css">
+    <style class="text/css">
+      @import url('https://static.oracle.com/cdn/jet/19.0.0/default/css/redwood/oj-redwood-min.css');
+     .exa-hide {
+       display: none;
+     }      
+     .exa-menu-list {
+       --oj-navigation-list-font-size:  var(--oj-typography-body-sm-font-size);
+     }
+    </style>
+    <script src="https://static.oracle.com/cdn/jet/19.0.0/3rdparty/require/require.js"></script>
+    <script type="text/javascript">
+      // get browser language
+      var browserLang = window.navigator.language || window.navigator.userLanguage;
+      requirejs.config({
+        paths: {"knockout": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/knockout/knockout-3.5.1", "jquery": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/jquery/jquery-3.7.1.min", "jqueryui-amd": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/jquery/jqueryui-amd-1.14.1.min", "hammerjs": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/hammer/hammer-2.0.8.min", "ojdnd": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/dnd-polyfill/dnd-polyfill-1.0.2.min", "ojs": "https://static.oracle.com/cdn/jet/19.0.0/default/js/min", "ojL10n": "https://static.oracle.com/cdn/jet/19.0.0/default/js/ojL10n", "ojtranslations": "https://static.oracle.com/cdn/jet/19.0.0/default/js/resources", "@oracle/oraclejet-preact": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/oraclejet-preact/amd", "oj-c": "https://static.oracle.com/cdn/jet/packs/oj-c/19.0.0/min", "persist": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/persist/min", "text": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/require/text", "signals": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/js-signals/signals.min", "touchr": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/touchr/touchr", "preact": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/dist/preact.umd", "preact/hooks": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/hooks/dist/hooks.umd", "preact/compat": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/compat/dist/compat.umd", "preact/jsx-runtime": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/jsx-runtime/dist/jsxRuntime.umd", "preact/debug": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/debug/dist/debug.umd", "preact/devtools": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/devtools/dist/devtools.umd", "proj4": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/proj4js/dist/proj4", "css": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/require-css/css.min", "ojcss": "https://static.oracle.com/cdn/jet/19.0.0/default/js/ojcss", "oj/ojcss": "https://static.oracle.com/cdn/jet/19.0.0/default/js/ojcss", "chai": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/chai/chai-4.5.0.min"}, 
+        // Shim configurations for modules that do not expose AMD
+        // shim: { 
+        //   'jquery' : { exports: ['jQuery','$'] } 
+        // },
+        config: {
+          i18n: { locale: browserLang },
+          ojL10n: { locale: browserLang }
+        }
+      });
+
+      require(["ojs/ojcore", "knockout", "jquery", "ojs/ojkeyset",
+               "ojs/ojknockout", "ojs/ojnavigationlist",
+               "ojs/ojarraytreedataprovider", 
+               "ojs/ojvalidation-base", "ojs/ojvalidation-number",
+               "ojs/ojvalidation-datetime" ],
+        function (oj, ko, $, keySet)
+        {
+
+          var Model = function()
+          {
+            var self = this;
+
+            self.itemOnly = function(context) 
+            {
+              return context['leaf'];
+            }
+            self.dateTimeConverter = oj.Validation.converterFactory("datetime").createConverter( { formatType: "datetime", dateFormat: "short",  timeFormat: "medium"} );
+
+            var menuItems = [{'name': 'c3cnbrapro01-9', 'id': 'c3cnbrapro01-9', 'children': [{'id': 'c3cnbrapro01-9.html', 'name': 'Summary', 'htmlFile': 'c3cnbrapro01-9.html'}, {'id': 'c3cnbrapro01-9_iosummary.html', 'name': 'IOStat Summary'}, {'id': 'c3cnbrapro01-9_iodetail.html', 'name': 'IOStat Detail'}, {'id': 'c3cnbrapro01-9_cpu.html', 'name': 'CPU Utilization'}, {'id': 'c3cnbrapro01-9_mp.html', 'name': 'CPU Detail'}, {'id': 'c3cnbrapro01-9_meminfo.html', 'name': 'Meminfo'}, {'id': 'c3cnbrapro01-9_roce.html', 'name': 'RoCEstat'}]}];
+            // add icons to menuItems based on existence of warning
+            for (var i = 0; i < menuItems.length; i++)
+            {
+              menuItem = menuItems[i];
+              // iterate over children
+              if (menuItem.hasOwnProperty('children') &&
+                  menuItem['children'].length > 0)
+              {
+                for (var j = 0; j < menuItem['children'].length; j++)
+                {
+                  childItem = menuItem['children'][j];
+                  if (childItem.hasOwnProperty('finding') &&
+                      childItem['finding'] == 'True')
+                  {
+                    console.log('adding icon for ' + menuItem.id);
+                    childItem['icons'] = "oj-icon-color-warning " +
+                      "oj-ux-ico-warning-s oj-ux-icon-size-6x" ;
+                  }
+                }
+              }
+            }
+            self.dataProvider =
+              new oj.ArrayTreeDataProvider(menuItems,
+                                           { keyAttributes: "id" });
+            // determine first entry
+            var firstHost = menuItems[0].id;
+            self.selectedItem = ko.observable(self.firstHost);
+            if (firstHost == "")
+              self.expandedItem = new keySet.ExpandedKeySet(["All"]);
+            else            
+              self.expandedItem = new keySet.ExpandedKeySet([firstHost]);
+            self.reportContext = {"reportStartTime": "2026-11-03T04:00:00", "reportEndTime": "2026-11-03T11:00:00", "numBuckets": 459, "bucketInterval": 55};
+
+            // format dates for display
+            self.reportStartTime = self.dateTimeConverter.format(self.reportContext.reportStartTime);
+            self.reportEndTime = self.dateTimeConverter.format(self.reportContext.reportEndTime);
+
+            // add messages for accessibility
+            self.message = ko.observable();
+            self.announcementHandler = function(event)
+            {
+              self.message('The data has been loaded into the charts frame.');
+            }
+          }
+
+          //------------------------------------------------------------
+          // create model
+          var model = new Model();
+
+          //------------------------------------------------------------
+
+          $(document).ready(
+            function()
+            {
+              ko.applyBindings(model,
+                               document.getElementById("menu-container"));
+            });
+        });
+    </script>
+  </head>
+  <body cass="oj-web-applayout-body">
+    <div id="menu-container">
+      <span class="oj-typography-body-sm" id="startTime" data-bind="text:reportStartTime"></span> -
+      <span class="oj-typography-body-sm" id="endTime"
+            data-bind="text:reportEndTime"></span>
+      <div id="announce" class="sendOffScreen exa-hide" aria-live="assertive"
+           aria-atomic="true">
+        <p id="ariaLiveMessage">
+          <oj-bind-text value="[[message]]"/>
+        </p>
+      </div>
+      <div id="menu-navlist-container" style="max-width:300px">
+          <div role="navigation" id="menulist-container">
+            <oj-navigation-list class="exa-menu-list" aria-label="menu list"
+              drill-mode="collapsible"
+              selection="[[selectedItem]]"
+              expanded="[[expandedItem]]"
+              item.selectable="[[itemOnly]]"
+              data="[[dataProvider]]"
+              on-selection-changed="[[announcementHandler]]">
+              <template slot="itemTemplate" data-oj-as="item">
+                <li :id="[[item.data.id]]">
+                  <a :href="[[item.data.id]]" target="chart">
+                    <span :class="[['oj-navigationlist-item-icon oj-navigationlist-item-end ' + item.data.icons]]"></span>
+                    <oj-bind-text value="[[item.data.name]]"></oj-bind-text>
+                  </a>
+                </li>
+              </template>
+            </oj-navigation-list>
+          </div>
+        </div>
+    </div>
+  </body>
+</html>
+

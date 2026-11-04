@@ -69,14 +69,28 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Interactive chart with series toggles
 
 ### 4. RDS_Info_Analysis.html
-**Purpose:** Analyze RDS (Relational Database Service) congestion counters
+**Purpose:** Analyze RDS (Reliable Datagram Sockets) counters and peer latency
 
 **Features:**
 - Multi-file upload (supports `.xz` compression)
 - Timestamp-aligned counter trend visualization
 - Statistics calculation (total increase, per-interval increase)
 - Automatic knowledge-base findings for increasing RDS counters
+- **Network Flow:** animated source-to-target probe paths, sample playback, queue filters, mean/P95/maximum latency, selectable nodes/routes, a zoomable timeline and route heatmap, PNG export, and CSV export
+- Apache ECharts 6.1.0; responsive layout and reduced-motion support
 - Key congestion counter reference
+
+Upload files once, then open **Network Flow**. The network requires timestamped
+`rds-ping -I <source IP> <target IP>: ... usec` results. It displays measured
+round-trip latency, not AWR block transfers or traffic volume. Missing routes
+remain unmeasured, overlapping observations are deduplicated, and the highlight
+threshold is user-configurable. Frames retain source-clock timestamps; multiple
+hosts share a frame only when their collection markers match exactly. CSV
+exports all collection times for the selected queue and node/route, regardless
+of the network's top-route limit. Keep `html/rds_network.js` and
+`html/rds_network.css` beside the HTML page when deploying it.
+
+Validate network data calculations with `node --test tests/rds_network.test.js`.
 
 ### 5. Exa_Cell_Metrics_Chart.html
 **Purpose:** ExaCC (Exadata Cloud@Customer) metrics dashboard
@@ -123,6 +137,112 @@ All HTML-based tools run entirely in the browser with no server required. The Py
 - Storage-cell cache-skew visualization when raw collector CSV is used
 - `CELL_FLASH_CACHE` tuning candidate visibility through the optional SQL views
 
+### 9. ExaWatcher Analyzer Workbench
+**Purpose:** Analyze ExaWatcher collectors that do not already have a dedicated tool.
+
+**Output views:** ACFS, Diskinfo, EDVStat, IBCardInfo, IBprocs, Lsof, Meminfo, Mpstat, Netinfo, Nfsiostat, Numa, Ps, Roceaudit, Rocestat, Top, and TopPid.
+
+**Features:**
+- Load a capture-root directory or upload one or more plain, `.xz`, or `.bz2` output files
+- Find the selected collector's `<Name>.ExaWatcher` directory under a capture root
+- Chart timestamped metrics with entity filters, show capture metadata and gaps, and download chart or detail rows as CSV
+- Keep snapshot reports searchable and distinguish incomplete or skipped output from zero-valued measurements
+
+Start the workbench on port 8505:
+
+```bash
+streamlit run python/ExaWatcher_Workbench.py --server.port 8505
+```
+
+---
+
+## AWR RAC Transfer Explorer
+
+A separate Streamlit application on **port 8506** for historical RAC cache
+transfers in an Oracle repository containing imported customer AWR data.
+The file-based RDS analyzer continues to provide ping and OS-counter analysis.
+
+```bash
+python3 -m streamlit run python/AWR_RAC_Transfer_Explorer.py --server.port 8506
+```
+
+Use the repository's Python environment with `requirements.txt` installed
+(Python 3.10+ recommended for current Streamlit releases). The dashboard's
+**Python Tools** tab links to this service. `startall.sh`, `stopall.sh`, and
+`status.sh` include it; its log is `streamlit_awr_transfer.log`. Run service
+commands on the application host, which may differ from the source checkout.
+
+1. Connect with host, port, service, and Oracle credentials. Passwords remain
+   in Streamlit session memory; results are not shared through a global cache.
+2. Select the customer DBID. The default window is the latest seven days
+   actually retained in `DBA_HIST_SNAPSHOT`, using source-clock timestamps.
+3. Load snapshots and available scopes. Select a snapshot container context
+   and an exact `(CON_DBID, CON_ID)` transfer/cache scope.
+4. Select **Generate / refresh dashboard**. Playback, scrubbing, block-class
+   filters, route ranking, node/route selection, and matrix navigation then
+   operate on the fetched dataset without querying Oracle.
+5. Use **Reconcile a route against independent repository SQL** to check
+   selected intervals and routes. The report records which checks matched;
+   untested intervals remain explicitly unverified.
+
+The animated directed network, transfer/congestion timeline, cache-activity
+timeline, and full route matrix use vendored **Apache ECharts 6.1.0**. Each
+chart has a PNG export. Download a standalone offline HTML report, filtered
+route CSV, full transfer CSV, or a ZIP with HTML, transfer/cache CSVs,
+metadata, and executable SQL with the selected bind values substituted.
+
+### Measurement and coverage
+
+Only `DBA_HIST_DATABASE_INSTANCE`, `DBA_HIST_SNAPSHOT`,
+`DBA_HIST_INST_CACHE_TRANSFER`, `DBA_HIST_SGA`, and `DBA_HIST_SYSSTAT` are
+queried. Column support is inspected through those views themselves. No
+internal `SYS.WRH$_` fallback is used. Snapshot and transfer data are
+required; missing optional cache datasets leave transfer analysis available.
+
+- Transfer direction is `INSTANCE` (sender) → `INSTANCE_NUMBER` (receiver).
+- Counters use adjacent snapshots within the same startup, including a
+  preceding snapshot for the first interval. Gaps, counter decreases,
+  missing class rows, and source/destination restarts make affected routes
+  unavailable. Missing values are never filled with zero.
+- Each route's rate uses the receiving instance's measured elapsed seconds.
+  Overlapping boundary intervals retain their full rates and actual bounds.
+  Source timezone offsets are retained in per-instance exports when present.
+- CR/current received counts include ordinary, busy, and congested counts.
+  Congestion share is congested counts divided by received counts; combined
+  percentages and transfer means use matching counts as weights.
+- Transfer timing is hidden by default. To enable microsecond means, verify
+  the `CR_BLOCK_TIME` / `CURRENT_BLOCK_TIME` unit and total-time semantics
+  for the source release, select the unit, and record the evidence. Busy and
+  congested times are not added again to those documented total-time columns.
+- Cache memory is **allocated GiB** from `Database Buffers`. Cache logical
+  reads use `db block gets from cache` plus `consistent gets from cache`;
+  `physical reads cache` is a **miss proxy**. Hits are estimates derived by
+  subtraction. A negative estimate is unavailable, not clipped to zero.
+- CDB totals and PDB rows are separate scopes. An optional view that cannot
+  establish the selected scope is reported unavailable rather than mixed.
+
+The charts describe **historical transfers at AWR snapshot resolution**.
+Animation illustrates direction, not individual block delivery. Local
+synthetic tests do not establish repository connectivity, imported-data
+coverage, source timing units, or agreement with a live Oracle repository.
+Use the SQL reconciliation control and exported SQL for that validation.
+
+Oracle reference:
+[DBA_HIST_INST_CACHE_TRANSFER](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_HIST_INST_CACHE_TRANSFER.html).
+ECharts license and notice are included in `html/vendor/`.
+
+Run calculation and query regression tests without Oracle:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_awr_transfer*.py' -v
+```
+
+`tests/awr_transfer_browser.cjs` exercises synthetic offline reports with
+Playwright Chromium, including playback, canvas drilldown, filtering, weighted
+averages, CSV/PNG export, gaps, reduced motion, and desktop/mobile layouts.
+Install Playwright in a development environment, make it available through
+`NODE_PATH`, and set `PYTHON_BIN` to the Python interpreter used for fixtures.
+
 ---
 
 ## Installation
@@ -163,10 +283,10 @@ PYTHON_BIN=/opt/exadata-tools-venv/bin/python ./startall.sh
 ```
 
 Each service writes to its own log in the project directory: `exaweb.log`,
-`streamlit_ecs.log`, `streamlit_awr.log`, `streamlit_iostat.log`, and
-`streamlit_netstat.log`. `startall.sh` clears these logs before launching a
-fresh set of services. Run `./status.sh` to see whether each configured port
-has a listening process and where its log is located.
+`streamlit_ecs.log`, `streamlit_awr.log`, `streamlit_iostat.log`,
+`streamlit_netstat.log`, and `streamlit_exawatcher.log`. `startall.sh`
+clears these logs before launching a fresh set of services. Run `./status.sh` to see
+whether each configured port has a listening process and where its log is located.
 
 ---
 
@@ -226,6 +346,17 @@ python3 -m streamlit run python/Netstat_Analyzer.py --server.port 8504
 ```
 
 Then open http://localhost:8504 in your browser.
+
+### ExaWatcher Analyzer Workbench
+
+```bash
+python3 -m streamlit run python/ExaWatcher_Workbench.py --server.port 8505
+```
+
+Then open http://localhost:8505 in your browser. Choose a collector view, then
+enter the ExaWatcher capture-root directory on the app host or upload matching
+`.dat`, `.dat.xz`, or `.dat.bz2` files. When given a capture root, the
+workbench loads the selected `<Name>.ExaWatcher` child directory.
 
 ---
 
@@ -288,6 +419,11 @@ TCPTimeouts: 0
 - **Rollup format:** CSV export of `SELECT * FROM fc_by_object ORDER BY cached_mb DESC`
 - **Collection prerequisite:** Run the extractor as `root` from an Exadata database node with `dcli` and root SSH equivalence to the storage cells.
 
+### ExaWatcher Analyzer Workbench
+- **Format:** ExaWatcher `.dat` output, plain, `.xz`, or `.bz2` compressed
+- **Structure:** Collector-specific records inside timestamped `zzz <...>` sample blocks, with capture metadata in the file header
+- **Views:** One analyzer for each remaining collector directory; `Charts.ExaWatcher...` is generated chart output and is not treated as a collector
+
 ---
 
 ## Project Structure
@@ -302,7 +438,9 @@ TCPTimeouts: 0
 │   ├── ECS_Analysis.py       # Streamlit ECstat analyzer
 │   ├── Iostat_Analyzer.py    # Streamlit ExaWatcher iostat analyzer
 │   ├── Netstat_Analyzer.py   # Streamlit ExaWatcher netstat analyzer
-│   └── netstat_analysis.py   # Standard-library netstat parser and analysis helpers
+│   ├── netstat_analysis.py   # Standard-library netstat parser and analysis helpers
+│   ├── ExaWatcher_Workbench.py # Streamlit workbench for remaining ExaWatcher outputs
+│   └── exawatcher_analysis.py # Collector parsers and normalized time-series rows
 │
 ├── html/                     # HTML-based tools
 │   ├── alertlog_analyzer.html

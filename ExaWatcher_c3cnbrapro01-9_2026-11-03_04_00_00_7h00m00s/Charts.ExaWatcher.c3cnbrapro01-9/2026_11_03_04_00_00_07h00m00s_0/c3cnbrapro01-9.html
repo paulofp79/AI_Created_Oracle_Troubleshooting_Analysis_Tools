@@ -1,0 +1,494 @@
+<!-- Copyright (c) 2016, 2022, Oracle and/or its affiliates. -->
+<!-- All rights reserved.-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>ExaWatcher Summary</title>
+    <meta name="description" content="Exawatcher summary"/>
+    <meta name="keywords" content="exawatcher"/>
+    <style class="text/css">
+      @import url('https://static.oracle.com/cdn/jet/19.0.0/default/css/redwood/oj-redwood-min.css');
+      ul.exalist { -ms-user-select: text; -webkit-user-select: text;
+              -moz-user-select: text; user-select: text; }
+      ul.exalist li { line-height: 0.3; padding-top:8px; padding-bottom:8px;}
+      .oj-applayout-content:not(.oj-complete) {
+        visibility: hidden; }
+    </style>
+    <script src="https://static.oracle.com/cdn/jet/19.0.0/3rdparty/require/require.js"></script>
+    <script type="text/javascript">
+      // get browser language
+      var browserLang = window.navigator.language || window.navigator.userLanguage;
+      requirejs.config({
+        paths: {"knockout": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/knockout/knockout-3.5.1", "jquery": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/jquery/jquery-3.7.1.min", "jqueryui-amd": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/jquery/jqueryui-amd-1.14.1.min", "hammerjs": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/hammer/hammer-2.0.8.min", "ojdnd": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/dnd-polyfill/dnd-polyfill-1.0.2.min", "ojs": "https://static.oracle.com/cdn/jet/19.0.0/default/js/min", "ojL10n": "https://static.oracle.com/cdn/jet/19.0.0/default/js/ojL10n", "ojtranslations": "https://static.oracle.com/cdn/jet/19.0.0/default/js/resources", "@oracle/oraclejet-preact": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/oraclejet-preact/amd", "oj-c": "https://static.oracle.com/cdn/jet/packs/oj-c/19.0.0/min", "persist": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/persist/min", "text": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/require/text", "signals": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/js-signals/signals.min", "touchr": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/touchr/touchr", "preact": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/dist/preact.umd", "preact/hooks": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/hooks/dist/hooks.umd", "preact/compat": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/compat/dist/compat.umd", "preact/jsx-runtime": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/jsx-runtime/dist/jsxRuntime.umd", "preact/debug": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/debug/dist/debug.umd", "preact/devtools": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/preact/devtools/dist/devtools.umd", "proj4": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/proj4js/dist/proj4", "css": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/require-css/css.min", "ojcss": "https://static.oracle.com/cdn/jet/19.0.0/default/js/ojcss", "oj/ojcss": "https://static.oracle.com/cdn/jet/19.0.0/default/js/ojcss", "chai": "https://static.oracle.com/cdn/jet/19.0.0/3rdparty/chai/chai-4.5.0.min"},
+        // Shim configurations for modules that do not expose AMD
+        // shim: { 
+        //   'jquery' : { exports: ['jQuery','$'] } 
+        // },
+        config: {
+          i18n: { locale: browserLang },
+          ojL10n: { locale: browserLang }
+        }
+      });
+
+      require(["ojs/ojcore", "knockout", "jquery", "ojs/ojknockout", "ojs/ojchart", "ojs/ojcollapsible", "ojs/ojlistview", "ojs/ojvalidation-base", "ojs/ojvalidation-number", "ojs/ojvalidation-datetime", "ojs/ojarraydataprovider" ],
+        function (oj, ko, $)
+        {
+
+          var ChartModel = function()
+          {
+            var self = this;
+
+            //------------------------------------------------------------
+            // supporting functions
+            //------------------------------------------------------------
+            self.pctConverter = oj.Validation.converterFactory("number").createConverter( { style:"percent", maximumFractionDigits: 2 });
+
+            self.psecConverter = oj.Validation.converterFactory("number").createConverter( { pattern: "#,###,###.##/s", useGrouping: true, maximumFractionDigits: 2 });
+
+            self.mbpsConverter = oj.Validation.converterFactory("number").createConverter( { pattern: "#,###,###.##MB/s", useGrouping: true, maximumFractionDigits: 2 } );
+
+            // self.msConverter = oj.Validation.converterFactory("number").createConverter( { pattern: "##,###.##ms", useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 } );
+
+            self.usConverter = oj.Validation.converterFactory("number").createConverter( { pattern: "##,###.##us", useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 } );
+
+            self.gbConverter = oj.Validation.converterFactory("number").createConverter( { pattern: "#,###,###.##GB", useGrouping: true, maximumFractionDigits: 2 } );
+
+            self.dateTimeConverter = oj.Validation.converterFactory("datetime").createConverter( { formatType: "datetime", dateFormat: "short",  timeFormat: "medium"} );
+
+            // self.gbpsConverter = oj.Validation.converterFactory("number").createConverter( { pattern: "#,###,###.##GB/s", useGrouping: true, maximumFractionDigits: 2 } );
+
+            // scale down as required
+            self.gbpsConverter = {
+              format : function(value)
+              {
+                var valueString;
+                var converter;
+                if (value < 0.1)
+                  valueString = self.mbpsConverter.format(value*1024);
+                else
+                {
+                  converter = oj.Validation.converterFactory("number").createConverter( { pattern: '#,###,###.##GB/s', useGrouping: true, maximumFractionDigits: 2 } );
+                  valueString = converter.format(value);
+                }
+                return valueString;                
+              }
+            };
+
+            // scale to us as required
+            self.msConverter = {
+              format : function(value)
+              {
+                var valueString;
+                var converter;
+                if (value < 1)
+                  valueString = self.usConverter.format(value*1000);
+                else
+                {
+                  converter = oj.Validation.converterFactory("number").createConverter( { pattern: "##,###.##ms", useGrouping: true, minimumFractionDigits: 2,  maximumFractionDigits: 2 });
+                  valueString = converter.format(value);
+                }
+                return valueString;
+              }
+            }
+
+            var noFindings = [ {'id': 1, 'item':'No findings'} ];
+            self.summary =  {"alerts": {"findings": [{"id": 0, "item": "Alerts not retrieved, current host(c3cnbrapro01-9.bs.br.bsch) is processing files extracted from another host(c3cnbrapro01-9)"}], "htmlFiles": []}, "iostat": {"groups": ["disk"], "seriesData": {"iops": [{"name": "r/s", "items": [0.0876647]}, {"name": "w/s", "items": [169.752]}], "mbps": [{"name": "rmb/s", "items": [0.000798403]}, {"name": "wmb/s", "items": [2.3359]}], "await": [{"name": "read wait time", "items": [0.00400798]}, {"name": "write wait time", "items": [0.787638]}, {"name": "service time", "items": [0.157268]}], "util": [{"name": "%util", "items": [0.00816652]}]}, "findings": [{"id": 0, "item": "Not checking for maximum IOPs and MB/s: current host(c3cnbrapro01-9.bs.br.bsch) is processing files extracted from another host(c3cnbrapro01-9)"}], "htmlFiles": [["c3cnbrapro01-9_iosummary.html", "IOStat Summary"], ["c3cnbrapro01-9_iodetail.html", "IOStat Detail"], ["c3cnbrapro01-9_cpu.html", "CPU Utilization"]]}, "mpstat": {"groups": ["avg"], "seriesData": [{"name": "%usr", "items": [0.07493980059820537], "color": "#4C825C"}, {"name": "%nice", "items": [3.1525423728813403e-05]}, {"name": "%sys", "items": [0.036433300099700985], "color": "#AA643B"}, {"name": "%wio", "items": [4.6580259222334534e-05], "color": "#A9BBBC"}, {"name": "%soft", "items": [0.02681593220338982]}, {"name": "%steal", "items": [0.00034273180458624646]}], "findings": [], "htmlFiles": [["c3cnbrapro01-9_mp.html", "CPU Detail"]]}, "cellsrvstat": {"groups": ["avg"], "seriesData": {"fcrrq": [], "fcwrq": [], "fcsz": [], "sio": []}, "findings": [], "htmlFiles": []}};
+
+            var statType;
+            // extract findings for each section and conver to DataProvider
+            self.findings = {};
+            for (statType in self.summary)
+            {
+              if (self.summary[statType].findings.length > 0)
+                self.findings[statType] = new oj.ArrayDataProvider(self.summary[statType].findings, {'keyAttributes': 'id'});
+              else
+                self.findings[statType] = new oj.ArrayDataProvider(noFindings,{'keyAttributes': 'id'});
+
+              // add visibility attribute based on existence of html files
+              if (statType === 'alerts') 
+                self.summary[statType]['visible'] = true; // always visible
+              else
+                self.summary[statType]['visible'] = (self.summary[statType].htmlFiles.length > 0 ? true : false);
+            }
+            
+            // bind series and group data
+            self.seriesData = {};
+            self.groupData = {};
+            for (statType in self.summary)
+            {
+              self.groupData[statType] = ko.observableArray(self.summary[statType].groups);
+              if (statType === "mpstat")
+                self.seriesData[statType] = ko.observableArray(self.summary[statType].seriesData);
+              else
+              {
+                self.seriesData[statType] = {};
+                for (var chartType in self.summary[statType].seriesData)
+                  self.seriesData[statType][chartType] = ko.observableArray(self.summary[statType].seriesData[chartType]);
+              }
+            }
+      
+            self.reportContext = {"reportStartTime": "2026-11-03T04:00:00", "reportEndTime": "2026-11-03T11:00:00", "numBuckets": 459, "bucketInterval": 55, "host": "c3cnbrapro01-9"};
+
+            // format dates for display
+            self.reportStartTime = self.dateTimeConverter.format(self.reportContext.reportStartTime);
+            self.reportEndTime = self.dateTimeConverter.format(self.reportContext.reportEndTime);
+        
+          };
+
+          //
+          var appendChart = function(htmlOptions, chartOptions)
+          {
+            // htmlOptions should include tags in the html - i.e.
+            // chartId, chartPanel, maxWidth
+            // chartOptions should include tags in the ojComponent 
+            // e.g. required: chartSeries, chartGroup, chartTitle, converter
+            //      optional: stack, orientation, xAxisRender, yAxisRender
+            // default hide xAxis and yAxis
+            let xAxisRender = ( chartOptions.hasOwnProperty("xAxisRender") ? chartOptions.xAxisRender : 'off' ); 
+            let yAxisRender = ( chartOptions.hasOwnProperty("yAxisRender") ? chartOptions.yAxisRender : 'off' ); 
+            // default unstacked
+            let stack = (chartOptions.hasOwnProperty("stack") ? chartOptions.stack : "off");
+            let groupTooltip = (chartOptions.hasOwnProperty("groupTooltip") ? chartOptions.groupTooltip : "off" );
+            // default orientation is vertical
+            let orientation = (chartOptions.hasOwnProperty("orientation") ? chartOptions.orientation : "vertical");
+            let legend = (chartOptions.hasOwnProperty("legend") ?  chartOptions.legend : "off" );
+
+            let maxBarWidth = (chartOptions.hasOwnProperty("maxBarWidth") ?
+                                chartOptions.maxBarWidth : "20");
+            
+            let ojChart = '<oj-chart id="' + htmlOptions.chartId + '" ' +
+                          'style="width:100%; height:80%;" ' +
+                          'type="bar" ' +
+                          'series="[[' + chartOptions.chartSeries + ']]" ' +
+                          'groups="[[' + chartOptions.chartGroups + ']]" ' +
+                          'animation-on-display="auto" ' +
+                          'animation-on-data-change="auto" ' +
+                          'orientation="' + orientation + '" ' +
+                          'hover-behavior="dim" ' +
+                          'selection-mode="single" ' +
+                          'stack="' + stack + '" ' +
+                          'stack-label="on" ' +
+                          'style-defaults.data-label-position="none" ' +
+                          'style-defaults.data-label-collision="fitInBounds" '+
+                          'style-defaults.max-bar-width="'+ maxBarWidth + '" ' +
+                          'style-defaults.bar-gap-ratio=".5" ' +
+                          'legend.rendered="' + legend + '" ' +
+                          'y-axis.tick-label.rendered="' + yAxisRender + '" ' +
+                          'y-axis.tick-label.scaling="none" ' +
+                          'y-axis.tick-label.converter="[[' + 
+                            chartOptions.converter + ']]" ' +
+                          'x-axis.rendered="' + xAxisRender + '" ' +
+                          'value-formats.group.tooltip-display="' + 
+                            groupTooltip+'" ' +
+                           'value-formats.y.scaling="none" ' +
+                           'value-formats.y.converter="[[' +
+                             chartOptions.converter + ']]" ' +
+                           'value-formats.label.scaling="none" ' +
+                           'value-formats.label.converter="[[' + 
+                             chartOptions.converter + ']]" ' +
+                          '>' +
+                          '</oj-chart>';
+
+            // console.log(ojChart);
+
+            // append to proper panel
+            $("#" + htmlOptions.chartPanelId).append('<h3 tabindex="0" class="oj_header oj-typography-subheading-xs">' +
+      chartOptions.chartTitle + '</h3>');
+            $("#" + htmlOptions.chartPanelId).append(ojChart);
+            
+          };
+                    
+          var chartModel = new ChartModel();
+          var statType; 
+          // iostat charts
+          appendChart( { chartId: 'iopsChart', chartPanelId: 'iopsPanel'},
+            { chartSeries: 'seriesData.iostat.iops', chartGroups: 'groupData.iostat',
+              chartTitle: 'IOPs', converter: 'psecConverter',
+              stack: 'on', orientation: 'horizontal', xAxisRender: 'on',
+              groupTooltip: 'auto' });
+          appendChart( { chartId: 'mbpsChart', chartPanelId: 'mbpsPanel'},
+            { chartSeries: 'seriesData.iostat.mbps', chartGroups: 'groupData.iostat',
+              chartTitle: 'MB/s', converter: 'mbpsConverter',
+              stack: 'on', orientation: 'horizontal', xAxisRender: 'off',
+              groupTooltip: 'auto' });
+          // bug34710409: do not stack r_await/w_await
+          appendChart( { chartId: 'awaitChart', chartPanelId: 'awaitPanel'},
+            { chartSeries: 'seriesData.iostat.await', chartGroups: 'groupData.iostat',
+              chartTitle: 'Wait Time', converter: 'msConverter',
+              stack: 'off', orientation: 'horizontal', xAxisRender: 'off',
+              groupTooltip: 'auto', maxBarWidth: '5' });
+          appendChart( { chartId: 'utilChart', chartPanelId: 'utilPanel' },
+            { chartSeries: 'seriesData.iostat.util', chartGroups: 'groupData.iostat',
+              chartTitle: '%Utilization', converter: 'pctConverter',
+              stack: 'on', orientation: 'horizontal', xAxisRender: 'off',
+              groupTooltip: 'auto' });
+          // mpstat chart
+          appendChart( { chartId: 'mpstatChart', chartPanelId: 'mpstatPanel' },
+            { chartSeries: 'seriesData.mpstat', chartGroups: 'groupData.mpstat',
+              chartTitle: 'CPU Utilization', converter: 'pctConverter',
+              stack: 'on', orientation: 'vertical', xAxisRender: 'off',
+              legend: 'on' });
+          // cell server charts
+          appendChart( { chartId: 'fcszChart', chartPanelId: 'flashCacheSizePanel'},
+            { chartSeries: 'seriesData.cellsrvstat.fcsz', chartGroups: 'groupData.cellsrvstat',
+              chartTitle: 'Flash Cache Size', converter: 'gbConverter',
+              stack: 'off', orientation: 'vertical', 
+              xAxisRender: 'off', yAxisRender: 'on', legend: 'on' });
+          appendChart( { chartId: 'fcreadsChart', chartPanelId: 'flashCacheReadsPanel'},
+            { chartSeries: 'seriesData.cellsrvstat.fcrrq', chartGroups: 'groupData.cellsrvstat',
+              chartTitle: 'Flash Cache Reads', converter: 'psecConverter',
+              stack: 'off', orientation: 'vertical', 
+              xAxisRender: 'off', yAxisRender: 'on', legend: 'on' });
+          appendChart( { chartId: 'fcWritesChart', chartPanelId: 'flashCacheWritesPanel' },
+            { chartSeries: 'seriesData.cellsrvstat.fcwrq', chartGroups: 'groupData.cellsrvstat',
+              chartTitle: 'Flash Cache Writes', converter: 'psecConverter',
+              stack: 'off', orientation: 'vertical', 
+              xAxisRender: 'off', yAxisRender: 'on', legend: 'on' });
+          appendChart( { chartId: 'sioChart', chartPanelId: 'smartIOPanel' },
+            { chartSeries: 'seriesData.cellsrvstat.sio', chartGroups: 'groupData.cellsrvstat',
+              chartTitle: 'Smart IO', converter: 'gbpsConverter',
+              stack: 'off', orientation: 'vertical', 
+              xAxisRender: 'off', yAxisRender: 'on', legend: 'on' });
+            
+          // add links
+          var linkId;
+          for (statType in chartModel.summary)
+          {
+            linkId = '#' + statType + 'Links';
+            for (var i = 0; i < chartModel.summary[statType].htmlFiles.length; i++)
+            {
+              if (chartModel.summary[statType].htmlFiles[i][1].indexOf("IOStat") !== -1 || statType !== "iostat")
+              {
+                var htmlString = '<a class="oj-link oj-typography-body-sm" href="' + chartModel.summary[statType].htmlFiles[i][0] + '">' +
+                        chartModel.summary[statType].htmlFiles[i][1] + '</a>&nbsp;';
+                
+                $(linkId).append(htmlString);
+              }
+            }
+          }
+
+          function adjustContentPadding() 
+          {
+            // assumes elements for fixed-top, fixed-bottom and content exist
+            var topElemHeight = $('.oj-applayout-fixed-top')[0].offsetHeight;
+            var bottomElemHeight = $('.oj-applayout-fixed-bottom')[0].clientHeight;
+            var contentElem = $('.oj-applayout-content')[0];
+            $(contentElem).css( { paddingTop: topElemHeight + 'px',
+                                  paddingBottom: bottomElemHeight + 'px' }).
+              addClass('oj-complete');
+          }
+
+          $("#alertsFindingsList").addClass("exalist");
+          $("#iostatFindingsList").addClass("exalist");
+          $("#cpuFindingsList").addClass("exalist");
+          $("#cellsrvstatFindingsList").addClass("exalist");
+
+          $(document).ready(
+            function()
+            {
+              ko.applyBindings(chartModel, document.getElementById("chart-container"));
+              adjustContentPadding();
+            });
+        });
+    </script>
+  </head>
+  <body class="oj-web-applayout-body">
+    <div id="chart-container">
+      <div id="page" class="oj-web-applayout-page">
+        <header role="banner" 
+          class="oj-applayout-fixed-top oj-web-applayout-header">
+            <div class="oj-flex-bar oj-sm-align-items-center">
+              <div class="oj-flex-bar-start oj-sm-align-items-baseline">
+                <h1 class="oj-web-applayout-header-title oj-typography-heading-md" title="ExaWatcher Summary">ExaWatcher Summary</h1>
+              </div>
+
+              <div class="oj-flex-bar-end oj-typography-body-sm">
+                <span id="host" data-bind="text:reportContext.host"></span>:
+                <span id="startTime" data-bind="text:reportStartTime"></span> -
+                <span id="endTime" data-bind="text:reportEndTime"></span>
+              </div>
+
+            </div> <!-- oj-flex-bar -->
+        </header>
+
+        <div role="main" class="oj-applayout-content">
+          <div class="oj-web-applayout-content">
+            <div>
+              
+              <div id="alertsRow" class="oj-flex">
+                <div id="alertsPanel" class="oj-panel oj-panel-shadow-sm oj-flex-item">
+                  <oj-collapsible id="collapsibleAlerts" expanded="true">
+                    <h2 slot="header" class="oj-header oj-typography-subheading-sm">Alert History</h2>
+                    <div class="oj-flex">
+                      <div class="oj-flex-item oj-typography-body-sm">
+                        <oj-list-view id="alertsFindingsList" 
+                          aria-label="list of alert findings"
+                          data="[[findings.alerts]]" 
+                          selection-mode="none">
+                          <template slot="itemTemplate">
+                            <span>
+                              <oj-bind-text value="[[$current.data.item]]"></oj-bind-text>
+                            </span>
+                          </template>
+                        </oj-list-view>
+                        <div id="alertsLinks"></div>
+                      </div>
+                    </div> <!-- oj-flex -->
+                  </oj-collapsible>
+                </div> <!-- iostatPanel -->
+              </div> <!-- alertsRow -->
+              
+              <div id="iostatSection" class="oj-flex" data-bind="visible: summary.iostat.visible">
+                <div id="iostatPanel" class="oj-panel oj-panel-shadow-sm oj-flex-item">
+                  <oj-collapsible id="collapsibleIostat" expanded="true">
+                    <h2 slot="header" class="oj-header-border oj-typography-subheading-sm">IOStat Summary</h2>  
+                    <div class="oj-flex">
+                      <div class="oj-flex-item">
+                        <div class="oj-flex">
+                          <div id="iostatChartsRow" class="oj-flex-item">
+                            <textarea id="iostatHiddenText" readonly
+                              aria-label="IOStat Summary text"
+                              class="oj-textarea-nocomp oj-helper-hidden-accessible">
+                              There are 4 charts in this section to display
+                              IOPs, IO MB/s, Wait Time, and %Utilization per
+                              disk type. Use the arrow keys to navigate within
+                              each chart.
+                            </textarea>
+                            <div class="oj-flex">
+                              <div id="iopsPanel" 
+                                class="oj-flex-item oj-sm-4">
+                              </div>
+                              <div id="mbpsPanel"
+                                class="oj-flex-item oj-sm-4">
+                              </div>
+                              <div id="awaitPanel"
+                                class="oj-flex-item oj-sm-2">
+                              </div>
+                              <div id="utilPanel"
+                                class="oj-flex-item oj-sm-2">
+                              </div>
+                            </div>
+                          </div> <!-- iostatChartsRow -->
+                        </div>
+                        <div class="oj-flex">
+                          <div id="iostatFindingsRow" class="oj-panel oj-flex-item oj-typography-body-sm">
+                            <h2 class="oj-header oj-typography-subheading-xs">Findings</h2>
+                            <oj-list-view id="iostatFindingsList" 
+                              aria-label="list of iostat findings"
+                              data="[[findings.iostat]]"
+                              selection-mode: "none">
+                              <template slot="itemTemplate">
+                              <span>
+                              <oj-bind-text value="[[$current.data.item]]"></oj-bind-text>
+                              </span>
+                              </template>
+                            </oj-list-view>
+                            <div id="iostatLinks" class="oj-typography-body-sm"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </oj-collapsible>
+                </div> <!-- iostatPanel -->
+              </div> <!-- iostatRow -->
+              
+              <div id="cpuRow" class="oj-flex" data-bind="visible: summary.mpstat.visible">
+                <div id="cpuPanel" class="oj-panel oj-panel-shadow-sm oj-flex-item">
+                  <oj-collapsible id="collapsibleCpu" expanded="true">
+                    <h2 slot="header" class="oj-header-border oj-typography-subheading-sm">CPU Utilization</h2>
+                     <div class="oj-flex">
+                      <textarea id="cpuHiddenText" readonly
+                        aria-label="CPU Section Text"
+                        class="oj-textarea-nocomp oj-helper-hidden-accessible">
+                        There is 1 chart in this section to display CPU 
+                        utilization for the host.  Use the arrow keys 
+                        to navigate within the chart.</textarea>
+                      <div id="mpstatPanel" class="oj-flex-item oj-sm-4">
+                      </div> <!-- mpstatPanel -->
+                      <div id="cpuFindings" class="oj-flex-item oj-typography-body-sm">
+                        <h2 class="oj-header oj-typography-subheading-xs">Findings</h2>
+                        <oj-list-view id="mpstatFindingsList" 
+                          aria-label="list of mpstat findings"
+                          data="[[findings.mpstat]]"
+                          selection-mode: "none">
+                          <template slot="itemTemplate">
+                            <span>
+                              <oj-bind-text value="[[$current.data.item]]"></oj-bind-text>
+                            </span>
+                          </template>
+                        </oj-list-view>
+                        <div id="mpstatLinks" class="oj-typography-body-sm"></div>
+                      </div> <!-- cpuFindings -->
+                    </div> <!-- oj-flex -->
+                  </oj-collapsible>
+                </div> <!-- cpuPanel -->
+              </div> <!-- cpuRow -->
+              
+              <div id="cellsrvstatSection" class="oj-flex" data-bind="visible: summary.cellsrvstat.visible">
+                <div id="cellsrvstatPanel" class="oj-panel oj-panel-shadow-sm oj-flex-item">
+                  <oj-collapsible id="collapsibleCellSrvStat" expanded="true">
+                    <h2 slot="header" class="oj-header-border oj-typography-subheading-sm">Cell Server Statistics</h2>  
+                    <div class="oj-flex">
+                      <div class="oj-flex-item">
+                        <div class="oj-flex">
+                          <div id="cellsrvstatChartsRow" class="oj-flex-item">
+                            <textarea id="cellsrvstatHiddenText" readonly
+                              aria-label="Cell Server Statistics text"
+                              class="oj-textarea-nocomp oj-helper-hidden-accessible">
+                              There are 4 charts in this section that displays
+                              information about Flash Cache Size, 
+                              Flash Cache Reads, Flash Cache Writes and Smart
+                              IO. Use the arrow keys to navigate within each chart.
+                            </textarea>
+                            <div class="oj-flex">
+                              <div id="flashCacheSizePanel" 
+                                class="oj-flex-item oj-sm-3">
+                              </div> <!-- flashCacheSizePanel -->
+                              <div id="flashCacheReadsPanel" 
+                                class="oj-flex-item oj-sm-3">
+                              </div> <!-- flashCacheReadsPanel -->
+                              <div id="flashCacheWritesPanel" 
+                                class="oj-flex-item oj-sm-3">
+                              </div> <!-- flashCacheWritesPanel -->
+                              <div id="smartIOPanel" 
+                                class="oj-flex-item oj-sm-3">
+                              </div> <!-- smartIOPanel -->
+                            </div>
+                          </div> <!-- cellsrvstatChartsRow -->
+                        </div>
+                        <div class="oj-flex">
+                          <div id="cellsrvstatFindings" class="oj-panel oj-flex-item oj-typography-body-sm">
+                            <h2 class="oj-header oj-typography-subheading-xs">Findings</h2>
+                            <oj-list-view id="cellsrvstatFindingsList"
+                              aria-label="list of cell server stat findings"
+                              data="[[findings.cellsrvstat]]"
+                              selection-mode="none">
+                              <template slot="itemTemplate">
+                                <span>
+                                  <oj-bind-text value="[[$current.data.item]]"></oj-bind-text>
+                                </span>
+                              </template>
+                            </oj-list-view>
+                            <div id="cellsrvstatLinks" class="oj-typography-body-sm"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </oj-collapsible>
+                </div> <!-- iostatPanel -->
+              </div> <!-- iostatRow -->
+                     
+              
+            </div>
+          </div> <!-- oj-web-applayout-content -->
+        </div> <!-- oj-applayout-content -->
+        
+        <footer role="contentinfo" class="oj-web-applayout-footer oj-applayout-fixed-bottom">
+          <p tabindex=0 class="oj-typography-body-sm" aria-label="Footer text">Number of buckets: <span id="numBuckets" data-bind="text:reportContext.numBuckets"></span>; Bucket Interval: <span id="bucketInterval" data-bind="text:reportContext.bucketInterval"></span></p>
+        </footer>
+
+      </div> <!-- oj-web-applayout-page -->
+    </div> <!-- chart-container -->  
+  </body>
+</html>

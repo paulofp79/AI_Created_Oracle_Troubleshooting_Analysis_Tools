@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AWR RAC Transfer Explorer</title>
+  <style>/* AWR_STYLE */</style>
+  <script>/* ECHARTS_LIBRARY */</script>
+</head>
+<body>
+<main>
+  <header><div><div class="eyebrow">ORACLE RAC · RETAINED AWR HISTORY</div><h1>Global Cache Transfer Flow</h1><p id="scope"></p></div><span class="badge">Snapshot playback</span></header>
+  <div id="warnings" role="status"></div>
+  <section class="transport card">
+    <div class="buttons"><button id="previous" aria-label="Previous snapshot">◀</button><button id="play" aria-pressed="false">▶ Play</button><button id="next" aria-label="Next snapshot">▶</button></div>
+    <div class="scrubber"><label for="frame">Snapshot interval · source clock</label><input id="frame" type="range" min="0" max="0" value="0"><output id="frameLabel"></output></div>
+    <div><label for="speed">Playback</label><select id="speed"><option value="2000">0.5×</option><option value="1000" selected>1×</option><option value="500">2×</option><option value="250">4×</option></select></div>
+  </section>
+  <div class="filters">
+    <div><label for="blockClass">Block class</label><select id="blockClass"><option value="">All classes</option></select></div>
+    <div><label for="metric">Flow thickness / matrix</label><select id="metric"><option value="totalRate">Current + CR</option><option value="currentRate">Current</option><option value="crRate">CR</option><option value="congestedRate">Congested</option></select></div>
+    <div><label for="limit">Network routes</label><select id="limit"><option value="12">Top 12</option><option value="24" selected>Top 24</option><option value="48">Top 48</option><option value="0">All measured</option></select></div>
+    <button id="clear">Clear selection</button><button id="export">Filtered routes CSV</button>
+  </div>
+  <div id="stats" class="stats"></div>
+  <p id="coverage" class="coverage" role="status"></p>
+  <div class="layout">
+    <section class="card network-card"><div class="card-head"><div><h2>Instance-to-instance transfers</h2><p id="networkCaption"></p></div><span class="badge">SOURCE → DESTINATION</span></div>
+      <div id="network" class="network" role="img" aria-label="Directed RAC block transfer network"></div>
+      <div class="legend"><span style="--dot:#50d3c5">Congested &lt;2%</span><span style="--dot:#f5bc69">2–&lt;5%</span><span style="--dot:#ff7c88">≥5%</span></div>
+      <p class="note">Arrows show block sender → receiver. Width represents the selected blocks/sec rate. Animation illustrates direction; it does not replay individual blocks.</p>
+    </section>
+    <aside class="side">
+      <section class="card"><h2 id="focus">Instances with snapshots</h2><p id="focusHint">Click a node, route, matrix cell, or table row to focus.</p><div id="routes" class="route-list"></div></section>
+      <section class="card"><h2>Buffer cache by instance</h2><p>Allocated GiB at the ending snapshot. Activity uses each instance’s valid interval.</p><div id="cacheTable" class="table-wrap"></div></section>
+    </aside>
+  </div>
+  <section class="card full"><h2>Transfer rate and congestion</h2><p>Click a point to select its snapshot. Gaps and unavailable intervals are not zero; boundary intervals use their full duration.</p><div id="timeline" class="timeline" role="img" aria-label="Transfer rates and congestion timeline"></div></section>
+  <section class="card full"><h2>Buffer cache activity over time</h2><p id="activityCaption">Physical cache reads are a miss proxy. Hit percentage is an estimate, weighted by logical reads.</p><div id="activity" class="timeline" role="img" aria-label="Cache physical reads and estimated hit percentage"></div></section>
+  <section class="card full"><h2>Every route · source × destination</h2><p>Rows are sending instances; columns are receiving instances. Blank means unavailable; a measured zero remains zero. Color shows the congested share.</p><div id="matrix" class="matrix" role="img" aria-label="Source to destination transfer rate matrix"></div></section>
+  <details class="card full"><summary>Source, coverage, and interpretation</summary><div id="provenance"></div>
+    <details><summary>Per-instance snapshot coverage and flagged intervals</summary><pre id="coverageDetails"></pre></details>
+    <p>Reads use only DBA_HIST_SNAPSHOT, DBA_HIST_DATABASE_INSTANCE, DBA_HIST_INST_CACHE_TRANSFER, DBA_HIST_SGA, and DBA_HIST_SYSSTAT. Transfer source = INSTANCE; destination = INSTANCE_NUMBER. Counts are differences of cumulative immediate, busy, and congested counters across adjacent snapshots within the same startup. Receiver elapsed seconds determine each route’s rate.</p>
+    <p>Missing rows, missing snapshots, non-monotonic counters, and restarts are unavailable. Totals explicitly identify observed subsets. Container scopes are never added together. Host names and allocated cache can change between frames. Unknown snapshot timezone offsets remain unknown.</p>
+    <p>Database Buffers is allocated memory, not cache occupancy. Estimated hits = db block gets from cache + consistent gets from cache − physical reads cache. Physical reads include prefetch and are a miss proxy, not exact demand misses; direct-path reads are excluded. Negative hit estimates are unavailable. Congested is an AWR transfer category, not proof of LMS CPU saturation or a network fault.</p>
+    <p id="timingNote"></p><p id="validation"></p>
+  </details>
+  <details class="card full"><summary>Reproducible repository SQL</summary><p>Bound values are rendered as SQL literals. Execute in the same repository and container with appropriate read access.</p><pre id="sql"></pre></details>
+</main>
+<script type="application/json" id="payload">AWR_PAYLOAD_JSON</script>
+<script>/* AWR_SCRIPT */</script>
+</body>
+</html>

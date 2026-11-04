@@ -374,6 +374,23 @@
           <a href="#" class="tool-link streamlit-link" data-streamlit-port="8504" target="_blank" rel="noopener noreferrer">Open Tool</a>
           <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">Netstat Tool: <a href="#" class="streamlit-link" data-streamlit-port="8504" target="_blank" rel="noopener noreferrer" style="color: var(--accent);"></a></p>
         </div>
+
+        <div class="tool-card python-card">
+          <span class="tool-type">Python/Streamlit</span>
+          <div class="tool-icon">EXA</div>
+          <h3 class="tool-title">ExaWatcher Analyzer Workbench</h3>
+          <p class="tool-desc">Analyze disk, memory, CPU, NFS, RoCE, ACFS, NUMA, network, RDMA, and process outputs with per-collector charts and reports.</p>
+          <a href="#" class="tool-link streamlit-link" data-streamlit-port="8505" target="_blank" rel="noopener noreferrer">Open Tool</a>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">ExaWatcher Workbench: <a href="#" class="streamlit-link" data-streamlit-port="8505" target="_blank" rel="noopener noreferrer" style="color: var(--accent);"></a></p>
+        </div>
+        <div class="tool-card python-card">
+          <span class="tool-type">Python/Streamlit</span>
+          <div class="tool-icon">RAC</div>
+          <h3 class="tool-title">AWR RAC Transfer Explorer</h3>
+          <p class="tool-desc">Connect to an imported AWR repository. Animate instance-to-instance block transfers, inspect congestion and allocated buffer cache, and export an offline report with CSV and SQL.</p>
+          <a href="#" class="tool-link streamlit-link" data-streamlit-port="8506" target="_blank" rel="noopener noreferrer">Open Tool</a>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">RAC Transfers: <a href="#" class="streamlit-link" data-streamlit-port="8506" target="_blank" rel="noopener noreferrer" style="color: var(--accent);"></a></p>
+        </div>
       </div>
 
       <div style="margin-top: 30px; padding: 20px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border);">
@@ -388,7 +405,15 @@
           <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
         </div>
         <div class="command-box" style="margin-top: 10px;">
+          <code>streamlit run python/ExaWatcher_Workbench.py --server.port 8505</code>
+          <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+        </div>
+        <div class="command-box" style="margin-top: 10px;">
           <code>streamlit run python/AWR_Repository_Explorer.py --server.port 8502</code>
+          <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+        </div>
+        <div class="command-box" style="margin-top: 10px;">
+          <code>streamlit run python/AWR_RAC_Transfer_Explorer.py --server.port 8506</code>
           <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
         </div>
         <div class="command-box" style="margin-top: 10px;">

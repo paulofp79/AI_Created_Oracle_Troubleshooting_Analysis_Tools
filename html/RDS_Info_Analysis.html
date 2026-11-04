@@ -7,7 +7,8 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
   <!-- Use the same browser-side XZ stream decoder as the VMStat analyzer. -->
   <script src="https://cdn.jsdelivr.net/npm/xz-decompress@0.2.3/dist/package/xz-decompress.min.js"></script>
-  <script src="../assets/common.js"></script>
+  <script src="rds_network.js"></script>
+  <link rel="stylesheet" href="rds_network.css">
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -264,14 +265,27 @@
       <div>
         <p class="page-kicker">ORACLE EXADATA DIAGNOSTICS</p>
         <h1>RDS Analysis</h1>
-        <p class="page-description">Explore RDS counters, congestion findings, and RDS ping latency.</p>
+        <p class="page-description">Explore RDS counters, congestion findings, and animated peer latency.</p>
       </div>
     </div>
     <a class="back-link" href="../index.html">← All tools</a>
   </header>
   <div class="container">
+    <div class="upload-panel">
+      <div class="upload-copy">
+        <h2>Load RDS files</h2>
+        <p>Choose one or more ExaWatcher or AHF files. Plain text and .xz archives are supported; files are processed in this browser.</p>
+      </div>
+      <div class="upload-control">
+        <label for="fileInput">Select files</label>
+        <input type="file" id="fileInput" multiple accept=".dat,.dat.xz,.txt,.xz">
+      </div>
+    </div>
+    <div id="statusText" class="status-text" role="status"></div>
+    <div id="errorBox" role="alert"></div>
     <div class="tab-nav" role="tablist" aria-label="RDS analysis views">
       <button class="active" data-tab="0" role="tab" aria-selected="true">Counter Analytics</button>
+      <button data-tab="4" role="tab" aria-selected="false">Network Flow</button>
       <button data-tab="1" role="tab" aria-selected="false">Automatic Findings</button>
       <button data-tab="2" role="tab" aria-selected="false">RDS Ping Latency</button>
       <button data-tab="3" role="tab" aria-selected="false">Key RDS Counters</button>
@@ -279,19 +293,6 @@
 
     <div class="tab-content active" id="tab-0" role="tabpanel">
       <h3>Counter Analytics</h3>
-      <div class="upload-panel">
-        <div class="upload-copy">
-          <h2>Load RDS files</h2>
-          <p>Choose one or more ExaWatcher or AHF files. Plain text and .xz archives are supported; files are processed in this browser.</p>
-        </div>
-        <div class="upload-control">
-          <label for="fileInput">Select files</label>
-          <input type="file" id="fileInput" multiple accept=".dat,.dat.xz,.txt,.xz">
-        </div>
-      </div>
-      <div id="statusText" class="status-text"></div>
-      <div id="errorBox"></div>
-
       <label for="counterSelect">Select counter(s) to plot (Ctrl/Cmd + Click for multiple):</label>
       <select id="counterSelect" multiple></select>
 
@@ -305,6 +306,52 @@
         <div class="echart" id="myChart" role="img" aria-label="Interactive RDS counter history chart"></div>
       </div>
       <div id="result"></div>
+    </div>
+
+    <div class="tab-content" id="tab-4" role="tabpanel" aria-label="RDS network flow">
+      <div class="flow-heading">
+        <div><span class="chart-kicker">PEER-TO-PEER DIAGNOSTICS</span><h3>RDS Network Flow</h3>
+          <p class="hint-text">Follow measured probe paths through time. Select a node or route to investigate its latency.</p></div>
+        <span class="chart-badge">Apache ECharts 6.1</span>
+      </div>
+      <div id="flowEmpty" class="empty-state">Load RDS files containing timestamped <code>rds-ping -I source target</code> results to explore the network. Counter-only files remain available in Counter Analytics.</div>
+      <div id="flowDashboard" hidden>
+        <div class="flow-controls">
+          <div class="flow-transport"><button id="flowPrev" aria-label="Previous sample">◀</button><button id="flowPlay" aria-pressed="false">▶ Play</button><button id="flowNext" aria-label="Next sample">▶</button></div>
+          <div class="flow-scrubber"><label for="flowFrame">Collection sample · source clock</label><input id="flowFrame" type="range" min="0" max="0" value="0"><output id="flowTime" for="flowFrame"></output></div>
+          <div><label for="flowSpeed">Playback</label><select id="flowSpeed"><option value="2000">0.5×</option><option value="1000" selected>1×</option><option value="500">2×</option><option value="250">4×</option></select></div>
+        </div>
+        <div class="flow-filters">
+          <div><label for="flowQueue">Queue</label><select id="flowQueue"><option value="">All queues</option></select></div>
+          <div><label for="flowMetric">Route latency</label><select id="flowMetric"><option value="mean">Mean</option><option value="p95">P95</option><option value="max">Maximum</option></select></div>
+          <div><label for="flowLimit">Network routes</label><select id="flowLimit"><option value="12">Top 12</option><option value="24" selected>Top 24</option><option value="48">Top 48</option><option value="0">All measured</option></select></div>
+          <div><label for="flowThreshold">Highlight at (µs)</label><input id="flowThreshold" type="number" min="1" step="100" value="1000"></div>
+          <button id="flowReset">Clear selection</button><button id="flowExport">Download CSV</button>
+        </div>
+        <div id="flowStats" class="flow-stats"></div>
+        <p id="flowCoverage" class="flow-note" role="status"></p>
+        <div class="flow-layout">
+          <section class="flow-card flow-network-card">
+            <div class="flow-card-head"><div><h4>Node-to-node probe paths</h4><p id="flowRouteCount"></p></div><span class="flow-live-label">DIRECTION →</span></div>
+            <div id="flowNetwork" class="flow-network" role="img" aria-label="Directed RDS probe network"></div>
+            <div id="flowLegend" class="flow-legend"></div>
+            <p class="flow-note">Arrow motion indicates probe direction. Width and color encode latency, not traffic volume. Hover for exact values; click to focus.</p>
+          </section>
+          <aside class="flow-card flow-route-card">
+            <div class="flow-card-head"><div><h4 id="flowFocus">All measured endpoints</h4><p>Routes ranked by selected latency.</p></div></div>
+            <div id="flowRoutes" class="flow-routes"></div>
+          </aside>
+        </div>
+        <section class="flow-card flow-timeline-card">
+          <div class="flow-card-head"><div><h4>Latency over time</h4><p>Mean and maximum across matching probes. Click a point to select its sample; drag the slider to zoom.</p></div></div>
+          <div id="flowTimeline" class="flow-timeline" role="img" aria-label="RDS probe latency timeline"></div>
+        </section>
+        <section class="flow-card">
+          <div class="flow-card-head"><div><h4>Every measured route · source × destination</h4><p>Rows are probe sources; columns are destinations. Blank cells mean no measurement. Zoom to inspect large networks.</p></div></div>
+          <div id="flowMatrix" class="flow-matrix" role="img" aria-label="Source to destination latency heatmap"></div>
+        </section>
+        <details class="flow-method"><summary>Measurement and coverage</summary><p>This view uses successful <code>rds-ping</code> results from the uploaded files. Endpoints are IP addresses, not inferred Oracle instance IDs. Arrow direction is the probe source → target; latency is the reported round-trip time in microseconds. No reverse route is inferred.</p><p>Frames use each <code>zzz</code> collection marker, falling back to the ping log timestamp. Files from multiple hosts are grouped only when their source-clock markers match exactly; align host clocks before comparing. Dates retain the logged wall clock without browser-timezone conversion. Identical timestamp/source/target/queue/latency observations in overlapping uploads are counted once. P95 uses the nearest-rank method. All-queue means are weighted by probe count.</p><p>Missing measurements and collection gaps are not zero. The timeline breaks across gaps larger than 1.5 times the median collection spacing. The highlight threshold is user-defined, not an Oracle diagnostic limit. The matrix and CSV contain every matching route; the top-route control limits only the network drawing. CSV exports all frames for the current queue and node/route selection.</p><p>RDS counters are host totals and are not allocated to peer routes. These files do not supply AWR block-transfer rates, buffer-cache sizes, cache hit ratios, or proof of RAC congestion.</p></details>
+      </div>
     </div>
 
     <div class="tab-content" id="tab-1">
@@ -366,6 +413,7 @@
     let allCounters = [];
     let samples = [];
     let pingSamples = [];
+    const networkView = new RdsNetworkView();
     const COUNTER_KNOWLEDGE_BASE = {
       cong_send_blocked: { severity: 'warning', explanation: 'A blocking local socket could not send until a peer congestion update indicated space was available.', implication: 'This corresponds with delays and points to congestion on a peer socket. Identify the congested peer and determine whether traffic is excessive or peer consumers lack resources.' },
       cong_send_error: { severity: 'warning', explanation: 'A non-blocking local socket could not send because the peer socket was full (ENOBUFS).', implication: 'This corresponds with delays and is the non-blocking form of cong_send_blocked. Investigate the congested peer, traffic volume, and peer resource availability.' },
@@ -451,6 +499,7 @@
         btn.classList.add('active');
         btn.setAttribute('aria-selected', 'true');
         document.getElementById(`tab-${tabIndex}`).classList.add('active');
+        networkView.setVisible(tabIndex === '4');
         requestAnimationFrame(() => {
           if (chart) chart.resize();
           if (pingChart) pingChart.resize();
@@ -469,6 +518,7 @@
 
       clearError();
       showLoading('Reading files...');
+      networkView.load([], []);
 
       try {
         const fileErrors = [];
@@ -485,6 +535,7 @@
 
         extractCountersAndTimestamps(contents.join('\n'));
         extractPingSamples(contents, files);
+        networkView.load(pingSamples, samples);
         populateCounterDropdown();
 
         if (allCounters.length > 0) {
@@ -495,11 +546,15 @@
         } else {
           setStatus('No counters found in the loaded files');
           document.getElementById('updateBtn').disabled = true;
+          if (chart) chart.clear();
+          document.getElementById('result').innerHTML = '';
         }
         renderFindings();
         populatePingFilters();
         document.getElementById('updatePingBtn').disabled = !pingSamples.length;
         if (pingSamples.length) plotPingSamples(); else clearPingView();
+        setStatus(`Loaded ${allCounters.length} counters, ${pingSamples.length.toLocaleString()} ping results, and ${files.length - fileErrors.length}/${files.length} readable file(s).`);
+        if (pingSamples.length && !samples.length && !fileErrors.length) clearError();
         if (fileErrors.length) {
           const messages = samples.length ? [] : ['No timestamped RDS samples were found in the readable files.'];
           messages.push(...fileErrors);
@@ -582,7 +637,7 @@
           const timestamp = logTimestamp ? `${logTimestamp[1]} ${logTimestamp[2]}` : (markerTimestamp || `Line ${lineIndex + 1}`);
           const sourceIp = source ? source[1] : 'unknown';
           const targetIp = targetAndLatency ? targetAndLatency[1] : 'unknown';
-          pingSamples.push({ timestamp, queue: queue ? queue[1] : 'unknown', sourceIp, targetIp, endpoint: `${sourceIp} → ${targetIp}`, usec, file: files[fileIndex].name });
+          pingSamples.push({ timestamp, frameTimestamp: markerTimestamp || timestamp, queue: queue ? queue[1] : 'unknown', sourceIp, targetIp, endpoint: `${sourceIp} → ${targetIp}`, usec, file: files[fileIndex].name });
         });
       });
       pingSamples.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
